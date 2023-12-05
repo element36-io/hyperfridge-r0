@@ -43,26 +43,24 @@ fn main() {
     // Obtain the default prover.
     let prover = default_prover();
 
-    let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    let _receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    println!("----- got result");
+    // println!("----- got result {} ",receipt_result);
 
-    println!("----- got result {:?} ",receipt_result);
-
-     match &receipt_result {
-        Ok(_val) => {
-            // println!("Receipt result: {}", val);_
+    //  match &receipt_result {
+    //     Ok(_val) => {
+    //         // println!("Receipt result: {}", val);_
             
-            let _receipt = receipt_result.unwrap();
-            let _journal=_receipt.journal();
-            // println!("Receipt result: {}", receipt);
-            //println!("Receipt result: {:?}", receipt.journal.decode().unwrap());
+    //         let _receipt = receipt_result.unwrap();
+    //         let _journal=_receipt.journal;
+    //         // println!("Receipt result: {}", receipt);
+    //         //println!("Receipt result: {:?}", receipt.journal.decode().unwrap());
 
-        },
-        Err(e) => {
-            println!("Receipt error: {:?}", e);
-            //None
-        },
-    }
-
+    //     },
+    //     Err(e) => {
+    //         println!("Receipt error: {:?}", e);
+    //         //None
+    //     },
     // 31709.14
 
 }
