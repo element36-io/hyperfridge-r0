@@ -1,0 +1,21 @@
+[package]
+name = "host"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# from template
+methods = { path = "../methods" }
+risc0-zkvm = { version = "0.19.1" }
+env_logger = "0.10"
+serde = "1.0"
+
+# own dependecies
+xmlparser = "0.*"
+rsa = "0.9"
+pkcs1 = "0.7.5"
+
+[features]
+#cuda = ["risc0-zkvm/cuda"]
+#default = []
+#metal = ["risc0-zkvm/metal"]
