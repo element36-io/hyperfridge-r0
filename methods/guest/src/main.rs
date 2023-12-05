@@ -1,4 +1,4 @@
-#![no_main]
+// #![no_main]
 
 // If you want to try std support, also update the guest Cargo.toml file
 // #![no_std]  // std support is experimental
@@ -59,7 +59,7 @@ pub fn main() {
     let document=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
             &signature_value_xml,&order_data_xml,&public_key,&private_key);
 
-    println!(">>> cycle count {:?}", env::get_cycle_count());
+    // println!(">>> cycle count {}", env::get_cycle_count());
     env::log("proof done walter"); // writes to journal
     env::log(&document.stmts[0].balances[0].amt);
     env::commit(&document.stmts[0].balances[0].amt);
