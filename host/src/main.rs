@@ -28,6 +28,19 @@ risc0_zkvm::guest::entry!(main);
 fn main() {
     env_logger::init();
 
+    // Using crypto-bigint does not work with RsaPUblicKey
+
+    // let exp_bigint = BigInt::from_str_radix(&BANK_X002_EXP, 10)
+    // .expect("error parsing EXP of public bank key");
+    // let modu_bigint = BigInt::from_str_radix(&BANK_X002_MOD, 10)
+    // .expect("error parsing MODULUS of public bank key");
+
+    // let exp_hex = format!("{:x}", exp_bigint);
+    // let modu_hex = format!("{:x}", modu_bigint);
+
+    // .write(&exp_hex).unwrap()
+    // .write(&modu_hex).unwrap()
+
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
     println!("Starting gues code, load environment");
     let env = ExecutorEnv::builder()
@@ -35,32 +48,33 @@ fn main() {
         .write(&AUTHENTICATED_XML_C14N).unwrap()
         .write(&SIGNATURE_VALUE_XML).unwrap()
         .write(&ORDER_DATA_XML).unwrap()
-        .write(&BANK_X002_EXP).unwrap()
         .write(&BANK_X002_MOD).unwrap()
+        .write(&BANK_X002_EXP).unwrap()
         .write(&USER_PRIVATE_KEY_E002_PEM).unwrap()
         .build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
     println!("prove hyperfridge elf"); 
-    let _receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
-    println!("got the receipt of the prove");
+    let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    println!("got the receipt of the prove ");
     // println!("----- got result {} ",receipt_result);
 
-    //  match &receipt_result {
-    //     Ok(_val) => {
-    //         // println!("Receipt result: {}", val);_
+     match &receipt_result {
+        Ok(_val) => {
+            // println!("Receipt result: {}", val);_
             
-    //         let _receipt = receipt_result.unwrap();
-    //         let _journal=_receipt.journal;
-    //         // println!("Receipt result: {}", receipt);
-    //         //println!("Receipt result: {:?}", receipt.journal.decode().unwrap());
+            let receipt = receipt_result.unwrap();
+            let journal= receipt.journal;
+            println!("Receipt result - balance information {}", journal.decode::<String>().unwrap());
+            //println!("Receipt result: {:?}", receipt.journal.decode().unwrap());
 
-    //     },
-    //     Err(e) => {
-    //         println!("Receipt error: {:?}", e);
-    //         //None
-    //     },
+        },
+        Err(e) => {
+            println!("Receipt error: {:?}", e);
+            //None
+        },
+    }
     // 31709.14
 
 }

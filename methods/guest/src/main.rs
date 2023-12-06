@@ -16,6 +16,7 @@ use risc0_zkvm::{
 use rsa::{RsaPublicKey,RsaPrivateKey,Pkcs1v15Sign};
 use rsa::{traits::PublicKeyParts, Pkcs1v15Encrypt, pkcs8::DecodePrivateKey};
 use rsa::BigUint;
+
 use xmlparser::{Tokenizer,Token,ElementEnd};
 use sha2::{Sha256 as RsaSha256 };
 use base64::{Engine as _, engine::general_purpose};
@@ -44,14 +45,20 @@ pub fn main() {
     let authenticated_xml_c14n :String= env::read();
     let signature_value_xml:String  = env::read();
     let order_data_xml:String  = env::read();
-    let public_key_exp:String = env::read();
     let public_key_mod:String = env::read();
+    let public_key_exp:String = env::read();
     let private_key_pem:String = env::read();
 
     let exp:BigUint = BigUint::parse_bytes(public_key_exp.as_bytes(),10).expect("error parsing EXP of public bank key");//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
     let modu:BigUint = BigUint::parse_bytes(public_key_mod.as_bytes(),10).expect("error parsing MODULUS of public bank key");  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
+
+
+    // U256, use crypto_bigint::U256; does not work with RsaPublicKey
+    // let exp = U256::from_be_hex(&public_key_exp);
+    // let modu = U256::from_be_hex(&public_key_mod);
+
     let public_key = RsaPublicKey::new( modu,exp).expect("Failed to create public key");
-    let private_key = RsaPrivateKey::from_pkcs8_pem(&private_key_pem).unwrap();
+    let private_key = RsaPrivateKey::from_pkcs8_pem(&private_key_pem).expect("Failed to create private key form pem");
 
     // do the actual work
     let document=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
