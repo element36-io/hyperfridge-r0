@@ -15,6 +15,7 @@ num-bigint = "0.4"
 xmlparser = "0.*"
 rsa = "0.9"
 pkcs1 = "0.7.5"
+chrono = "0.4"
 
 [features]
 #cuda = ["risc0-zkvm/cuda"]
