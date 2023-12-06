@@ -44,22 +44,20 @@ pub fn main() {
     let authenticated_xml_c14n :String= env::read();
     let signature_value_xml:String  = env::read();
     let order_data_xml:String  = env::read();
-    let public_key_exp:Vec<u8> = env::read();
-    let public_key_mod:Vec<u8> = env::read();
-    let private_key_pem:Vec<u8> = env::read();
+    let public_key_exp:String = env::read();
+    let public_key_mod:String = env::read();
+    let private_key_pem:String = env::read();
 
+    let exp:BigUint = BigUint::parse_bytes(public_key_exp.as_bytes(),10).expect("error parsing EXP of public bank key");//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
+    let modu:BigUint = BigUint::parse_bytes(public_key_mod.as_bytes(),10).expect("error parsing MODULUS of public bank key");  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
+    let public_key = RsaPublicKey::new( modu,exp).expect("Failed to create public key");
+    let private_key = RsaPrivateKey::from_pkcs8_pem(&private_key_pem).unwrap();
 
-    let exp:BigUint = BigUint::parse_bytes(&public_key_exp, 10).unwrap();//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
-    let modu:BigUint = BigUint::parse_bytes(&public_key_mod, 10).unwrap();  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
-    let public_key = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
-
-    let pem_str = String::from_utf8(private_key_pem).expect("Invalid UTF-8");
-    let private_key = RsaPrivateKey::from_pkcs8_pem(&pem_str).unwrap();
-    
+    // do the actual work
     let document=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
             &signature_value_xml,&order_data_xml,&public_key,&private_key);
 
-    // println!(">>> cycle count {}", env::get_cycle_count());
+    println!(">>> cycle count {}k", (env::get_cycle_count())/1000);
     env::log("proof done walter"); // writes to journal
     env::log(&document.stmts[0].balances[0].amt);
     env::commit(&document.stmts[0].balances[0].amt);
@@ -70,17 +68,24 @@ fn load(authenticated_xml_c14n: &str,
     signature_value_xml: &str,
     order_data_xml :&str, public_key: &RsaPublicKey, private_key: &RsaPrivateKey,) -> Document {
 
+    // cycle count 1800k
     let request=parse_ebics_response(&authenticated_xml_c14n,
                     &signed_info_xml_c14n, 
                     &signature_value_xml,
                     &order_data_xml);
 
+    // cycle count 12502k: adds 10702k
     verify_bank_signature( &public_key, &request);
+    
+    // cycle count 98347k: adds 85845k
     let transaction_key=decrypt_transaction_key(&request,private_key);
 
+    // cycle count 100038k: adds 1691k
     let order_data=decrypt_order_data(&request, &transaction_key);
 
+    // cycle count 101274k : adds 1236
     parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap()) 
+    //Document::default()
 }
 
 
@@ -206,6 +211,7 @@ fn verify_bank_signature(
     public_key: &RsaPublicKey, 
     request: &Request, 
 )  {
+    println!(" verify the bank signature");
     // Decode the signature
     //let digest_value_bytes=base64_to_bytes(&request.digest_value_b64);
     let signature_value_bytes = base64_to_bytes(&request.signature_value_b64);
@@ -218,25 +224,22 @@ fn verify_bank_signature(
     //    This implies the PKCS#1 v1.5 padding algorithm [RFC3447] as described
     //    in section 2.3.1 but with the ASN.1 BER SHA-256 algorithm designator
     //    prefix. 
-
     
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
     // println!(" schema {}",&scheme);
-    // let verifying_key = VerifyingKey::<RsaSha256>::new(public_key.clone());
-    println!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
-    println!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed)); 
-    println!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
-
+    // println!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
+    // println!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed)); 
+    // println!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
     
     // Verify the signature
     let res=  public_key.verify( scheme ,// verifying_key.verify(//public_key.verify( scheme ,
         &request.signed_info_hashed,
         &signature_value_bytes
     );
-    println!(" res ---->  {:?}",&res);
+    // println!(" res ---->  {:?}",&res);
     match res {
-        Ok(_) => println!("OK"),
-        Err(e) => {eprintln!(" ---> error {:?}",e);panic!("not validated")}
+        Ok(_) => println!("  bank Signature is verified"),
+        Err(e) => {eprintln!(" ---> error {:?}",e);panic!("  bank Signature could not be verified")}
       };
 }
 
@@ -349,7 +352,7 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
 fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey) -> Vec<u8> {
     // remove pemm feature, initialize with numbers - less code, more efficent?
     let transaction_key_bin=base64_to_bytes(&request.transaction_key_b64);
-
+    println!(" start decrypt transaction key with Pkcs1v15 Rsa");
     // Decrypt with PKCS1 padding
     let decrypted_data = private_key.decrypt(
         Pkcs1v15Encrypt,
@@ -358,11 +361,11 @@ fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey) -> Ve
 
     match decrypted_data {
         Ok(res) => {
-            println!("... ok   yeah done  ");
+            println!("  transaction key to decrypt payload could be decrypted");
             res
         },
         Err(e) => {
-            println!(" error txkey decrypt ");
+            println!(" transaction key to decrypt payload could __NOT__ be decrypted");
                         println!("{}",e);
             Vec::new() 
         }
@@ -375,6 +378,7 @@ use std::{io::{Read, Cursor}};
 use zip::ZipArchive;
 
 fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<u8>> {
+    println!(" decrypting payload with transaction key");
     let order_data_bin = base64_to_bytes(&request.order_data_b64);
     // implement following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
@@ -451,6 +455,7 @@ struct Balance {
 
 /// get information from ISO20022 camt53 which hold bank data
 fn parse_camt53(camt53_file: &str)  -> Document {
+    println!(" parsing payload to extract data to commit");
     let mut tag_stack: Vec<String> = Vec::new();
     let mut current_balance=Balance::default();
     let mut grp_header=GrpHdr::default();
@@ -465,13 +470,13 @@ fn parse_camt53(camt53_file: &str)  -> Document {
             Ok(Token::ElementStart { local, .. }) => {
                 current_tag=local.to_string();
                 tag_stack.push(local.to_string());
-                println!("   open tag  as_str {:?} ", local.as_str());
+                // println!("   open tag  as_str {:?} ", local.as_str());
             },
             Ok(Token::ElementEnd {end,..}) => {
                 match end {
                     ElementEnd::Close(.., local) => {
-                        if let Some(tag) = tag_stack.pop() {
-                            println!("End Tag: {}", tag);
+                        if let Some(_tag) = tag_stack.pop() {
+                            // println!("End Tag: {}", _tag);
                         };
                         if local=="Bal" {
                             current_stmt.balances.push(current_balance);
@@ -487,8 +492,8 @@ fn parse_camt53(camt53_file: &str)  -> Document {
                 }
             },            
             Ok(Token::Text { text })  => {
-                if let Some(current_tag) = tag_stack.last() {
-                    println!("Text for {}: {}", current_tag, text);
+                if let Some(_current_tag) = tag_stack.last() {
+                    //println!("Text for {}: {}", _current_tag, text);
                 };
 
                 
