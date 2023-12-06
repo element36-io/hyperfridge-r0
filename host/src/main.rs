@@ -29,7 +29,7 @@ fn main() {
     env_logger::init();
 
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
-    println!("----- load environment");
+    println!("Starting gues code, load environment");
     let env = ExecutorEnv::builder()
         .write(&SIGNED_INFO_XML_C14N).unwrap()
         .write(&AUTHENTICATED_XML_C14N).unwrap()
@@ -42,9 +42,9 @@ fn main() {
 
     // Obtain the default prover.
     let prover = default_prover();
-
+    println!("prove hyperfridge elf"); 
     let _receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
-    println!("----- got result");
+    println!("got the receipt of the prove");
     // println!("----- got result {} ",receipt_result);
 
     //  match &receipt_result {
