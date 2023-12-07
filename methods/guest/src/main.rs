@@ -13,6 +13,7 @@ use risc0_zkvm::{
     guest::env,
     sha::{Impl, Sha256},
 };
+
 use rsa::{RsaPublicKey,RsaPrivateKey,Pkcs1v15Sign};
 use rsa::{traits::PublicKeyParts, Pkcs1v15Encrypt, pkcs8::DecodePrivateKey};
 use rsa::BigUint;
@@ -41,6 +42,8 @@ struct EbicsRequestData {
 
 
 pub fn main() {
+
+
     let signed_info_xml_c14n:String = env::read();
     let authenticated_xml_c14n :String= env::read();
     let signature_value_xml:String  = env::read();
