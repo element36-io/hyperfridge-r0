@@ -9,20 +9,29 @@
 # [provider_sect]
 # default = default_sect
 # legacy = legacy_sect
-# [legacy_sect]
-# activate = 1
 # [default_sect]
 # activate = 1
+# [legacy_sect]
+# activate = 1
+
 
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default."
-    exit 1
+    xml_file="er3.xml-orig"
 fi
 
 if [ -z "${pem_file}" ]; then
     echo "pem_file variable for bank public key X002 is not set. Set to default."
-    exit 1
+    pem_file="HBLEBICS-prod-2023.cer-x002.pem"
 fi
+
+if [ -z "${private_pem_file}" ]; then
+    echo "pem_file variable for bank public key X002 is not set. Set to default."
+    private_pem_file="../secrets/e002_private_key.pem"
+fi
+
+decrypted_file="orderdata_decrypted.zip"
+
 set -e
 
 # Generate timestamp
@@ -84,7 +93,7 @@ export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
 perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "${xml_file}-SignedInfo"
 signedinfo_digest_file="/tmp/signedinfo_digest_$timestamp.bin"
 openssl dgst -sha256 -binary  "${xml_file}-SignedInfo" > "$signedinfo_digest_file"
-
+echo "created digest for SignedInfo from XML, now checking Signature"
 
 perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $xml_file-SignatureValue
 # Create file names with timestamp
@@ -93,6 +102,7 @@ awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:Sig
 signature_file="/tmp/signature_$timestamp.bin"
 cat ${xml_file}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
 
+echo "check signature with public key from bank"
 # needs X002 from bank
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"  -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
@@ -111,7 +121,7 @@ txkey_file="/tmp/${timestamp}_encrypted_transaction_key.bin"
 cat "${xml_file}-TransactionKey" | base64 --decode > ${txkey_file}
 
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
-openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
+openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey $private_pem_file -pkeyopt rsa_padding_mode:pkcs1
 
 # openssl pkeyutl -decrypt -in ${trimmed_txkey_file} -out pdek.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
 # transaction_key.bin="/tmp/${timestamp}_transaction_key.bin"
@@ -137,7 +147,7 @@ fi
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # but openssl does not handle ISO10126Padding, so use -nopad and do the padding manually
 
-decrypted_file="orderdata_decrypted.zip"
+
 cat  "${xml_file}-OrderData-value" | tr -d '\n' | base64 --decode > orderdata_decoded.bin 
 
 openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
