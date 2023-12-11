@@ -288,13 +288,13 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     for token in tokens {
         match token {
             Ok(Token::ElementStart { local, .. }) => {
-                // println!("   open tag  as_str {:?}", local.as_str());
+                println!("   open tag  as_str {:?}", local.as_str());
                 curr_tag=local.as_str();
             },
             Ok(Token::ElementEnd {end,..}) => {
                 match end {
                     ElementEnd::Close(.., _local) => {
-                        // println!("   close tag  as_str {:?}", _local.as_str());
+                        println!("   close tag  as_str {:?}", _local.as_str());
                         // handling Close variant
                         curr_tag = "";
                 

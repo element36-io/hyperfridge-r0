@@ -30,9 +30,9 @@ const ORDER_DATA_XML: &str = include_resource!("OrderData");
 
 #[test]
 fn test_print_imports( ) {
-  println!("{}",SIGNED_INFO_XML_C14N);
-  println!("{}",AUTHENTICATED_XML_C14N);
-  println!("{}",SIGNATURE_VALUE_XML);
+  println!(" => {}",SIGNED_INFO_XML_C14N);
+  println!(" => {}",AUTHENTICATED_XML_C14N);
+  println!(" => {}",SIGNATURE_VALUE_XML);
 }
 
 #[test]
