@@ -45,14 +45,24 @@ fi
 
 
 # generate bank and use keys RSA
-openssl genpkey -algorithm RSA -out bank.pem -pkeyopt rsa_keygen_bits:2048
-openssl genpkey -algorithm RSA -out client.pem -pkeyopt rsa_keygen_bits:2048
+if [ -z "bank.pem" ]; then
+    openssl genpkey -algorithm RSA -out bank.pem -pkeyopt rsa_keygen_bits:2048
+    echo "new bank keys generated"
+fi
+if [ -z "client.pem" ]; then
+    openssl genpkey -algorithm RSA -out client.pem -pkeyopt rsa_keygen_bits:2048
+    echo "new client generated"
+fi
+if [ -z "transaction_key.bin" ]; then
 # 1. Generate a new 128-bit AES key in hexadecimal format
-transaction_key_hex=$(openssl rand -hex 16)
-echo "Generated transaction key (hex): $transaction_key_hex"
-echo "new keys generated"
+    transaction_key_hex_temp=$(openssl rand -hex 16)
+    echo "Generated transaction key (hex): $transaction_key_hex_temp"
+        # Convert the hex string to a binary file
+    echo "$transaction_key_hex_temp" | xxd -r -p > transaction_key.bin
+    echo "new transaction keys generated"
+fi
 
-
+transaction_key_hex=$(xxd -p -c 256 transaction_key.bin | tr -d '\n')
 
 # Encrypt the ZIP file
 # Replace 'your_zip_file.zip' with the path to your ZIP file
@@ -71,8 +81,6 @@ perl -pi -e "s|<OrderData>.*?</OrderData>|<OrderData>$base64_encrypted</OrderDat
 # As  next step, encrypt the binary transaction key (bin file) with  public key of client.pem, then base64 it. 
 # openssl defaults to PKCS#1, Ebics page 265, process for asymmetrical encryption of the transaction key
 
-# Convert the hex string to a binary file
-echo "$transaction_key_hex" | xxd -r -p > transaction_key.bin
 # extract public cert form client.pem
 openssl rsa -in client.pem -pubout -out client_public.pem
 # Encrypt the transaction key with the public key
