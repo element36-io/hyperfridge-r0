@@ -132,7 +132,6 @@ signature_output_file="signature-output-file.bin"
 # Create a signature
 openssl pkeyutl -sign -inkey "bank.pem" -in "$signedinfo_digest_file" -out "$signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
 
-set -x
 
 # Convert the signature to Base64
 base64_signature=$(base64 -w 0 "$signature_output_file")
@@ -142,6 +141,6 @@ perl -pi -e "s|<ds:SignatureValue>.*?</ds:SignatureValue>|<ds:SignatureValue>$ba
 
 echo "Signature inserted into the XML file."
 
+# archive new file to new name; call checkResponse with new name
 cp  "$created_file" "er3-created.xml"
-
 xml_file="er3-created.xml" pem_file="bank_public.pem"  private_pem_file="client.pem" ./checkResponse.sh

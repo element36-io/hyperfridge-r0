@@ -33,7 +33,6 @@ fi
 decrypted_file="orderdata_decrypted.zip"
 
 set -e
-set -x
 
 # Generate timestamp
 timestamp=$(date +%Y%m%d%H%M%S)
@@ -116,7 +115,7 @@ echo "hash of signature bin file:" $(openssl dgst -r -sha256 "$signature_file")
 # Base64 decoding, Decrypting, Decompressing, Verifying the signature
 awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "${xml_file}-TransactionKey"
 awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "${xml_file}-OrderData-value"
-perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/'  er3.xml > "${xml_file}-OrderData"
+perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "${xml_file}-OrderData"
 
 
 txkey_file="/tmp/${timestamp}_encrypted_transaction_key.bin"
