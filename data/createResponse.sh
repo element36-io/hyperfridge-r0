@@ -1,7 +1,7 @@
 
 #!/bin/bash
 set -e
-set -x
+#set -x
 
 # deb packages needed: 	libxml2-utils (xmllint), perl, openssl, openssl-dev, qpdf (zlib-flate)
 #
@@ -29,7 +29,7 @@ fi
 
 created_file="$xml_file-created"
 cp "$xml_file" "$created_file"
-
+echo "============================"
 echo "response template xml_file: ${xml_file} - created xml file $created_file" 
 
 fileAuthenticated="${xml_file}-authenticated"
@@ -43,16 +43,18 @@ if [ ! -f "$fileAuthenticated" ] || [ ! -f "$fileOrderData" ] || [ ! -f "$fileSi
     echo "One or more files are missing."
     exit 1
 fi
-
-
-
+       
 # generate bank and use keys RSA
 if [ -z "bank.pem" ]; then
     openssl genpkey -algorithm RSA -out bank.pem -pkeyopt rsa_keygen_bits:2048
+    # extract public cert form bank.pem
+    openssl rsa -in bank.pem -pubout -out bank_public.pem    
     echo "new bank keys generated"
 fi
 if [ -z "client.pem" ]; then
     openssl genpkey -algorithm RSA -out client.pem -pkeyopt rsa_keygen_bits:2048
+    # extract public cert form client.pem
+    openssl rsa -in client.pem -pubout -out client_public.pem
     echo "new client generated"
 fi
 if [ -z "transaction_key.bin" ]; then
@@ -87,8 +89,7 @@ perl -pi -e "s|<OrderData>.*?</OrderData>|<OrderData>$base64_encrypted</OrderDat
 # As  next step, encrypt the binary transaction key (bin file) with  public key of client.pem, then base64 it. 
 # openssl defaults to PKCS#1, Ebics page 265, process for asymmetrical encryption of the transaction key
 
-# extract public cert form client.pem
-openssl rsa -in client.pem -pubout -out client_public.pem
+
 # Encrypt the transaction key with the public key
 openssl rsautl -encrypt -pubin -inkey client_public.pem -in transaction_key.bin -out encrypted_transaction_key.bin
 # Convert the encrypted key to Base64
@@ -109,6 +110,9 @@ perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "
 echo "size of authenticate file:" $(stat --format="%s" "$header_file")
 calculated_digest_hex=$( openssl dgst -sha256 -r $header_file | cut -d ' ' -f 1 )
 echo calculated digest headertag hex: $calculated_digest_hex
+# hex --> binary --> to base64;
+digest_value=$(echo "$calculated_digest_hex" | xxd -r -p | openssl enc -a -A)
+
 # Put the digest into the document
 perl -pi -e "s|<ds:DigestValue>.*?</ds:DigestValue>|<ds:DigestValue>$digest_value</ds:DigestValue>|s" "$created_file"
 
@@ -124,10 +128,11 @@ signedinfo_digest_file="/tmp/signedinfo_digest_$timestamp.bin"
 openssl dgst -sha256 -binary  "${created_file}-SignedInfo" > "$signedinfo_digest_file"
 echo "created digest for SignedInfo from XML, now creating Signature"
 
-
 signature_output_file="signature-output-file.bin"
 # Create a signature
 openssl pkeyutl -sign -inkey "bank.pem" -in "$signedinfo_digest_file" -out "$signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
+
+set -x
 
 # Convert the signature to Base64
 base64_signature=$(base64 -w 0 "$signature_output_file")
@@ -136,3 +141,7 @@ base64_signature=$(base64 -w 0 "$signature_output_file")
 perl -pi -e "s|<ds:SignatureValue>.*?</ds:SignatureValue>|<ds:SignatureValue>$base64_signature</ds:SignatureValue>|s" "$created_file"
 
 echo "Signature inserted into the XML file."
+
+cp  "$created_file" "er3-created.xml"
+
+xml_file="er3-created.xml" pem_file="bank_public.pem"  private_pem_file="client.pem" ./checkResponse.sh

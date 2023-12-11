@@ -33,6 +33,7 @@ fi
 decrypted_file="orderdata_decrypted.zip"
 
 set -e
+set -x
 
 # Generate timestamp
 timestamp=$(date +%Y%m%d%H%M%S)
@@ -46,9 +47,10 @@ echo xml_file: $xml_file pem_file: $pem_file
 
 # extract the digest value from the XML and compare it which the digest of the content marked with a authenticate="true"
 # which is in the case of ebics <header authenticate="true">
+# digest is base64 string in DigestValue. 
 expected_digest=$(awk '/<ds:DigestValue>/,/<\/ds:DigestValue>/' "$xml_file" | sed 's/.*<ds:DigestValue>//' | sed 's/<\/ds:DigestValue>.*$//' | tr -d '\n')
-echo "$expected_digest" > digest_base64.txt
 echo "$expected_digest" > $xml_file-DigestInfo-value
+# Base64 --> binary --> hex
 expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c256)
 
 # According to standard, we need to inherit all upper namespaces form the sourrounding xml document if we c14n a snippet
@@ -102,7 +104,7 @@ awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:Sig
 signature_file="/tmp/signature_$timestamp.bin"
 cat ${xml_file}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
 
-echo "check signature with public key from bank"
+echo "check signature with public key from bank $pem_file"
 # needs X002 from bank
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"  -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
