@@ -63,6 +63,7 @@ if [ -z "transaction_key.bin" ]; then
 fi
 
 transaction_key_hex=$(xxd -p -c 256 transaction_key.bin | tr -d '\n')
+echo "transaction key hex: $transaction_key_hex"
 
 # Encrypt the ZIP file
 # Replace 'your_zip_file.zip' with the path to your ZIP file
@@ -72,6 +73,10 @@ encrypted_file="orderdata_encrypted.bin"
 # Encrypting the ZIP file
 openssl enc -e -aes-128-cbc -nopad -in "$decrypted_file" -out "$encrypted_file" -K "$transaction_key_hex" -iv 00000000000000000000000000000000
 echo "Encrypted file: $encrypted_file   - convert to base64 nd put it as value into the OrderData Tag "
+echo "Sha256 eynrypted_file: $(sha256sum $encrypted_file)"
+echo "Sha256 decrypted_file: $(sha256sum $decrypted_file)"
+
+
 
 base64_encrypted=$(base64 -w 0 "$encrypted_file")
 # Use Perl to replace the content inside the OrderData tag
