@@ -1,5 +1,6 @@
 
 #!/bin/bash
+set -e
 
 # deb packages needed: 	libxml2-utils (xmllint), perl, openssl, openssl-dev, qpdf (zlib-flate)
 #
@@ -15,20 +16,20 @@
 # [default_sect]
 # activate = 1
 
+
+# Generate timestamp
+timestamp=$(date +%Y%m%d%H%M%S)
+
 xml_file="er3.xml-orig"
-set -e
-created_file="$xml_file-created"
-
-cp "$xml_file" "$created_file"
-
-
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default. ${xml_file}"
     #exit 1
 fi
 
+created_file="$xml_file-created"
+cp "$xml_file" "$created_file"
 
-echo "response xml_file: ${xml_file}"
+echo "response template xml_file: ${xml_file} - created xml file $created_file" 
 
 fileAuthenticated="${xml_file}-authenticated"
 fileOrderData="${xml_file}-OrderData"
@@ -73,9 +74,8 @@ encrypted_file="orderdata_encrypted.bin"
 # Encrypting the ZIP file
 openssl enc -e -aes-128-cbc -nopad -in "$decrypted_file" -out "$encrypted_file" -K "$transaction_key_hex" -iv 00000000000000000000000000000000
 echo "Encrypted file: $encrypted_file   - convert to base64 nd put it as value into the OrderData Tag "
-echo "Sha256 eynrypted_file: $(sha256sum $encrypted_file)"
-echo "Sha256 decrypted_file: $(sha256sum $decrypted_file)"
-
+# echo "Sha256 eynrypted_file: $(sha256sum $encrypted_file)"
+# echo "Sha256 decrypted_file: $(sha256sum $decrypted_file)"
 
 
 base64_encrypted=$(base64 -w 0 "$encrypted_file")
@@ -106,3 +106,19 @@ perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$created_file" | xm
 perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$created_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
 
 echo "size of authenticate file:" $(stat --format="%s" "$header_file")
+calculated_digest_hex=$( openssl dgst -sha256 -r $header_file | cut -d ' ' -f 1 )
+echo calculated digest headertag hex: $calculated_digest_hex
+# Put the digest into the document
+perl -pi -e "s|<ds:DigestValue>.*?</ds:DigestValue>|<ds:DigestValue>$digest_value</ds:DigestValue>|s" "$created_file"
+
+
+# Now we need to produce the "SingedInfo" Text and sign the tings which are wrapped by the  <ds:SignedInfo> tag
+# first extract SignedInfo Tag and do C14N
+
+export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
+# need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
+export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
+perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$created_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "${created_file}-SignedInfo"
+signedinfo_digest_file="/tmp/signedinfo_digest_$timestamp.bin"
+openssl dgst -sha256 -binary  "${created_file}-SignedInfo" > "$signedinfo_digest_file"
+echo "created digest for SignedInfo from XML, now creating Signature"
