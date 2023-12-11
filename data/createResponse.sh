@@ -1,6 +1,7 @@
 
 #!/bin/bash
 set -e
+set -x
 
 # deb packages needed: 	libxml2-utils (xmllint), perl, openssl, openssl-dev, qpdf (zlib-flate)
 #
@@ -122,3 +123,16 @@ perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$created_file" | s
 signedinfo_digest_file="/tmp/signedinfo_digest_$timestamp.bin"
 openssl dgst -sha256 -binary  "${created_file}-SignedInfo" > "$signedinfo_digest_file"
 echo "created digest for SignedInfo from XML, now creating Signature"
+
+
+signature_output_file="signature-output-file.bin"
+# Create a signature
+openssl pkeyutl -sign -inkey "bank.pem" -in "$signedinfo_digest_file" -out "$signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
+
+# Convert the signature to Base64
+base64_signature=$(base64 -w 0 "$signature_output_file")
+
+# Replace the <ds:SignatureValue> content in the XML file
+perl -pi -e "s|<ds:SignatureValue>.*?</ds:SignatureValue>|<ds:SignatureValue>$base64_signature</ds:SignatureValue>|s" "$created_file"
+
+echo "Signature inserted into the XML file."
