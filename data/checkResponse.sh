@@ -1,5 +1,5 @@
 #!/bin/bash
-
+echo ---------------------------------------------
 # deb packages needed: 	libxml2-utils (xmllint), perl, openssl, openssl-dev, qpdf (zlib-flate)
 #
 # The Script needs legacy support for openssl to handle banking protocols. 
@@ -9,37 +9,54 @@
 # [provider_sect]
 # default = default_sect
 # legacy = legacy_sect
-# [legacy_sect]
-# activate = 1
 # [default_sect]
 # activate = 1
+# [legacy_sect]
+# activate = 1
+
+set -e
 
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default."
-    exit 1
+    xml_file="productive_example.xml"
+fi
+dir_name="${xml_file%.xml}"
+
+if [ ! -d "$dir_name" ]; then
+    mkdir "$dir_name"
 fi
 
 if [ -z "${pem_file}" ]; then
     echo "pem_file variable for bank public key X002 is not set. Set to default."
-    exit 1
+    pem_file="productive_bank_x002.pem"
 fi
-set -e
+
+if [ -z "${private_pem_file}" ]; then
+    echo "pem_file variable for bank public key X002 is not set. Set to default."
+    private_pem_file="../secrets/e002_private_key.pem"
+fi
+
+decrypted_file="$dir_name/orderdata_decrypted.zip"
+
+openssl rsa -in $private_pem_file -check -noout
+openssl rsa -pubin -in $pem_file -text -noout > ./tmp/${pem_file}.txt
 
 # Generate timestamp
 timestamp=$(date +%Y%m%d%H%M%S)
 
 # Assign parameters to variables
-header_file=$xml_file-authenticated
-signedinfo_file=$xml_file-c14n-signedinfo
-echo ---------------------------------------------
-echo xml_file: $xml_file pem_file: $pem_file
+header_file=$dir_name/$xml_file-authenticated
+signedinfo_file=$dir_name/$xml_file-c14n-signedinfo
+
+echo xml_file: $xml_file public key bank: $pem_file  private key client: $private_pem_file 
 
 
 # extract the digest value from the XML and compare it which the digest of the content marked with a authenticate="true"
 # which is in the case of ebics <header authenticate="true">
+# digest is base64 string in DigestValue. 
 expected_digest=$(awk '/<ds:DigestValue>/,/<\/ds:DigestValue>/' "$xml_file" | sed 's/.*<ds:DigestValue>//' | sed 's/<\/ds:DigestValue>.*$//' | tr -d '\n')
-echo "$expected_digest" > digest_base64.txt
-echo "$expected_digest" > $xml_file-DigestInfo-value
+echo "$expected_digest" > $dir_name/$xml_file-DigestInfo-value
+# Base64 --> binary --> hex
 expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c256)
 
 # According to standard, we need to inherit all upper namespaces form the sourrounding xml document if we c14n a snippet
@@ -81,44 +98,49 @@ fi
 export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
 # need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
 export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
-perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "${xml_file}-SignedInfo"
-signedinfo_digest_file="/tmp/signedinfo_digest_$timestamp.bin"
-openssl dgst -sha256 -binary  "${xml_file}-SignedInfo" > "$signedinfo_digest_file"
+perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "$dir_name/${xml_file}-SignedInfo"
+signedinfo_digest_file="./tmp/signedinfo_digest_$timestamp.bin"
+openssl dgst -sha256 -binary  "$dir_name/${xml_file}-SignedInfo" > "$signedinfo_digest_file"
+echo "created digest for SignedInfo from XML, now checking Signature"
 
-
-perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $xml_file-SignatureValue
+perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $dir_name/$xml_file-SignatureValue
 # Create file names with timestamp
-awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' | tr -d '\n' > "${xml_file}-SignatureValue-value"
+awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' | tr -d '\n' > "$dir_name/${xml_file}-SignatureValue-value"
 #echo signature value from xml as base64: $signature_base64
-signature_file="/tmp/signature_$timestamp.bin"
-cat ${xml_file}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
+signature_file="./tmp/signature_$timestamp.bin"
+cat $dir_name/${xml_file}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
 
+echo "check signature with public key from bank $pem_file"
 # needs X002 from bank
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"  -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
-echo "size of digest and signature bin files:" $(stat --format="%s" "$signedinfo_digest_file") $(stat --format="%s" "$signature_file")
+echo "check typical key sizes for integritiy - size of digest and signature bin files:" $(stat --format="%s" "$signedinfo_digest_file") $(stat --format="%s" "$signature_file")
+[ $(stat --format=%s "$signedinfo_digest_file") -eq 32 ] || { echo "Wrong filesize of signedinfo_digest_file "; exit 1; }
+[ $(stat --format=%s "$signature_file") -eq 256 ] || { echo "Wrong filesize of signature_file "; exit 1; }
+
 echo "hash of digest bin file:" $(openssl dgst -sha256 -r "$signedinfo_digest_file")
 echo "hash of signature bin file:" $(openssl dgst -r -sha256 "$signature_file")
 
 # decript and unzip base64 data
 # Base64 decoding, Decrypting, Decompressing, Verifying the signature
-awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "${xml_file}-TransactionKey"
-awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "${xml_file}-OrderData-value"
-perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/'  er3.xml > "${xml_file}-OrderData"
+awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "$dir_name/${xml_file}-TransactionKey"
+awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "$dir_name/${xml_file}-OrderData-value"
+perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "$dir_name/${xml_file}-OrderData"
 
+# the transaction key is ecrypted with the clients public key - so first we have to decrypt the 
+# tx key before we can use it for decrypting the payload. 
+encrypted_txkey_file_bin="./tmp/${timestamp}_encrypted_transaction_key.bin"
+cat "$dir_name/${xml_file}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
 
-txkey_file="/tmp/${timestamp}_encrypted_transaction_key.bin"
-cat "${xml_file}-TransactionKey" | base64 --decode > ${txkey_file}
-
+decrypted_txkey_file_bin="./tmp/${timestamp}_transaction_key.bin"
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
-openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
-
-# openssl pkeyutl -decrypt -in ${trimmed_txkey_file} -out pdek.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
-# transaction_key.bin="/tmp/${timestamp}_transaction_key.bin"
-# tail -c 16 pdek.bin > ${transaction_key.bin}
+[ $(stat --format=%s "$encrypted_txkey_file_bin") -eq 256 ] || { echo "Wrong filesize of encrypted tx key"; exit 1; }
+openssl pkeyutl -decrypt -in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}" -inkey $private_pem_file -pkeyopt rsa_padding_mode:pkcs1 
+# echo "size tx key (should be 16) $(stat -c %s "$decrypted_txkey_file_bin") "
+[ $(stat --format=%s "$decrypted_txkey_file_bin") -eq 16 ] || { echo "Wrong filesize of decrypted tx key"; exit 1; }
 
 # AES-128 bit key in hex
-transaction_key_hex=$(xxd -p -c256 transaction_key.bin | tr -d '\n')
+transaction_key_hex=$(xxd -p -c256 $decrypted_txkey_file_bin  | tr -d '\n')
 echo "transaction_key_hex: $transaction_key_hex"
 key_length=${#transaction_key_hex}
 # For AES-128, the key should be 32 hex characters
@@ -137,12 +159,12 @@ fi
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # but openssl does not handle ISO10126Padding, so use -nopad and do the padding manually
 
-decrypted_file="orderdata_decrypted.zip"
-cat  "${xml_file}-OrderData-value" | tr -d '\n' | base64 --decode > orderdata_decoded.bin 
+orderdata_bin_file="./tmp/${timestamp}_orderdata_decoded.bin"
+cat  "$dir_name/${xml_file}-OrderData-value" | tr -d '\n' | base64 --decode > $orderdata_bin_file 
 
-openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
+openssl enc -d -aes-128-cbc -nopad -in $orderdata_bin_file -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -pass file:transaction_key.bin -iv 00000000000000000000000000000000
-echo "size $(stat -c %s "orderdata_decoded.bin") and hash of orderdata bin file:" $(openssl dgst -sha256 -r "orderdata_decoded.bin")
+echo "size $(stat -c %s "$orderdata_bin_file") and hash of orderdata bin file:" $(openssl dgst -sha256 -r "$orderdata_bin_file")
 echo "size $(stat -c %s "$decrypted_file") and hash of decrypted bin file:" $(openssl dgst -sha256 -r "$decrypted_file")
 
 
@@ -154,7 +176,7 @@ if [ ! -f "$decrypted_file" ]; then
 fi
 
 # the result is a compressed binary using standard RFC 1951 which is just (de)compressing a stream
-zlib-flate -uncompress  < $decrypted_file > $xml_file.zip
-echo "size $(stat -c %s "$xml_file.zip") hash of zip file:" $(openssl dgst -sha256 -r "$xml_file.zip")
+zlib-flate -uncompress  < $decrypted_file > $dir_name/$xml_file.zip
+echo "size $(stat -c %s "$dir_name/$xml_file.zip") hash of zip file:" $(openssl dgst -sha256 -r "$dir_name/$xml_file.zip")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
-unzip $xml_file.zip -o -d ./camt53
+unzip -o $dir_name/$xml_file.zip -d  ./$dir_name/camt53/
