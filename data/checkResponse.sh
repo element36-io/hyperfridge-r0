@@ -1,5 +1,5 @@
 #!/bin/bash
-
+echo ---------------------------------------------
 # deb packages needed: 	libxml2-utils (xmllint), perl, openssl, openssl-dev, qpdf (zlib-flate)
 #
 # The Script needs legacy support for openssl to handle banking protocols. 
@@ -38,7 +38,8 @@ fi
 
 decrypted_file="$dir_name/orderdata_decrypted.zip"
 
-set -e
+openssl rsa -in $private_pem_file -check -noout
+openssl rsa -pubin -in $pem_file -text -noout > /dev/null
 
 # Generate timestamp
 timestamp=$(date +%Y%m%d%H%M%S)
@@ -46,8 +47,8 @@ timestamp=$(date +%Y%m%d%H%M%S)
 # Assign parameters to variables
 header_file=$dir_name/$xml_file-authenticated
 signedinfo_file=$dir_name/$xml_file-c14n-signedinfo
-echo ---------------------------------------------
-echo xml_file: $xml_file pem_file: $pem_file
+
+echo xml_file: $xml_file public key bank: $pem_file  private key client: $private_pem_file 
 
 
 # extract the digest value from the XML and compare it which the digest of the content marked with a authenticate="true"
@@ -113,7 +114,10 @@ echo "check signature with public key from bank $pem_file"
 # needs X002 from bank
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
 openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"  -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
-echo "size of digest and signature bin files:" $(stat --format="%s" "$signedinfo_digest_file") $(stat --format="%s" "$signature_file")
+echo "check typical key sizes for integritiy - size of digest and signature bin files:" $(stat --format="%s" "$signedinfo_digest_file") $(stat --format="%s" "$signature_file")
+[ $(stat --format=%s "$signedinfo_digest_file") -eq 32 ] || { echo "Wrong filesize of signedinfo_digest_file "; exit 1; }
+[ $(stat --format=%s "$signature_file") -eq 256 ] || { echo "Wrong filesize of signature_file "; exit 1; }
+
 echo "hash of digest bin file:" $(openssl dgst -sha256 -r "$signedinfo_digest_file")
 echo "hash of signature bin file:" $(openssl dgst -r -sha256 "$signature_file")
 
@@ -123,21 +127,20 @@ awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionK
 awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "$dir_name/${xml_file}-OrderData-value"
 perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "$dir_name/${xml_file}-OrderData"
 
+# the transaction key is ecrypted with the clients public key - so first we have to decrypt the 
+# tx key before we can use it for decrypting the payload. 
+encrypted_txkey_file_bin="/tmp/${timestamp}_encrypted_transaction_key.bin"
+cat "$dir_name/${xml_file}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
 
-txkey_file="/tmp/${timestamp}_encrypted_transaction_key.bin"
-cat "$dir_name/${xml_file}-TransactionKey" | base64 --decode > ${txkey_file}
-
+decrypted_txkey_file_bin="/tmp/${timestamp}_transaction_key.bin"
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
-txkey_file_bin="/tmp/${timestamp}_transaction_key.bin"
-openssl pkeyutl -decrypt -in ${txkey_file} -out $txkey_file_bin -inkey $private_pem_file -pkeyopt rsa_padding_mode:pkcs1
-
-# openssl pkeyutl -decrypt -in ${trimmed_txkey_file} -out pdek.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
-# transaction_key.bin="/tmp/${timestamp}_transaction_key.bin"
-# tail -c 16 pdek.bin > ${transaction_key.bin}
-
+[ $(stat --format=%s "$encrypted_txkey_file_bin") -eq 256 ] || { echo "Wrong filesize of encrypted tx key"; exit 1; }
+openssl pkeyutl -decrypt -in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}" -inkey $private_pem_file -pkeyopt rsa_padding_mode:pkcs1 
+# echo "size tx key (should be 16) $(stat -c %s "$decrypted_txkey_file_bin") "
+[ $(stat --format=%s "$decrypted_txkey_file_bin") -eq 16 ] || { echo "Wrong filesize of decrypted tx key"; exit 1; }
 
 # AES-128 bit key in hex
-transaction_key_hex=$(xxd -p -c256 $txkey_file_bin  | tr -d '\n')
+transaction_key_hex=$(xxd -p -c256 $decrypted_txkey_file_bin  | tr -d '\n')
 echo "transaction_key_hex: $transaction_key_hex"
 key_length=${#transaction_key_hex}
 # For AES-128, the key should be 32 hex characters
@@ -176,5 +179,4 @@ fi
 zlib-flate -uncompress  < $decrypted_file > $dir_name/$xml_file.zip
 echo "size $(stat -c %s "$dir_name/$xml_file.zip") hash of zip file:" $(openssl dgst -sha256 -r "$dir_name/$xml_file.zip")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
-set -x
-unzip $dir_name/$xml_file.zip -d ./$dir_name/camt53/
+unzip -o $dir_name/$xml_file.zip -d  ./$dir_name/camt53/
