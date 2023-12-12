@@ -1,11 +1,25 @@
+# How to run with test data
+
+```bash
+cd host
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  -- 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- 
+```
+
+Run tests for verifier - need to enable main function with feature flag:
+
+```bash
+cd methods/guest
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode
+```
+
+# Unstructured notes
 
 error: linking with `cc` failed: exit status: 1 
 apt install gcc-multilib
 sudo apt-get install gcc-riscv64-linux-gnu
 
 w@w-l5:~/workspace/hyperfridge-r0/host$ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run
-
-
 
 rm /home/w/workspace/risc0/examples/target/debug/.cargo-lock
 
@@ -25,6 +39,8 @@ export BONSAI_API_URL="https://api.bonsai.xyz/"
 
 RISC0_DEV_MODE=true cargo run --release
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  --release
+
+Feature debug_mode allow mains function
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  --features debug_mode --release
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode --release -- --nocapture
 RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release

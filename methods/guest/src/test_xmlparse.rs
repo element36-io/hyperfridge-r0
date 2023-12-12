@@ -1,26 +1,33 @@
-use rsa::BigUint;
 use super::*;
+use pem::parse;
+use rsa::pkcs8::DecodePublicKey;
 
-
-// public keys hypi lenzburg - taken from keystore which was inspected after
-// INI and HPB key exchange
+// public keys of the bank< as transferred with EBICS  INI and HPB key exchange procudure. The Hashes are usually published. 
 // Extracted from serialized java objects 
-const BANK_X002_EXP:&str="65537";
-const BANK_X002_MOD:&str="21524090256724430753141164535357196193197829951773396673897149554944452950696866451970472861932763191193568445765183992099613636142795752374489379772370669343448213653821892000554946389960903517318221964264342975374422650695173463691448081485863523220580649377592018038535843425153118082871773276341994344926781918685214779262529224767198147117671197644390419910537282768483198192468651239846388201830260805724659049813611048312053230240344724275567263285752460071116825269841133210376606159417744932436820868948917671457457542670698470415229193578914058282452054113544823576233190357144856848176044816602959795687329";
+
+// values from bank_public.pem - see also data/tmp/bank_public.pem.txt
+// const BANK_X002_EXP:&str="65537";
+// const BANK_X002_MOD:&str="408790301635326461949353377406314315498689023260552122859485094218973266174298492568662167888094833008095035331863613080673675011770556849083569999215104215243347262626190952965804717293841449282207994275764458426379811341511263506509637818789555536674414792921850496633370256608329960104289833391223801582046755369871210989547664628608980082919285040451959150208902738840199432120291497810271847459870686394288672190286927235145431629795120229474825474499570389748517991002852976831781878153377152401769137287879668202718485709068513125988747161364943610058414027825538092558708641699514913764260455097361535226500803";
 
 
 #[test]
 fn test_signature_x( ) {
-  let exp:BigUint = BigUint::parse_bytes(BANK_X002_EXP.as_bytes(), 10).unwrap();//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
-  let modu:BigUint = BigUint::parse_bytes(BANK_X002_MOD.as_bytes(), 10).unwrap();  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
-  let _public_key = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+  // let exp:BigUint = BigUint::parse_bytes(BANK_X002_EXP.as_bytes(), 10).unwrap();//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
+  // let modu:BigUint = BigUint::parse_bytes(BANK_X002_MOD.as_bytes(), 10).unwrap();  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
+  // let _public_key = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+
+  // https://cryptoballot.com/doc/rsa/struct.RSAPublicKey.html
+  let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse PEM");
+  let _public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create public key");
+
 }
 
-const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../../secrets/e002_private_key.pem");
+const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../../data/bank_public.pem");
+const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../../data/client.pem");
  
 macro_rules! include_resource {
   ($file:expr) => {
-      include_str!(concat!("../../../data/er3.xml-orig-", $file))
+      include_str!(concat!("../../../data/test/test.xml-", $file))
   };
 }
 const SIGNED_INFO_XML_C14N: &str = include_resource!("SignedInfo");
@@ -43,11 +50,11 @@ fn test_parse_signed_info( ) {
   // <TransactionKey>ZX9km6Rg0Fghizh42Z+5VMoyGz9MFtPoBhmzDZq4V1TdBbraESTEpgXusr9vPiOx8uOJ097LWshc7uUNMK44KIo6+n4auaHUgUPnfDY9dsiqYTzdp7W7yZBXNcgWYKDxGOwCK9TZqQEgu+OdXv9GM8JEeT6AqaQwRMALzAaIZVFgxuVnJFc1HqESeoTon4jdPU38JsXSc9ukEVqFkDfYh+DCFYf0moxeBQ6WjJMuAM1GtHZHDXL3UyCoNkInmh3+zucshwcv70d2EcaDT7uHzR8MwFdjYAiLL8urQZcsPF/FNSzUZyWG0kDJWwxFR3G7nxWsF4Dn5s482UELLkJIJg==</TransactionKey>
 
   let res=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
-  assert_eq!("VkdMpq9P+oYx7NUp0JhQnZw/17yulOzmAzqJQvvnT0w=",
+  assert_eq!("AqkA6LWKhHzPYw6F+qnoyvP28JHORC7f9skfkjZ2aqM=",
         res.digest_value_b64,"res.digest_value_b64");
-  assert_eq!("YmozAQZ66YHSqx0m68vlmWhjxV7KoFGlkn3oUTXnvdw6QnyYnlLCEgtoNPnoI9GIeuPVUZ1nQ4uz/P4G9hX/Gx6brf+6JSMy5DqIRaISmBN/BjmmGjM+cSlTpGBut0SDxNbf8H5fY2oLBzdwapI4LrTP9GwzPXuD+8nUqObLVDOL/tBXW3AIpf+0SmS8n80uJBADFdV3/u80+pLDZYaE+cId1Y9QvUBoew297cw+ZZiAy1Vt7FZFBA7RnIjL64ohdcYHKrjrtDI5EOk5rA39Iu0ANmMJsBfHchjnsUeBSOC3Lok8r1r3mb7C9c1OgaOOgLQy5k/pItAXemfGCNqcbg==",
+  assert_eq!("iGW85fy7btjXxfQfyGpEgq/6lug+LkbGqmp7uq6OdUG81q4trf+YHWO3ZeZVklnseoETuOUkUaLfCf8kNSw8t2NOB6xqhGTqwe5imzuvslv0zQL4eU+XiPnpB3qhletI1zA1ZBSfYZOuPtKja8UwzwFs7gofMbeKd6Gkv6+FeSG052D48FiCG2L6zB9wedG2dvDjD3dOCLDLMFUoGDWN5fDnC5HxMe/Nrww8TNMnt6EqOTdilxk6TpFAVZqOybWGBWOYScBs/Q5U4KBnyxLs6dpaMS5Kv8xYJjhCwgsUKwTTCoJuN5mklpC8InYZN3jzsUdH7amZQ0al+woOcKGK8A==",
         res.signature_value_b64,"res.signature_value_b64");
-  assert_eq!("ZX9km6Rg0Fghizh42Z+5VMoyGz9MFtPoBhmzDZq4V1TdBbraESTEpgXusr9vPiOx8uOJ097LWshc7uUNMK44KIo6+n4auaHUgUPnfDY9dsiqYTzdp7W7yZBXNcgWYKDxGOwCK9TZqQEgu+OdXv9GM8JEeT6AqaQwRMALzAaIZVFgxuVnJFc1HqESeoTon4jdPU38JsXSc9ukEVqFkDfYh+DCFYf0moxeBQ6WjJMuAM1GtHZHDXL3UyCoNkInmh3+zucshwcv70d2EcaDT7uHzR8MwFdjYAiLL8urQZcsPF/FNSzUZyWG0kDJWwxFR3G7nxWsF4Dn5s482UELLkJIJg==",
+  assert_eq!("TeEYes+voS4Vyv3AK/g6l15fG61EzmawBiu0aYVKagvqKz4hZYkGUXA1VdvMm6amj/gzEEzbscNdTX8vpA8CyFD3RWN6I2oRbWoGn/+6+mzG+Q2kKSgGfVfgHXbMRRhaZ9658ga9bIokxfC0dNdBprKN1gcHbFRa93oAynD3h5iveWZKlSdUOgydaKZf8fySb8tKbuppm4kkXT+O1gNXwXEmtkxyvF6eg0fWlix23ZCyvpfU7BSRmcsRKiehroD+1AyiFpVtXxnEDu9EUSUWusBNBflmPJZoOCAv2kTnk9ZHgRUYw9NeLqwGRmOqN1NCRnr18ebjyPMizij699GyFg==",
         res.transaction_key_b64, "res.transaction_key_b64");
   
   let sha = *Impl::hash_bytes(SIGNED_INFO_XML_C14N.as_bytes());
@@ -77,10 +84,9 @@ fn test_digest() {
 fn test_validate_signature( )  {//-> Result<bool, Box<dyn Error>> {
   //openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" 
   //-pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
-  let exp:BigUint = BigUint::parse_bytes(BANK_X002_EXP.as_bytes(), 10).unwrap();//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
-  let modu:BigUint = BigUint::parse_bytes(BANK_X002_MOD.as_bytes(), 10).unwrap();  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
 
-  let bank_public_key = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+  let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
+  let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create bank public key");
   let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
 
   // let signed_data = base64_to_bytes(SIGNED_INFO_C14N);

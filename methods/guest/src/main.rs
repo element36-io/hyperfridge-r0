@@ -1,11 +1,13 @@
 // #![no_main]
+// #![forbid(unsafe_code)]
+#![cfg_attr(not(feature = "debug_mode"), no_main)]
 
 // If you want to try std support, also update the guest Cargo.toml file
 // #![no_std]  // std support is experimental
 
 // #[cfg(not(feature = "debug_mode"))]
-// #![cfg_attr(not(feature = "debug_mode"), no_main)]
-// #![no_main]
+// #[cfg_attr(not(feature = "debug_mode"), no_main)]
+
 
 use core::panic;
 use miniz_oxide::inflate::{decompress_to_vec_zlib};
@@ -21,8 +23,10 @@ use xmlparser::{Tokenizer,Token,ElementEnd};
 use sha2::{Sha256 as RsaSha256 };
 use base64::{Engine as _, engine::general_purpose};
 
-//#![forbid(unsafe_code)]
+// todo - enable this
 
+#[cfg(not(feature = "debug_mode"))]
+risc0_zkvm::guest::entry!(main);
 
 #[cfg(test)]
 mod test_xmlparse;
@@ -233,10 +237,9 @@ fn verify_bank_signature(
     //    prefix. 
     
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
-    // println!(" schema {}",&scheme);
-    // println!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
-    // println!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed)); 
-    // println!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
+    println!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
+    println!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed)); 
+    println!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
     
     // Verify the signature
     let res=  public_key.verify( scheme ,// verifying_key.verify(//public_key.verify( scheme ,
@@ -288,13 +291,13 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     for token in tokens {
         match token {
             Ok(Token::ElementStart { local, .. }) => {
-                println!("   open tag  as_str {:?}", local.as_str());
+                // println!("   open tag  as_str {:?}", local.as_str());
                 curr_tag=local.as_str();
             },
             Ok(Token::ElementEnd {end,..}) => {
                 match end {
                     ElementEnd::Close(.., _local) => {
-                        println!("   close tag  as_str {:?}", _local.as_str());
+                        // println!("   close tag  as_str {:?}", _local.as_str());
                         // handling Close variant
                         curr_tag = "";
                 

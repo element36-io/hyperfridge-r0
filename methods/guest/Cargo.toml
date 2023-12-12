@@ -5,27 +5,29 @@ edition = "2021"
 
 [workspace]
 
+
+[features]
+debug_mode = []
+
 [dependencies]
 # If you want to try (experimental) std support, add `features = [ "std" ]` to risc0-zkvm
 # risc0-zkvm = { version = "0.19.1", default-features = false,features = [ "std",] }
 risc0-zkvm = { version = "0.19.1", default-features = false,features = [ "std",] }
 
-pem = "3.0"
 aes = "0.8"
 cbc = "0.1"
 base64 = { version = "0.21.5"}
-rsa = { version="0.9", features = ["pem"]}
+rsa = { version="0.9"}
 miniz_oxide = "0.7"
-#zip = "0.5.10"  # Use the latest version available
 zip = { version = "0.6.6", default-features = false, features=["deflate"] }
 flate2 = "1"  # If you're using flate2 for decompressio
-#sha2 = { version="0.10.0", features = ["oid"]}
-#json = "0.12"
 hex = "0.4.3" 
 xmlparser = "0.13.6"
-#core2="0"
-#json-core = { path = "../../../json/core" }
-#fix time compile error?
+
+
+[dev-dependencies]
+pem = "3.0"
+rsa = { version="0.9", features = ["pem"]}
 
 [dependencies.sha2]
 git = "https://github.com/risc0/RustCrypto-hashes"

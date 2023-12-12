@@ -5,10 +5,14 @@ use methods::{
     HYPERFRIDGE_ELF, HYPERFRIDGE_ID // TODO: does not work, why? HYPERFRIDGE_ID
 };
 use risc0_zkvm::{default_prover, ExecutorEnv};
+use pem::parse;
+use rsa::RsaPublicKey; 
+use rsa::pkcs8::DecodePublicKey;
+use rsa::traits::PublicKeyParts;
 
 macro_rules! include_resource {
     ($file:expr) => {
-        include_str!(concat!("../../data/er3.xml-orig-", $file))
+        include_str!(concat!("../../data/test/test.xml-", $file))
     };
 }
 
@@ -16,9 +20,9 @@ const SIGNED_INFO_XML_C14N: &str = include_resource!("SignedInfo");
 const AUTHENTICATED_XML_C14N: &str = include_resource!("authenticated");
 const SIGNATURE_VALUE_XML: &str = include_resource!("SignatureValue");
 const ORDER_DATA_XML: &str = include_resource!("OrderData");
-const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../secrets/e002_private_key.pem");
-const BANK_X002_MOD:&str="21524090256724430753141164535357196193197829951773396673897149554944452950696866451970472861932763191193568445765183992099613636142795752374489379772370669343448213653821892000554946389960903517318221964264342975374422650695173463691448081485863523220580649377592018038535843425153118082871773276341994344926781918685214779262529224767198147117671197644390419910537282768483198192468651239846388201830260805724659049813611048312053230240344724275567263285752460071116825269841133210376606159417744932436820868948917671457457542670698470415229193578914058282452054113544823576233190357144856848176044816602959795687329";
-const BANK_X002_EXP:&str="65537";
+const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../data/bank_public.pem");
+const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../data/client.pem");
+ 
 
 
 // #[cfg(not(feature = "debug_mode"))]
@@ -52,13 +56,19 @@ fn proove_camt53() -> String {
 
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
     println!("Starting guest code, load environment");
+
+    let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
+    let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create bank public key");
+    let modulus_str = bank_public_key.n().to_str_radix(10);
+    let exponent_str = bank_public_key.e().to_str_radix(10);
+
     let env = ExecutorEnv::builder()
         .write(&SIGNED_INFO_XML_C14N).unwrap()
         .write(&AUTHENTICATED_XML_C14N).unwrap()
         .write(&SIGNATURE_VALUE_XML).unwrap()
         .write(&ORDER_DATA_XML).unwrap()
-        .write(&BANK_X002_MOD).unwrap()
-        .write(&BANK_X002_EXP).unwrap()
+        .write(&modulus_str).unwrap()
+        .write(&exponent_str).unwrap()
         .write(&USER_PRIVATE_KEY_E002_PEM).unwrap()
         .build().unwrap();
 

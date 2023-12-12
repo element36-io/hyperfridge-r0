@@ -13,9 +13,10 @@ num-bigint = "0.4"
 
 # own dependecies
 xmlparser = "0.*"
-rsa = "0.9"
+rsa = { version="0.9", features = ["pem"]}
 pkcs1 = "0.7.5"
 chrono = "0.4"
+pem = "3"
 
 [features]
 #cuda = ["risc0-zkvm/cuda"]

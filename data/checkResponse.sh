@@ -39,7 +39,7 @@ fi
 decrypted_file="$dir_name/orderdata_decrypted.zip"
 
 openssl rsa -in $private_pem_file -check -noout
-openssl rsa -pubin -in $pem_file -text -noout > /dev/null
+openssl rsa -pubin -in $pem_file -text -noout > ./tmp/${pem_file}.txt
 
 # Generate timestamp
 timestamp=$(date +%Y%m%d%H%M%S)
