@@ -30,11 +30,10 @@ https://api.bonsai.xyz/swagger-ui/
 And our Discord is the best place to find development support:
 https://discord.gg/risczero 
 
-API Key: H2b4cLqIoV9ywICla8SMB8vRGAKa4ugr2QKl65Wj
+API Key: XXXX
 API URL: https://api.bonsai.xyz/
 
-BONSAI_API_KEY="H2b4cLqIoV9ywICla8SMB8vRGAKa4ugr2QKl65Wj" BONSAI_API_URL="https://api.bonsai.xyz/" cargo run --release
-export BONSAI_API_KEY="H2b4cLqIoV9ywICla8SMB8vRGAKa4ugr2QKl65Wj"
+BONSAI_API_KEY="XXX" BONSAI_API_URL="https://api.bonsai.xyz/" cargo run --release
 export BONSAI_API_URL="https://api.bonsai.xyz/"
 
 RISC0_DEV_MODE=true cargo run --release
@@ -45,9 +44,9 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  --features debug_mode --release
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode --release -- --nocapture
 RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release
 
-RUST_LOG="executor=info"   BONSAI_API_KEY="H2b4cLqIoV9ywICla8SMB8vRGAKa4ugr2QKl65Wj" BONSAI_API_URL="https://api.bonsai.xyz/" RUST_BACKTRACE=1 cargo test
+RUST_LOG="executor=info"   BONSAI_API_KEY="XXX" BONSAI_API_URL="https://api.bonsai.xyz/" RUST_BACKTRACE=1 cargo test
 
-RUST_LOG="executor=info"   BONSAI_API_KEY="H2b4cLqIoV9ywICla8SMB8vRGAKa4ugr2QKl65Wj" BONSAI_API_URL="https://api.bonsai.xyz/" RUST_BACKTRACE=1 cargo test
+RUST_LOG="executor=info"   BONSAI_API_KEY="XXX" BONSAI_API_URL="https://api.bonsai.xyz/" RUST_BACKTRACE=1 cargo test
 
 cd /home/w/workspace/risc0/examples/xml/res
 cp /home/w/ebics/client_before_keepass/users/28953700/traces/Z53493m2onmc3c3c3litqeddb659t.xml ./ebics-request.xml-orig
