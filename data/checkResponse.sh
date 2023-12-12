@@ -99,7 +99,7 @@ export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
 # need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
 export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
 perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "$dir_name/${xml_file}-SignedInfo"
-signedinfo_digest_file="/tmp/signedinfo_digest_$timestamp.bin"
+signedinfo_digest_file="./tmp/signedinfo_digest_$timestamp.bin"
 openssl dgst -sha256 -binary  "$dir_name/${xml_file}-SignedInfo" > "$signedinfo_digest_file"
 echo "created digest for SignedInfo from XML, now checking Signature"
 
@@ -107,7 +107,7 @@ perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file"
 # Create file names with timestamp
 awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' | tr -d '\n' > "$dir_name/${xml_file}-SignatureValue-value"
 #echo signature value from xml as base64: $signature_base64
-signature_file="/tmp/signature_$timestamp.bin"
+signature_file="./tmp/signature_$timestamp.bin"
 cat $dir_name/${xml_file}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
 
 echo "check signature with public key from bank $pem_file"
@@ -129,10 +129,10 @@ perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "$dir_name/${xm
 
 # the transaction key is ecrypted with the clients public key - so first we have to decrypt the 
 # tx key before we can use it for decrypting the payload. 
-encrypted_txkey_file_bin="/tmp/${timestamp}_encrypted_transaction_key.bin"
+encrypted_txkey_file_bin="./tmp/${timestamp}_encrypted_transaction_key.bin"
 cat "$dir_name/${xml_file}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
 
-decrypted_txkey_file_bin="/tmp/${timestamp}_transaction_key.bin"
+decrypted_txkey_file_bin="./tmp/${timestamp}_transaction_key.bin"
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
 [ $(stat --format=%s "$encrypted_txkey_file_bin") -eq 256 ] || { echo "Wrong filesize of encrypted tx key"; exit 1; }
 openssl pkeyutl -decrypt -in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}" -inkey $private_pem_file -pkeyopt rsa_padding_mode:pkcs1 
@@ -159,7 +159,7 @@ fi
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # but openssl does not handle ISO10126Padding, so use -nopad and do the padding manually
 
-orderdata_bin_file="/tmp/${timestamp}_orderdata_decoded.bin"
+orderdata_bin_file="./tmp/${timestamp}_orderdata_decoded.bin"
 cat  "$dir_name/${xml_file}-OrderData-value" | tr -d '\n' | base64 --decode > $orderdata_bin_file 
 
 openssl enc -d -aes-128-cbc -nopad -in $orderdata_bin_file -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
