@@ -15,3 +15,7 @@ Cargo.lock
 
 # hypterfridge ignores
 secrets/
+host/profile-output
+
+data/*.bin
+data/tmp/*
