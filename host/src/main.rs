@@ -9,37 +9,60 @@ use pem::parse;
 use rsa::RsaPublicKey; 
 use rsa::pkcs8::DecodePublicKey;
 use rsa::traits::PublicKeyParts;
+use std::fs;
 
-macro_rules! include_resource {
-    ($file:expr) => {
-        include_str!(concat!("../../data/test/test.xml-", $file))
-    };
-}
-
-const SIGNED_INFO_XML_C14N: &str = include_resource!("SignedInfo");
-const AUTHENTICATED_XML_C14N: &str = include_resource!("authenticated");
-const SIGNATURE_VALUE_XML: &str = include_resource!("SignatureValue");
-const ORDER_DATA_XML: &str = include_resource!("OrderData");
-const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../data/bank_public.pem");
-const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../data/client.pem");
- 
-
-
-// #[cfg(not(feature = "debug_mode"))]
-
-risc0_zkvm::guest::entry!(main);
-
+#[cfg(not(test))] 
 use chrono::Local;
+#[cfg(not(test))] 
+use std::env;
 
+
+
+
+#[cfg(not(test))] 
 fn main() {
 
     println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
-    let _=proove_camt53();
+
+    let args: Vec<String> = env::args().collect();
+    // Ensure there are enough arguments
+    if args.len() < 3 {
+        eprintln!("Usage: program<bank_public_key> <user_private_key> <ebics_response_xml>");
+        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem");
+        return;
+    }
+
+    //<SignedInfo> <authenticated> <SignatureValue> <OrderData> 
+    // Load files based on command-line arguments
+    let bank_public_key_x002_pem = fs::read_to_string(&args[2]).expect("Failed to read bank_public_key file");
+    let user_private_key_e002_pem = fs::read_to_string(&args[3]).expect("Failed to read user_private_key file");
+    
+    let signed_info_xml_c14n =  fs::read_to_string(args[1].to_string()+"-SignedInfo").expect("Failed to read SignedInfo file") ;
+    let authenticated_xml_c14n = fs::read_to_string(args[1].to_string()+"-authenticated").expect("Failed to read authenticated file");
+    let signature_value_xml = fs::read_to_string(args[1].to_string()+"-SignatureValue").expect("Failed to read SignatureValue file") ;
+    let order_data_xml =  fs::read_to_string(args[1].to_string()+"-OrderData").expect("Failed to read OrderData file") ;
+ 
+
+    let _ = proove_camt53(
+        &signed_info_xml_c14n,
+        &authenticated_xml_c14n,
+        &signature_value_xml,
+        &order_data_xml,
+        &bank_public_key_x002_pem,
+        &user_private_key_e002_pem,
+    );
     println!("end: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
 }
 
-fn proove_camt53() -> String {
-    env_logger::init();
+fn proove_camt53(
+    signed_info_xml_c14n: &str,
+    authenticated_xml_c14n: &str,
+    signature_value_xml: &str,
+    order_data_xml: &str,
+    bank_public_key_x002_pem: &str,
+    user_private_key_e002_pem: &str,
+) -> String {
+
 
     // Using crypto-bigint does not work with RsaPUblicKey
 
@@ -56,25 +79,25 @@ fn proove_camt53() -> String {
 
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
     println!("Starting guest code, load environment");
-
-    let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
+    env_logger::init();
+    let pem = parse(&bank_public_key_x002_pem).expect("Failed to parse bank public key PEM");
     let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create bank public key");
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
 
     let env = ExecutorEnv::builder()
-        .write(&SIGNED_INFO_XML_C14N).unwrap()
-        .write(&AUTHENTICATED_XML_C14N).unwrap()
-        .write(&SIGNATURE_VALUE_XML).unwrap()
-        .write(&ORDER_DATA_XML).unwrap()
+        .write(&signed_info_xml_c14n).unwrap()
+        .write(&authenticated_xml_c14n).unwrap()
+        .write(&signature_value_xml).unwrap()
+        .write(&order_data_xml).unwrap()
         .write(&modulus_str).unwrap()
         .write(&exponent_str).unwrap()
-        .write(&USER_PRIVATE_KEY_E002_PEM).unwrap()
+        .write(&user_private_key_e002_pem).unwrap()
         .build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
-    println!("prove hyperfridge elf"); 
+    println!("prove hyperfridge elf "); 
     let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
     println!("got the receipt of the prove ");
     // println!("----- got result {} ",receipt_result);
@@ -109,10 +132,23 @@ fn proove_camt53() -> String {
 #[cfg(test)]
 mod tests {
     use crate::{proove_camt53};
+    use crate::fs;
+
     #[test]
     fn do_main() {
-       
-        assert_eq!(proove_camt53(),"31709.14");
+        const EBICS_FILE:&str="../data/test/test.xml";
+
+        assert_eq!(proove_camt53(
+            fs::read_to_string(EBICS_FILE.to_string()+"-SignedInfo").unwrap().as_str(),
+            fs::read_to_string(EBICS_FILE.to_string()+"-authenticated").unwrap().as_str(), 
+            fs::read_to_string(EBICS_FILE.to_string()+"-SignatureValue").unwrap().as_str(),
+            fs::read_to_string(EBICS_FILE.to_string()+"-OrderData").unwrap().as_str(),
+            fs::read_to_string("../data/bank_public.pem").unwrap().as_str(),
+            fs::read_to_string("../data/client.pem").unwrap().as_str(),
+        ),"31709.14");
+
+        eprintln!("To use with test data: ../../data/test/test.xml ../../data/bank_public.pem ../../data/client.pem  ");
+        return;
         // let data = include_str!("../res/example.json");
         // let outputs = super::search_json(data);
         // assert_eq!(

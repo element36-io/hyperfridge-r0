@@ -3,7 +3,9 @@
 ```bash
 cd host
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  -- 
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem  
+
 ```
 
 Run tests for verifier - need to enable main function with feature flag:
