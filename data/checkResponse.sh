@@ -180,3 +180,6 @@ zlib-flate -uncompress  < $decrypted_file > $dir_name/$xml_file.zip
 echo "size $(stat -c %s "$dir_name/$xml_file.zip") hash of zip file:" $(openssl dgst -sha256 -r "$dir_name/$xml_file.zip")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
 unzip -o $dir_name/$xml_file.zip -d  ./$dir_name/camt53/
+
+# For speeding up development - copy decrypted transation key
+cp $decrypted_txkey_file_bin $dir_name/$xml_file-decrypted_tx_key.binary
