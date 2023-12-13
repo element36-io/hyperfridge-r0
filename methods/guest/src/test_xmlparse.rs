@@ -58,7 +58,7 @@ fn test_parse_signed_info( ) {
         res.transaction_key_b64, "res.transaction_key_b64");
   
   let sha = *Impl::hash_bytes(SIGNED_INFO_XML_C14N.as_bytes());
-  println!("sha {}",bytes_to_base64(sha.as_bytes()));
+  println!("sha {}",general_purpose::STANDARD.encode(sha.as_bytes()));
 
 }
 
@@ -77,7 +77,8 @@ fn test_digest() {
   // println!("  digest should be in b64  {:?}",res.digest_value_b64);
   // println!("  digest calculated hex {:?}",bytes_to_hex(sha.as_bytes()));
   // println!("  digest should be in hex  {:?}",base64_to_hex(&res.digest_value_b64));
-  assert_eq!(res.digest_value_b64, bytes_to_base64(sha.as_bytes()));
+
+  assert_eq!(res.digest_value_b64, general_purpose::STANDARD.encode(sha.as_bytes()));
 }
 
 #[test]

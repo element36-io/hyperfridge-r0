@@ -10,7 +10,7 @@
 
 
 use core::panic;
-use miniz_oxide::inflate::{decompress_to_vec_zlib};
+use miniz_oxide::inflate::decompress_to_vec_zlib;
 use risc0_zkvm::{
     guest::env,
     sha::{Impl, Sha256},
@@ -20,10 +20,8 @@ use rsa::{traits::PublicKeyParts, Pkcs1v15Encrypt, pkcs8::DecodePrivateKey};
 use rsa::BigUint;
 
 use xmlparser::{Tokenizer,Token,ElementEnd};
-use sha2::{Sha256 as RsaSha256 };
+use sha2::Sha256 as RsaSha256;
 use base64::{Engine as _, engine::general_purpose};
-
-// todo - enable this
 
 #[cfg(not(feature = "debug_mode"))]
 risc0_zkvm::guest::entry!(main);
@@ -42,7 +40,6 @@ struct EbicsRequestData {
     digest_value: String,
     signature_value: String,
 }
-
 
 pub fn main() {
     let signed_info_xml_c14n:String = env::read();
@@ -71,9 +68,16 @@ pub fn main() {
     println!(">>> cycle count {}k", (env::get_cycle_count())/1000);
     env::log("proof done walter"); // writes to journal
     env::log(&document.stmts[0].balances[0].amt);
+
+    // public committed data, that is what we want to prove
+    env::commit(&document.stmts[0].elctrnc_seq_nb);
+    env::commit(&document.stmts[0].iban);
+    env::commit(&document.stmts[0].fr_dt_tm);
+    env::commit(&document.stmts[0].to_dt_tm);
     env::commit(&document.stmts[0].balances[0].amt);
 }
 
+/// Calls all the steps necessary for the proof.
 fn load(authenticated_xml_c14n: &str,
     signed_info_xml_c14n: &str, 
     signature_value_xml: &str,
@@ -96,61 +100,21 @@ fn load(authenticated_xml_c14n: &str,
 
     // cycle count 101274k : adds 1236
     parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap()) 
-    //Document::default()
 }
 
-
-#[allow(dead_code)]
-fn hex_to_base64(hex: &str) -> String {
-    // Make vector of bytes from octets
-    let mut bytes = Vec::new();
-    for i in 0..(hex.len()/2) {
-        let res = u8::from_str_radix(&hex[2*i .. 2*i+2], 16);
-        match res {
-            Ok(v) => bytes.push(v),
-            Err(e) => panic!("Problem with hex: {}", e),
-        };
-    };
-    println!(" bytes hex-to-b64 {:?}",&bytes);
-    //FIXME: use encode_slice - provide fixed output
-    general_purpose::STANDARD.encode(&bytes)
-}
-
-#[allow(dead_code)]
-fn base64_to_hex(hex: &str) -> String {
-    // FIXME: use encode_slice
-    // Make vector of bytes from octets
-    //println!(" bytes b64-to-hext {:?}",&hex);
-    hex::encode(general_purpose::STANDARD.decode(&hex).unwrap())
-}
-#[allow(dead_code)]
-fn bytes_to_base64(bytes: &[u8]) -> String {
-    general_purpose::STANDARD.encode(bytes)
-}
-
-fn base64_to_bytes(base64: &str) -> Vec<u8> {
-    //println!(" str sssssss {:?}",base64);
-    general_purpose::STANDARD.decode(base64).unwrap()
-}
-
-#[allow(dead_code)]
-fn hash(text: &str) -> Vec<u8>{
-    let sha = *Impl::hash_bytes(text.as_bytes());
-    sha.as_bytes().to_vec()
-}
-
-
-/* Returns the digest value of a given public key.
-*
-*
-* <p>In Version “H003” of the EBICS protocol the ES of the financial:
-*
-* <p>The SHA-256 hash values of the financial institution's public keys for X002 and E002 are
-* composed by concatenating the exponent with a blank character and the modulus in hexadecimal
-* representation (using lower case letters) without leading zero (as to the hexadecimal
-* representation). The resulting string has to be converted into a byte array based on US ASCII
-* code.
-*/
+// Todo: shall we check the hash from public sources as well?
+///
+/// Returns the digest value of a given public key - needs to match  with published hash
+///
+///
+/// <p>In Version “H003” of the EBICS protocol the ES of the financial:
+///
+/// <p>The SHA-256 hash values of the financial institution's public keys for X002 and E002 are
+/// composed by concatenating the exponent with a blank character and the modulus in hexadecimal
+/// representation (using lower case letters) without leading zero (as to the hexadecimal
+/// representation). The resulting string has to be converted into a byte array based on US ASCII
+/// code.
+///
 #[allow(dead_code)]
 fn get_private_key_hex(pk: &RsaPublicKey) -> String {
     let exponent = pk.e().to_bytes_be(); // Convert exponent to big-endian bytes
@@ -179,53 +143,51 @@ fn get_private_key_hex(pk: &RsaPublicKey) -> String {
 }
 
 
-// https://datatracker.ietf.org/doc/html/rfc3275#section-3.1.2
-// Signature Generation
-// https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf
-// 5.5.1.2.1 Processing in the initialisation phase 
-
-//    1. Create SignedInfo element with SignatureMethod,
-//       CanonicalizationMethod and Reference(s).
-//    2. Canonicalize and then calculate the SignatureValue over SignedInfo
-//       based on algorithms specified in SignedInfo.
-//       3. Construct the Signature element that includes SignedInfo,
-//       Object(s) (if desired, encoding may be different than that used
-//       for signing), KeyInfo (if required), and SignatureValue.
-
-//    Note, if the Signature includes same-document references, [XML] or
-//    [XML-schema] validation of the document might introduce changes that
-//    break the signature.  Consequently, applications should be careful to
-//    consistently process the document or refrain from using external
-//    contributions (e.g., defaults and entities).
-
-// Signature Validation
-
-//    1. Obtain the keying information from KeyInfo or from an external
-//       source.
-//    2. Obtain the canonical form of the SignatureMethod using the
-//       CanonicalizationMethod and use the result (and previously obtained
-//       KeyInfo) to confirm the SignatureValue over the SignedInfo
-//       element.
-
-//    Note, KeyInfo (or some transformed version thereof) may be signed via
-//    a Reference element.  Transformation and validation of this reference
-//    (3.2.1) is orthogonal to Signature Validation which uses the KeyInfo
-//    as parsed.
-
-//    Additionally, the SignatureMethod URI may have been altered by the
-//    canonicalization of SignedInfo (e.g., absolutization of relative
-//    URIs) and it is the canonical form that MUST be used.  However, the
-//    required canonicalization [XML-C14N] of this specification does not
-//    change URIs.
-   
+/// https://datatracker.ietf.org/doc/html/rfc3275#section-3.1.2
+/// Signature Generation
+/// https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf
+/// 5.5.1.2.1 Processing in the initialisation phase 
+///
+///    1. Create SignedInfo element with SignatureMethod,
+///       CanonicalizationMethod and Reference(s).
+///    2. Canonicalize and then calculate the SignatureValue over SignedInfo
+///       based on algorithms specified in SignedInfo.
+///       3. Construct the Signature element that includes SignedInfo,
+///       Object(s) (if desired, encoding may be different than that used
+///       for signing), KeyInfo (if required), and SignatureValue.
+///
+///    Note, if the Signature includes same-document references, [XML] or
+///    [XML-schema] validation of the document might introduce changes that
+///    break the signature.  Consequently, applications should be careful to
+///    consistently process the document or refrain from using external
+///    contributions (e.g., defaults and entities).
+///
+/// Signature Validation
+///
+///    1. Obtain the keying information from KeyInfo or from an external
+///       source.
+///    2. Obtain the canonical form of the SignatureMethod using the
+///       CanonicalizationMethod and use the result (and previously obtained
+///       KeyInfo) to confirm the SignatureValue over the SignedInfo
+///       element.
+///
+///    Note, KeyInfo (or some transformed version thereof) may be signed via
+///    a Reference element.  Transformation and validation of this reference
+///    (3.2.1) is orthogonal to Signature Validation which uses the KeyInfo
+///    as parsed.
+///
+///    Additionally, the SignatureMethod URI may have been altered by the
+///    canonicalization of SignedInfo (e.g., absolutization of relative
+///    URIs) and it is the canonical form that MUST be used.  However, the
+///    required canonicalization [XML-C14N] of this specification does not
+///    change URIs.
 fn verify_bank_signature(
     public_key: &RsaPublicKey, 
     request: &Request, 
 )  {
     println!(" verify the bank signature");
     // Decode the signature
-    //let digest_value_bytes=base64_to_bytes(&request.digest_value_b64);
-    let signature_value_bytes = base64_to_bytes(&request.signature_value_b64);
+    let signature_value_bytes =  general_purpose::STANDARD.decode(&request.signature_value_b64).unwrap();
 
     // Create a signer with PKCS#1 v1.5 padding - from the standard: 
     //     2.3.2 RSA-SHA256
@@ -237,9 +199,9 @@ fn verify_bank_signature(
     //    prefix. 
     
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
-    println!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
-    println!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed)); 
-    println!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
+    // println!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
+    // println!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed)); 
+    // println!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
     
     // Verify the signature
     let res=  public_key.verify( scheme ,// verifying_key.verify(//public_key.verify( scheme ,
@@ -250,7 +212,7 @@ fn verify_bank_signature(
     match res {
         Ok(_) => println!("  bank Signature is verified"),
         Err(e) => {eprintln!(" ---> error {:?}",e);panic!("  bank Signature could not be verified")}
-      };
+    };
 }
 
 #[allow(dead_code)]
@@ -265,6 +227,9 @@ struct Request {
    order_data_b64:String,
 }
 
+
+
+/// Parse the XML file, return a structure
 fn parse_ebics_response(authenticated_xml_c14n: &str,
                 signed_info_xml_c14n: &str, 
                 signature_value_xml: &str,
@@ -279,7 +244,7 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     
 
     // digest over all tags with authenticated=true; later check it with digest_value_b64 
-    let calculated_digest_b64 = bytes_to_base64(&*Impl::hash_bytes(authenticated_xml_c14n.as_bytes()).as_bytes());
+    let calculated_digest_b64 = general_purpose::STANDARD.encode(&*Impl::hash_bytes(authenticated_xml_c14n.as_bytes()).as_bytes());
     let signed_info_hashed: Vec<u8> = (*Impl::hash_bytes(signed_info_xml_c14n.as_bytes())).as_bytes().to_vec();
     //let tokens=Tokenizer::from(xml_data); // use from_fragment so deactive xml checks
     let all_tags=format!("{}{}{}{}", 
@@ -322,11 +287,11 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
                                 exactly the same character string which has been used to generate the hash, which is 
                                 usually available in the direct response of the banking backend. ");
             },
-            // <ds:SignatureValue>WW6VtstkLq+c8YKP6a1i6AijJlAAPEm9WC0SwQ+CRYdojBxBPF0L+3Wgby67dqg5FccooPWrlqy0ZXb3f0DGJJ6YkmNiK/zzMJFgcfHzOrRFmgMa2h9EseH+ga7oyRl/fBqDBPitgZ/0BUsKnhoyaJDIvfsVUr0Gt6BtewqRGsMvV78nSrj9wK8Jr6Mcqwx3CFcaDKTpixkXkdkqrthntN4VJljdlzDnXpmBuMGeS+m75Y0vmQ6TdnBw60/FEz9DJlkeu4hi85Rl1/qIUUVwbhBDSjKU7zUI3DxKUvRPEGoNpPlJkzxvIpJSZTSh920UAwZUFy3pmJzZC9AGieIALQ==</ds:SignatureValue>
+            // <ds:SignatureValue>WW6VtstkLq+c8YKP6a1i6AijJlAAPEm9WChBDSjKU7zUI3DxKUvRPEGoNpPlJk....zxvIpJSZTSh920UAwZUFy3pmJzZC9AGieIALQ==</ds:SignatureValue>
             Ok(Token::Text { text }) if curr_tag == "SignatureValue" => {
                 signature_value_b64 = text.to_string();
             },            
-            // <TransactionKey>XTKNSQh2cXKEM4WR/t4fMrl2QnD1YhO6IVDg8ZHz+81rwwd88NNZFr8T6wU8lHs5bjZNMVX08dhN2HQDdj7VgIfIBjIkt1G/PxFS4+HwuK6Du9J+lxNx4+TUSgdr6/rdG8gFnl4BsMnANbZON9yx9QS67jdFOSypwVZQ/VGJpDoSJnArHMutk0rDcQtQV8qjxcuIlu2p475wG6CwllxXR5wmnHsK+OTOPsyc8mHrCnymbhikzNkWOF4MYi4Pw9VFMFBfuorF2FHxIN2BtsV3S/uCYZesg5NEMpYCq2X0n2Zm/O6932QDsom6zzEMyedKePYbxxxpAAk0RWhPQG/ZTw==</TransactionKey>
+            // <TransactionKey>XTKNSQh2cXKEM4WR/t4fMrl2QnD1YhO6IVDg8ZHz+81rwwd88NNZFr8T6wU8lHs5bj....Z32QDsom6zzEMyedKePYbxxxpAAk0RWhPQG/ZTw==</TransactionKey>
             Ok(Token::Text { text }) if curr_tag == "TransactionKey" => {
                 transaction_key_b64 = text.to_string();
             },
@@ -351,7 +316,9 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     assert_ne!(signed_info_hashed.len(),0);
     assert_ne!(order_data_b64.len(),0);
 
-    Request {digest_value_b64:digest_value_b64,autheticated_hashed:hash(authenticated_xml_c14n),
+    let authenticated_xml_c14n_hashed=*Impl::hash_bytes(authenticated_xml_c14n.as_bytes());
+
+    Request {digest_value_b64:digest_value_b64,autheticated_hashed:authenticated_xml_c14n_hashed.as_bytes().to_vec(),
             transaction_key_b64:transaction_key_b64,bank_timestamp:bank_timestamp, 
             signature_value_b64:signature_value_b64,signed_info_hashed:signed_info_hashed,
             order_data_b64:order_data_b64}
@@ -359,9 +326,15 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
    
 }
 
+
+/// The Transaction key is transmitted as base64. 
+/// The used this transaction key to encrypt the payload,
+/// and is integrated in the Ebics Response file encrypted with the 
+/// public key of the client, which is exchanged when setting up the 
+/// Ebics connection between bank and client (see HIA and INI requests)
 fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey) -> Vec<u8> {
     // remove pemm feature, initialize with numbers - less code, more efficent?
-    let transaction_key_bin=base64_to_bytes(&request.transaction_key_b64);
+    let transaction_key_bin=general_purpose::STANDARD.decode(&request.transaction_key_b64).unwrap();
     println!(" start decrypt transaction key with Pkcs1v15 Rsa");
     // Decrypt with PKCS1 padding
     let decrypted_data = private_key.decrypt(
@@ -384,13 +357,19 @@ fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey) -> Ve
 
 use aes::cipher::{block_padding::NoPadding, KeyIvInit,BlockDecryptMut};
 type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
-use std::{io::{Read, Cursor}};
+// Dastan - can we get rid of this?
+use std::io::{Read, Cursor};
 use zip::ZipArchive;
 
+/// using the decrypted transaction key, lets decrypt the payload.  
+/// The payload is considered a stream which is compressed with the deflate alogrithm. 
+/// The stream is actually a ZIP file, which containts the XML documents which hold the 
+/// daily statements and account data. 
 fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<u8>> {
     println!(" decrypting payload with transaction key");
-    let order_data_bin = base64_to_bytes(&request.order_data_b64);
-    // implement following:
+    
+    let order_data_bin =general_purpose::STANDARD.decode(&&request.order_data_b64).unwrap();
+    // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
     // Decrypt the AES key using RSA (not shown, replace with your RSA decryption code)
     // Create an AES-128-CBC cipher instance
@@ -423,16 +402,14 @@ fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<
     }
 
     file_contents
-
-
 }
-
+/// Root structure of a Camt53 XML respose
 #[derive(Debug,Default)]
 struct Document{
     grp_hdr:GrpHdr, // creatin time
     stmts: Vec<Stmt>,
 }
-
+/// GrpHdr structure of a Camt53 XML respose
 #[derive(Debug,Default)]
 struct GrpHdr{
     cre_dt_tm:String, // creating time
@@ -440,7 +417,7 @@ struct GrpHdr{
     pg_nb:i8,
     last_pg_ind:bool,
 }
-
+/// Stmt structure of a Camt53 XML respose
 #[derive(Debug,Default)]
 struct Stmt {
     elctrnc_seq_nb:String,
@@ -450,7 +427,7 @@ struct Stmt {
     to_dt_tm:String,
     balances:Vec<Balance>
 }
-
+/// Balance structure of a Camt53 XML respose
 /// code or proprietory - OPBD = opening balance,CLBD is closing balance
 /// cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
 #[derive(Debug,Default)]
@@ -462,8 +439,9 @@ struct Balance {
     cdt_dbt_ind:String, // cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
 }
 
-
-/// get information from ISO20022 camt53 which hold bank data
+/// parses a Camt53 File which is decrypted and decompressed from the payload which is stored 
+/// as base64 in the Ebics Response XML.
+/// It get information from ISO20022 camt53 which hold bank data.
 fn parse_camt53(camt53_file: &str)  -> Document {
     println!(" parsing payload to extract data to commit");
     let mut tag_stack: Vec<String> = Vec::new();
