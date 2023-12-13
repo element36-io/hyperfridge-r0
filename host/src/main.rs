@@ -12,7 +12,6 @@ use rsa::traits::PublicKeyParts;
 use std::fs;
 
 
-#[cfg(not(test))] 
 use chrono::Local;
 #[cfg(not(test))] 
 use std::env;
@@ -21,7 +20,7 @@ use std::env;
 #[cfg(not(test))] 
 fn main() {
 
-    println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
+
 
     let args: Vec<String> = env::args().collect();
     // Ensure there are enough arguments
@@ -40,7 +39,8 @@ fn main() {
     let authenticated_xml_c14n = fs::read_to_string(args[1].to_string()+"-authenticated").expect("Failed to read authenticated file");
     let signature_value_xml = fs::read_to_string(args[1].to_string()+"-SignatureValue").expect("Failed to read SignatureValue file") ;
     let order_data_xml =  fs::read_to_string(args[1].to_string()+"-OrderData").expect("Failed to read OrderData file") ;
- 
+
+    let decrypted_tx_key:Vec<u8> =  Vec::new();
 
     let json = proove_camt53(
         &signed_info_xml_c14n,
@@ -49,9 +49,12 @@ fn main() {
         &order_data_xml,
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
+        &decrypted_tx_key, // todo: remove this later
     );
     println!("Receipt  {}",json);
-    println!("end: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
+
+
+
 }
 
 
@@ -63,7 +66,10 @@ fn proove_camt53(
     order_data_xml: &str,
     bank_public_key_x002_pem: &str,
     user_private_key_e002_pem: &str,
+    decrypted_tx_key:&Vec<u8> ,  // Todo: remove this later
+
 ) -> String {
+    println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
     // Todo: 
     // Using r0 implementation crypto-bigint does not work with RsaPUblicKey
 
@@ -94,6 +100,7 @@ fn proove_camt53(
         .write(&modulus_str).unwrap()
         .write(&exponent_str).unwrap()
         .write(&user_private_key_e002_pem).unwrap()
+        .write(&decrypted_tx_key).unwrap()
         .build().unwrap();
 
     // Obtain the default prover.
@@ -114,14 +121,14 @@ fn proove_camt53(
             println!("verify receipt: ");
             let _=receipt.verify(HYPERFRIDGE_ID).expect("verify failed");
             let journal= receipt.journal;
-            println!("Receipt result (commitment) - balance information {}. ", &(journal.decode::<String>().unwrap()));
+            println!("Receipt result (commitment) - first element {}. ", &(journal.decode::<String>().unwrap()));
         },
         Err(e) => {
             println!("Receipt error: {:?}", e);
             //None
         },
     }
-
+    println!("end: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
     result
     // 31709.14
 }
@@ -134,10 +141,14 @@ mod tests {
 
     use crate::{proove_camt53};
     use crate::fs;
+    use std::fs::File;
+    use std::io::Write;
 
     #[test]
     fn do_main() {
         const EBICS_FILE:&str="../data/test/test.xml";
+
+        let decrypted_tx_key:Vec<u8> =  fs::read(EBICS_FILE.to_string()+"-decrypted_tx_key.binary").expect("Failed to read transaction key file") ;
 
         let receipt_json= proove_camt53(
             fs::read_to_string(EBICS_FILE.to_string()+"-SignedInfo").unwrap().as_str(),
@@ -146,12 +157,16 @@ mod tests {
             fs::read_to_string(EBICS_FILE.to_string()+"-OrderData").unwrap().as_str(),
             fs::read_to_string("../data/bank_public.pem").unwrap().as_str(),
             fs::read_to_string("../data/client.pem").unwrap().as_str(),
+            &decrypted_tx_key,
         );
 
         let receipt_parsed :Receipt= serde_json::from_str(&receipt_json).expect("Failed to parse JSON");
         let result_string = String::from_utf8(receipt_parsed.journal.bytes).expect("Failed to convert bytes to string");
         print!(" commitments in receipt {}",result_string);
         assert_eq!(result_string.ends_with("31709.14"),true);
+
+        let mut file = File::create(EBICS_FILE.to_string()+"-Receipt").expect("Unable to create file");
+        file.write_all(receipt_json.as_bytes()).expect("Unable to write data");
 
         return;
         //         // verify your receipt

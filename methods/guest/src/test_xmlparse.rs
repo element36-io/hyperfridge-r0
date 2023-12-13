@@ -50,11 +50,14 @@ fn test_parse_signed_info( ) {
   // <TransactionKey>ZX9km6Rg0Fghizh42Z+5VMoyGz9MFtPoBhmzDZq4V1TdBbraESTEpgXusr9vPiOx8uOJ097LWshc7uUNMK44KIo6+n4auaHUgUPnfDY9dsiqYTzdp7W7yZBXNcgWYKDxGOwCK9TZqQEgu+OdXv9GM8JEeT6AqaQwRMALzAaIZVFgxuVnJFc1HqESeoTon4jdPU38JsXSc9ukEVqFkDfYh+DCFYf0moxeBQ6WjJMuAM1GtHZHDXL3UyCoNkInmh3+zucshwcv70d2EcaDT7uHzR8MwFdjYAiLL8urQZcsPF/FNSzUZyWG0kDJWwxFR3G7nxWsF4Dn5s482UELLkJIJg==</TransactionKey>
 
   let res=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
-  assert_eq!("AqkA6LWKhHzPYw6F+qnoyvP28JHORC7f9skfkjZ2aqM=",
+  // needs to updated i new test data is generated - paste conents of test.xml-DigestInfo-value
+  assert_eq!("bWeAYW4JOqrj9Emz7QXVkGFaNaQcACvXHyGEomAc+xs=",
         res.digest_value_b64,"res.digest_value_b64");
-  assert_eq!("iGW85fy7btjXxfQfyGpEgq/6lug+LkbGqmp7uq6OdUG81q4trf+YHWO3ZeZVklnseoETuOUkUaLfCf8kNSw8t2NOB6xqhGTqwe5imzuvslv0zQL4eU+XiPnpB3qhletI1zA1ZBSfYZOuPtKja8UwzwFs7gofMbeKd6Gkv6+FeSG052D48FiCG2L6zB9wedG2dvDjD3dOCLDLMFUoGDWN5fDnC5HxMe/Nrww8TNMnt6EqOTdilxk6TpFAVZqOybWGBWOYScBs/Q5U4KBnyxLs6dpaMS5Kv8xYJjhCwgsUKwTTCoJuN5mklpC8InYZN3jzsUdH7amZQ0al+woOcKGK8A==",
+   // needs to updated i new test data is generated - paste conents of test.xml-SignatureValue-value
+  assert_eq!("JE7N0l41VpWmdBZ9kVN9U/iwLAsD87XEnr2Lbhn7KDgtk8qqkV5oT/eCrls7fCvql12iv8j6B9Y3+NpWrhoicxzzt7UmC7vNQD4ppcthsfLl8d6tU3/iIP+03U1TRXouTYwQ0pASAvL5sRkSzdtWhyC/vAYv9Hs5qm0cAPDQ6uRttX0WiLlc8j1h/iZBqJkvdDcH6X04yrtJZwSGl3ld/anKXbaFUMDjWrE0rOSzwLlI+WFyfpyLZlSZA8pOntEm33Xoe0Tnwk7ut9OgmAMPPG2uO3KzKQ60a1HwnVFVnvC+aC851ZmDJnB/8IM3lwaQlbr0qK+OOForHvahax9GYw==",
         res.signature_value_b64,"res.signature_value_b64");
-  assert_eq!("TeEYes+voS4Vyv3AK/g6l15fG61EzmawBiu0aYVKagvqKz4hZYkGUXA1VdvMm6amj/gzEEzbscNdTX8vpA8CyFD3RWN6I2oRbWoGn/+6+mzG+Q2kKSgGfVfgHXbMRRhaZ9658ga9bIokxfC0dNdBprKN1gcHbFRa93oAynD3h5iveWZKlSdUOgydaKZf8fySb8tKbuppm4kkXT+O1gNXwXEmtkxyvF6eg0fWlix23ZCyvpfU7BSRmcsRKiehroD+1AyiFpVtXxnEDu9EUSUWusBNBflmPJZoOCAv2kTnk9ZHgRUYw9NeLqwGRmOqN1NCRnr18ebjyPMizij699GyFg==",
+  // needs to updated i new test data is generated - paste conents of test.xml-TransactionKey  
+  assert_eq!("r5RUVnIuDYu03U3f6xdA+HfZc9XDBdl5CnJmlStxRq1a3gOO66VcBQ7y3QFxFkekYKNvj1444dsm/2LyqU0THf3dvq4/pSx5CgIYKMw9QZ8sHLgmSs0Dz/QL79J3leBVQjwiWEk9hOjvJQRbWQNpLReNXJfpaP6ULn/szyOnU/Gx/9rQ7ei5Ib3G9gV0R34FapSRkSMTNU71WXGDG/s/WI1fLyvibCUIH58nhAhvYcEtGxmAgP0LqJlbw0MIet3833HU6Wlrq2q1K5OAtxgLrX+hDbNlARkP1tObHlvr3qV8Qy88iBnyh6+0l5wx23Jc6Vq8maDZy1sUAy0vFdOo3Q==",
         res.transaction_key_b64, "res.transaction_key_b64");
   
   let sha = *Impl::hash_bytes(SIGNED_INFO_XML_C14N.as_bytes());
@@ -104,7 +107,7 @@ fn test_decrypt_txkey( )  {//-> Result<bool, Box<dyn Error>> {
   let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
     // Parse the private key from PEM format
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
-  let transaction_key_bin= decrypt_transaction_key(&request,&private_key);
+  let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&Vec::new());
   let files=decrypt_order_data(&request, &transaction_key_bin); 
 
   for (index, item) in files.iter().enumerate() {
@@ -130,7 +133,7 @@ fn test_parse( )  {//-> Result<bool, Box<dyn Error>> {
   // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
   let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
-  let transaction_key_bin= decrypt_transaction_key(&request,&private_key);
+  let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&Vec::new());
   let files=decrypt_order_data(&request, &transaction_key_bin); 
 
   for (index, item) in files.iter().enumerate() {

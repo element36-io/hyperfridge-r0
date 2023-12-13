@@ -49,6 +49,7 @@ pub fn main() {
     let public_key_mod:String = env::read();
     let public_key_exp:String = env::read();
     let private_key_pem:String = env::read();
+    let decrypted_tx_key_bin:Vec<u8>=env::read();
 
     let exp:BigUint = BigUint::parse_bytes(public_key_exp.as_bytes(),10).expect("error parsing EXP of public bank key");//BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
     let modu:BigUint = BigUint::parse_bytes(public_key_mod.as_bytes(),10).expect("error parsing MODULUS of public bank key");  //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
@@ -63,7 +64,7 @@ pub fn main() {
 
     // do the actual work
     let document=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
-            &signature_value_xml,&order_data_xml,&public_key,&private_key);
+            &signature_value_xml,&order_data_xml,&public_key,&private_key,&decrypted_tx_key_bin);
 
     println!(">>> cycle count {}k", (env::get_cycle_count())/1000);
     env::log("proof done walter"); // writes to journal
@@ -81,7 +82,9 @@ pub fn main() {
 fn load(authenticated_xml_c14n: &str,
     signed_info_xml_c14n: &str, 
     signature_value_xml: &str,
-    order_data_xml :&str, public_key: &RsaPublicKey, private_key: &RsaPrivateKey,) -> Document {
+    order_data_xml :&str, public_key: &RsaPublicKey, private_key: &RsaPrivateKey,
+    decrypted_tx_key:&Vec<u8> ,
+    ) -> Document {
 
     // cycle count 1800k
     let request=parse_ebics_response(&authenticated_xml_c14n,
@@ -89,16 +92,16 @@ fn load(authenticated_xml_c14n: &str,
                     &signature_value_xml,
                     &order_data_xml);
 
-    // cycle count 12502k: adds 10702k
+    // cycle count 12502k: adds 10`702k
     verify_bank_signature( &public_key, &request);
     
-    // cycle count 98347k: adds 85845k
-    let transaction_key=decrypt_transaction_key(&request,private_key);
+    // cycle count 98347k: adds 85'845k
+    let transaction_key=decrypt_transaction_key(&request,private_key,decrypted_tx_key);
 
-    // cycle count 100038k: adds 1691k
+    // cycle count 100038k: adds 1'691k
     let order_data=decrypt_order_data(&request, &transaction_key);
 
-    // cycle count 101274k : adds 1236
+    // cycle count 101274k : adds 1'236k
     parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap()) 
 }
 
@@ -222,9 +225,9 @@ struct Request {
     autheticated_hashed:Vec<u8>,
     bank_timestamp:String,
     transaction_key_b64:String,
-   signature_value_b64:String,
-   signed_info_hashed:Vec<u8>,
-   order_data_b64:String,
+    signature_value_b64:String,
+    signed_info_hashed:Vec<u8>,
+    order_data_b64:String,
 }
 
 
@@ -332,7 +335,13 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
 /// and is integrated in the Ebics Response file encrypted with the 
 /// public key of the client, which is exchanged when setting up the 
 /// Ebics connection between bank and client (see HIA and INI requests)
-fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey) -> Vec<u8> {
+fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey,decrypted_tx_key: &Vec<u8> ) -> Vec<u8> {
+    // as this function is very expensive, be can provide the decrypted tx key externally. 
+    if !decrypted_tx_key.is_empty() {
+        println!("WARNING: binary transaction key was provided - use this to decrypt");
+        return decrypted_tx_key.clone();
+    }
+
     // remove pemm feature, initialize with numbers - less code, more efficent?
     let transaction_key_bin=general_purpose::STANDARD.decode(&request.transaction_key_b64).unwrap();
     println!(" start decrypt transaction key with Pkcs1v15 Rsa");
@@ -342,6 +351,7 @@ fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey) -> Ve
         &transaction_key_bin,
     );
 
+    // todo: better error handling
     match decrypted_data {
         Ok(res) => {
             println!("  transaction key to decrypt payload could be decrypted");
