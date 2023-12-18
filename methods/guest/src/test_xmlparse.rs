@@ -2,13 +2,6 @@ use super::*;
 use pem::parse;
 use rsa::pkcs8::DecodePublicKey;
 
-// public keys of the bank< as transferred with EBICS  INI and HPB key exchange procudure. The Hashes are usually published. 
-// Extracted from serialized java objects 
-
-// values from bank_public.pem - see also data/tmp/bank_public.pem.txt
-// const BANK_X002_EXP:&str="65537";
-// const BANK_X002_MOD:&str="408790301635326461949353377406314315498689023260552122859485094218973266174298492568662167888094833008095035331863613080673675011770556849083569999215104215243347262626190952965804717293841449282207994275764458426379811341511263506509637818789555536674414792921850496633370256608329960104289833391223801582046755369871210989547664628608980082919285040451959150208902738840199432120291497810271847459870686394288672190286927235145431629795120229474825474499570389748517991002852976831781878153377152401769137287879668202718485709068513125988747161364943610058414027825538092558708641699514913764260455097361535226500803";
-
 
 #[test]
 fn test_signature_x( ) {
@@ -24,7 +17,8 @@ fn test_signature_x( ) {
 
 const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../../data/bank_public.pem");
 const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../../data/client.pem");
- 
+const TX_KEY_DECRYPTED : &[u8] = include_bytes!("../../../data/test/test.xml-decrypted_tx_key.binary");
+
 macro_rules! include_resource {
   ($file:expr) => {
       include_str!(concat!("../../../data/test/test.xml-", $file))
@@ -35,6 +29,8 @@ const AUTHENTICATED_XML_C14N: &str = include_resource!("authenticated");
 const SIGNATURE_VALUE_XML: &str = include_resource!("SignatureValue");
 const ORDER_DATA_XML: &str = include_resource!("OrderData");
 
+
+
 #[test]
 fn test_print_imports( ) {
   println!(" => {}",SIGNED_INFO_XML_C14N);
@@ -42,28 +38,6 @@ fn test_print_imports( ) {
   println!(" => {}",SIGNATURE_VALUE_XML);
 }
 
-#[test]
-fn test_parse_signed_info( ) {
-
-  // <ds:DigestValue>VkdMpq9P+oYx7NUp0JhQnZw/17yulOzmAzqJQvvnT0w=</ds:DigestValue>
-  // <ds:SignatureValue>YmozAQZ66YHSqx0m68vlmWhjxV7KoFGlkn3oUTXnvdw6QnyYnlLCEgtoNPnoI9GIeuPVUZ1nQ4uz/P4G9hX/Gx6brf+6JSMy5DqIRaISmBN/BjmmGjM+cSlTpGBut0SDxNbf8H5fY2oLBzdwapI4LrTP9GwzPXuD+8nUqObLVDOL/tBXW3AIpf+0SmS8n80uJBADFdV3/u80+pLDZYaE+cId1Y9QvUBoew297cw+ZZiAy1Vt7FZFBA7RnIjL64ohdcYHKrjrtDI5EOk5rA39Iu0ANmMJsBfHchjnsUeBSOC3Lok8r1r3mb7C9c1OgaOOgLQy5k/pItAXemfGCNqcbg==</ds:SignatureValue>
-  // <TransactionKey>ZX9km6Rg0Fghizh42Z+5VMoyGz9MFtPoBhmzDZq4V1TdBbraESTEpgXusr9vPiOx8uOJ097LWshc7uUNMK44KIo6+n4auaHUgUPnfDY9dsiqYTzdp7W7yZBXNcgWYKDxGOwCK9TZqQEgu+OdXv9GM8JEeT6AqaQwRMALzAaIZVFgxuVnJFc1HqESeoTon4jdPU38JsXSc9ukEVqFkDfYh+DCFYf0moxeBQ6WjJMuAM1GtHZHDXL3UyCoNkInmh3+zucshwcv70d2EcaDT7uHzR8MwFdjYAiLL8urQZcsPF/FNSzUZyWG0kDJWwxFR3G7nxWsF4Dn5s482UELLkJIJg==</TransactionKey>
-
-  let res=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
-  // needs to updated i new test data is generated - paste conents of test.xml-DigestInfo-value
-  assert_eq!("bWeAYW4JOqrj9Emz7QXVkGFaNaQcACvXHyGEomAc+xs=",
-        res.digest_value_b64,"res.digest_value_b64");
-   // needs to updated i new test data is generated - paste conents of test.xml-SignatureValue-value
-  assert_eq!("JE7N0l41VpWmdBZ9kVN9U/iwLAsD87XEnr2Lbhn7KDgtk8qqkV5oT/eCrls7fCvql12iv8j6B9Y3+NpWrhoicxzzt7UmC7vNQD4ppcthsfLl8d6tU3/iIP+03U1TRXouTYwQ0pASAvL5sRkSzdtWhyC/vAYv9Hs5qm0cAPDQ6uRttX0WiLlc8j1h/iZBqJkvdDcH6X04yrtJZwSGl3ld/anKXbaFUMDjWrE0rOSzwLlI+WFyfpyLZlSZA8pOntEm33Xoe0Tnwk7ut9OgmAMPPG2uO3KzKQ60a1HwnVFVnvC+aC851ZmDJnB/8IM3lwaQlbr0qK+OOForHvahax9GYw==",
-        res.signature_value_b64,"res.signature_value_b64");
-  // needs to updated i new test data is generated - paste conents of test.xml-TransactionKey  
-  assert_eq!("r5RUVnIuDYu03U3f6xdA+HfZc9XDBdl5CnJmlStxRq1a3gOO66VcBQ7y3QFxFkekYKNvj1444dsm/2LyqU0THf3dvq4/pSx5CgIYKMw9QZ8sHLgmSs0Dz/QL79J3leBVQjwiWEk9hOjvJQRbWQNpLReNXJfpaP6ULn/szyOnU/Gx/9rQ7ei5Ib3G9gV0R34FapSRkSMTNU71WXGDG/s/WI1fLyvibCUIH58nhAhvYcEtGxmAgP0LqJlbw0MIet3833HU6Wlrq2q1K5OAtxgLrX+hDbNlARkP1tObHlvr3qV8Qy88iBnyh6+0l5wx23Jc6Vq8maDZy1sUAy0vFdOo3Q==",
-        res.transaction_key_b64, "res.transaction_key_b64");
-  
-  let sha = *Impl::hash_bytes(SIGNED_INFO_XML_C14N.as_bytes());
-  println!("sha {}",general_purpose::STANDARD.encode(sha.as_bytes()));
-
-}
 
 #[test]
 fn test_digest() {
@@ -108,6 +82,37 @@ fn test_decrypt_txkey( )  {//-> Result<bool, Box<dyn Error>> {
     // Parse the private key from PEM format
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
   let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&Vec::new());
+  assert_eq!(transaction_key_bin.len(),16);
+  let files=decrypt_order_data(&request, &transaction_key_bin); 
+
+  for (index, item) in files.iter().enumerate() {
+    if index % 2 == 0 {
+        // Odd entries (by zero-based index): Filenames
+        let filename = String::from_utf8(item.clone())
+            .expect("Failed to convert filename bytes to string");
+        
+        assert!(filename.ends_with(".xml"), "Filename does not end with .xml");
+    } else {
+        // Even entries: File contents
+        let content_start = String::from_utf8(item[0..5].to_vec())
+            .expect("Failed to convert content bytes to string");
+        //println!(" file {}",String::from_utf8(item.to_vec()).unwrap());
+        assert!(content_start == "<?xml", "File content does not start with <xml>");
+      
+    }
+  }
+}
+
+
+#[test]
+fn test_decrypt_txkey_reverse( )  {//-> Result<bool, Box<dyn Error>> {
+  // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
+  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
+    // Parse the private key from PEM format
+  let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
+
+  let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&TX_KEY_DECRYPTED.to_vec());
+  assert_eq!(transaction_key_bin.len(),16);
   let files=decrypt_order_data(&request, &transaction_key_bin); 
 
   for (index, item) in files.iter().enumerate() {

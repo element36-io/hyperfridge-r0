@@ -14,9 +14,14 @@ Run tests for verifier - need to enable main function with feature flag:
 ```bash
 cd methods/guest
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode
+# with output 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
 
 # Unstructured notes
+
+cd /host
+pprof -http=127.0.0.1:8089 ../target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge ./profile-output 
 
 error: linking with `cc` failed: exit status: 1 
 apt install gcc-multilib

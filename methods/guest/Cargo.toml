@@ -17,13 +17,13 @@ risc0-zkvm = { version = "0.19.1", default-features = false,features = [ "std",]
 aes = "0.8"
 cbc = "0.1"
 base64 = { version = "0.21.5"}
-rsa = { version="0.9"}
+rsa = { version="0.9", features = ["hazmat"]}
 miniz_oxide = "0.7"
 zip = { version = "0.6.6", default-features = false, features=["deflate"] }
 flate2 = "1"  # If you're using flate2 for decompressio
 hex = "0.4.3" 
 xmlparser = "0.13.6"
-
+rand_core = "0.6"
 
 [dev-dependencies]
 pem = "3.0"

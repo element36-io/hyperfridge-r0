@@ -159,7 +159,7 @@ mod tests {
             fs::read_to_string("../data/client.pem").unwrap().as_str(),
             &decrypted_tx_key,
         );
-
+        println!(" receipt_json {}",&receipt_json);
         let receipt_parsed :Receipt= serde_json::from_str(&receipt_json).expect("Failed to parse JSON");
         let result_string = String::from_utf8(receipt_parsed.journal.bytes).expect("Failed to convert bytes to string");
         print!(" commitments in receipt {}",result_string);

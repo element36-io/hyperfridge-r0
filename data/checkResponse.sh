@@ -32,7 +32,7 @@ if [ -z "${pem_file}" ]; then
 fi
 
 if [ -z "${private_pem_file}" ]; then
-    echo "pem_file variable for bank public key X002 is not set. Set to default."
+    echo "pem_file variable for client private key E002 is not set. Set to default."
     private_pem_file="../secrets/e002_private_key.pem"
 fi
 
@@ -136,6 +136,8 @@ decrypted_txkey_file_bin="./tmp/${timestamp}_transaction_key.bin"
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
 [ $(stat --format=%s "$encrypted_txkey_file_bin") -eq 256 ] || { echo "Wrong filesize of encrypted tx key"; exit 1; }
 openssl pkeyutl -decrypt -in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}" -inkey $private_pem_file -pkeyopt rsa_padding_mode:pkcs1 
+# leave padding intact so we can compute from message to cyphertext in the circuit which is must faster than vice-versa
+openssl pkeyutl -decrypt --in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}-raw" -inkey $private_pem_file -pkeyopt rsa_padding_mode:none
 # echo "size tx key (should be 16) $(stat -c %s "$decrypted_txkey_file_bin") "
 [ $(stat --format=%s "$decrypted_txkey_file_bin") -eq 16 ] || { echo "Wrong filesize of decrypted tx key"; exit 1; }
 
@@ -165,10 +167,9 @@ cat  "$dir_name/${xml_file}-OrderData-value" | tr -d '\n' | base64 --decode > $o
 openssl enc -d -aes-128-cbc -nopad -in $orderdata_bin_file -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -pass file:transaction_key.bin -iv 00000000000000000000000000000000
 echo "size $(stat -c %s "$orderdata_bin_file") and hash of orderdata bin file:" $(openssl dgst -sha256 -r "$orderdata_bin_file")
-echo "size $(stat -c %s "$decrypted_file") and hash of decrypted bin file:" $(openssl dgst -sha256 -r "$decrypted_file")
+echo "size $(stat -c %s "$decrypted_file") and hash of decrypted orderdaa bin file:" $(openssl dgst -sha256 -r "$decrypted_file")
 
 
-echo "result without padding: $decrypted_file"
 # Check if the decrypted file exists, wo do not want to mess with the dd command. 
 if [ ! -f "$decrypted_file" ]; then
     echo "Error: Decrypted file ($decrypted_file) does not exist."
@@ -182,4 +183,4 @@ echo "size $(stat -c %s "$dir_name/$xml_file.zip") hash of zip file:" $(openssl 
 unzip -o $dir_name/$xml_file.zip -d  ./$dir_name/camt53/
 
 # For speeding up development - copy decrypted transation key
-cp $decrypted_txkey_file_bin $dir_name/$xml_file-decrypted_tx_key.binary
+cp  -v ${decrypted_txkey_file_bin}-raw ./$dir_name/$xml_file-decrypted_tx_key.binary
