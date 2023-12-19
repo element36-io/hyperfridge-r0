@@ -11,10 +11,13 @@ COPY Cargo.toml /
 COPY rust-toolchain.toml /
 
 WORKDIR /host
+RUN mkdir out; touch out/test.touch
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
 
 WORKDIR /methods/guest
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+
+RUN ls -la /host
 
 COPY host/out host/out
 
