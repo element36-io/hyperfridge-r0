@@ -19,6 +19,6 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --n
 
 RUN ls -la /host
 
-COPY host/out host/out
+#COPY host/out host/out
 
 CMD ["RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --nocapture "]
