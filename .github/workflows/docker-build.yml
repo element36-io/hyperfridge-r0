@@ -24,15 +24,18 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Build Docker image (manual)
+      run: |
+        docker build . -t e36io/hyperfridge-r0:temp --no-cache
 
     - name: Build Docker image
       uses: docker/build-push-action@v2
       with:
+        no-cache: true
         context: .
         file: ./Dockerfile
         push: false
         load: true
-        no-cache: true
         tags: e36io/hyperfridge-r0:temp
 
     - name: Create and Run Temporary Container
