@@ -16,4 +16,6 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
 WORKDIR /methods/guest
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 
+COPY host/out host/out
+
 CMD ["RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --nocapture "]

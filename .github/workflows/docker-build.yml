@@ -37,7 +37,7 @@ jobs:
     - name: Create and Run Temporary Container
       run: |
         docker create --name temp-container e36io/hyperfridge-r0:temp
-        docker cp temp-container:/path/to/IMAGE_ID.hex ./IMAGE_ID.hex
+        docker cp temp-container:/host/out/IMAGE_ID.hex ./IMAGE_ID.hex
         docker rm temp-container  
 
     - name: Read the Image Tag
