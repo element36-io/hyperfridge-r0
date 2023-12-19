@@ -26,7 +26,7 @@ jobs:
 
     - name: Build Docker image (manual)
       run: |
-        docker build . -t e36io/hyperfridge-r0:temp2 --no-cache
+        docker build . -t e36io/hyperfridge-r0:${{ github.run_id }} --no-cache
 
     - name: Build Docker image
       uses: docker/build-push-action@v2
@@ -36,11 +36,11 @@ jobs:
         file: ./Dockerfile
         push: false
         load: true
-        tags: e36io/hyperfridge-r0:temp3
+        tags: e36io/hyperfridge-r0:${{ github.run_id }}
 
     - name: Create and Run Temporary Container
       run: |
-        docker create --name temp-container e36io/hyperfridge-r0:temp3
+        docker create --name temp-container e36io/hyperfridge-r0:${{ github.run_id }}
         docker cp temp-container:/host/out/IMAGE_ID.hex ./IMAGE_ID.hex
         docker rm temp-container  
 
