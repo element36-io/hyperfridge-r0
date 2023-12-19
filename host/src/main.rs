@@ -19,9 +19,6 @@ use std::env;
 
 #[cfg(not(test))] 
 fn main() {
-
-
-
     let args: Vec<String> = env::args().collect();
     // Ensure there are enough arguments
     if args.len() < 3 {
@@ -70,6 +67,7 @@ fn proove_camt53(
 
 ) -> String {
     println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
+    let _=write_image_id(); 
     // Todo: 
     // Using r0 implementation crypto-bigint does not work with RsaPUblicKey
 
@@ -132,6 +130,24 @@ fn proove_camt53(
     result
     // 31709.14
 }
+
+
+use std::fs::File;
+use std::io::{Write, Error};
+
+fn write_image_id() -> Result<(), Error> {
+    // Convert image_id to a hexadecimal string
+    let hex_string = HYPERFRIDGE_ID.iter()
+                             .map(|&num| format!("{:08x}", num))
+                             .collect::<String>();
+
+    // Write hex string to IMAGE_ID.hex
+    let mut hex_file = File::create("./out/IMAGE_ID.hex")?;
+    hex_file.write_all(hex_string.as_bytes())?;
+
+    Ok(())
+}
+
 
 
 #[cfg(test)]

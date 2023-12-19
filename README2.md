@@ -18,6 +18,9 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
 
+RUST_LOG="executor=info"
+
+
 # Unstructured notes
 
 cd /host

@@ -22,3 +22,5 @@ data/tmp/*
 data/test/test.xml-Receipt.json
 data/hello.txt
 data/test.sh
+host/out/IMAGE_ID.binary
+host/out/IMAGE_ID.hex
