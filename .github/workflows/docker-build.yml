@@ -32,6 +32,7 @@ jobs:
         file: ./Dockerfile
         push: false
         load: true
+        no-cache: true
         tags: e36io/hyperfridge-r0:temp
 
     - name: Create and Run Temporary Container
