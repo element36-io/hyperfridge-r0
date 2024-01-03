@@ -23,6 +23,9 @@ use xmlparser::{Tokenizer,Token,ElementEnd};
 use sha2::Sha256 as RsaSha256;
 use base64::{Engine as _, engine::general_purpose};
 
+use hex::encode as hex_encode;
+
+
 #[cfg(not(feature = "debug_mode"))]
 risc0_zkvm::guest::entry!(main);
 
@@ -46,6 +49,7 @@ pub fn main() {
     let authenticated_xml_c14n :String= env::read();
     let signature_value_xml:String  = env::read();
     let order_data_xml:String  = env::read();
+    let order_data_digest_xml:String  = env::read();
     let public_key_mod:String = env::read();
     let public_key_exp:String = env::read();
     let private_key_pem:String = env::read();
@@ -64,7 +68,7 @@ pub fn main() {
 
     // do the actual work
     let document=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
-            &signature_value_xml,&order_data_xml,&public_key,&private_key,&decrypted_tx_key_bin);
+            &signature_value_xml,&order_data_xml, &order_data_digest_xml, &public_key,&private_key,&decrypted_tx_key_bin);
 
     println!(">>> cycle count {}k", (env::get_cycle_count())/1000);
     env::log("proof done walter"); // writes to journal
@@ -82,7 +86,10 @@ pub fn main() {
 fn load(authenticated_xml_c14n: &str,
     signed_info_xml_c14n: &str, 
     signature_value_xml: &str,
-    order_data_xml :&str, public_key: &RsaPublicKey, private_key: &RsaPrivateKey,
+    order_data_xml :&str, 
+    order_data_digest_xml: &str,
+    public_key: &RsaPublicKey, 
+    private_key: &RsaPrivateKey,
     decrypted_tx_key:&Vec<u8> ,
     ) -> Document {
 
@@ -90,10 +97,14 @@ fn load(authenticated_xml_c14n: &str,
     let request=parse_ebics_response(&authenticated_xml_c14n,
                     &signed_info_xml_c14n, 
                     &signature_value_xml,
-                    &order_data_xml);
+                    &order_data_xml,
+                    &order_data_digest_xml,);
 
     // cycle count 12502k: adds 10`702k
     verify_bank_signature( &public_key, &request);
+
+    // cycle count ....
+    verify_order_data_signature( &public_key, &request);
     
     // cycle count 98347k: adds 85'845k
     let transaction_key=decrypt_transaction_key(&request,private_key,decrypted_tx_key);
@@ -218,6 +229,30 @@ fn verify_bank_signature(
     };
 }
 
+/// Check Signature of Payload 
+fn verify_order_data_signature(
+    public_key: &RsaPublicKey, 
+    request: &Request, 
+)  {
+    println!(" verify the bank signature");
+    // Decode the signature
+    let signature_value_bytes =  general_purpose::STANDARD.decode(&request.signature_data_b64).unwrap();
+
+    // We checked for Schema A005  which enforces: 
+    let scheme = Pkcs1v15Sign::new::<RsaSha256>();
+
+    // Verify the signature
+    let res=  public_key.verify( scheme ,// verifying_key.verify(//public_key.verify( scheme ,
+        &request.signed_info_hashed,
+        &signature_value_bytes
+    );
+
+    match res {
+        Ok(_) => println!(" Order Data is verified"),
+        Err(e) => {eprintln!(" ---> error {:?}",e);panic!(" Order Data Signature could not be verified")}
+    };
+}
+
 #[allow(dead_code)]
 #[derive(Debug)]
 struct Request {
@@ -228,6 +263,8 @@ struct Request {
     signature_value_b64:String,
     signed_info_hashed:Vec<u8>,
     order_data_b64:String,
+    signature_data_b64:String,
+    data_digest_b64:String,
 }
 
 
@@ -239,11 +276,15 @@ struct Request {
 fn parse_ebics_response(authenticated_xml_c14n: &str,
                 signed_info_xml_c14n: &str, 
                 signature_value_xml: &str,
-                order_data_xml:&str) -> Request {
+                order_data_xml:&str,
+                order_data_digest_xml:&str) -> Request {
+
     let mut curr_tag: &str= "";
 
     let mut digest_value_b64: String=String::new();
     let mut signature_value_b64: String=String::new();
+    let mut signature_data_b64: String=String::new();
+    let mut data_digest_b64: String=String::new();
     let mut bank_timestamp: String=String::new();
     let mut transaction_key_b64: String=String::new();
     let mut order_data_b64: String=String::new();
@@ -253,8 +294,8 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     let calculated_digest_b64 = general_purpose::STANDARD.encode(&*Impl::hash_bytes(authenticated_xml_c14n.as_bytes()).as_bytes());
     let signed_info_hashed: Vec<u8> = (*Impl::hash_bytes(signed_info_xml_c14n.as_bytes())).as_bytes().to_vec();
     //let tokens=Tokenizer::from(xml_data); // use from_fragment so deactive xml checks
-    let all_tags=format!("{}{}{}{}", 
-                    authenticated_xml_c14n, signed_info_xml_c14n,signature_value_xml,order_data_xml);
+    let all_tags=format!("{}{}{}{}{}", 
+                    authenticated_xml_c14n, signed_info_xml_c14n,signature_value_xml,order_data_xml,order_data_digest_xml);
     let tokens=Tokenizer::from_fragment(&all_tags,0..all_tags.len());
     //  0..full_text.len()
 
@@ -262,13 +303,13 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     for token in tokens {
         match token {
             Ok(Token::ElementStart { local, .. }) => {
-                // println!("   open tag  as_str {:?}", local.as_str());
+                println!("   open tag  as_str {:?}", local.as_str());
                 curr_tag=local.as_str();
             },
             Ok(Token::ElementEnd {end,..}) => {
                 match end {
                     ElementEnd::Close(.., _local) => {
-                        // println!("   close tag  as_str {:?}", _local.as_str());
+                        println!("   close tag  as_str {:?}", _local.as_str());
                         // handling Close variant
                         curr_tag = "";
                 
@@ -305,6 +346,15 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
             Ok(Token::Text { text }) if curr_tag == "TimestampBankParameter" => {
                 bank_timestamp = text.to_string();
             },
+            Ok(Token::Text { text }) if curr_tag == "SignatureData" => {
+                signature_data_b64 = text.to_string();
+            },
+            Ok(Token::Text { text }) if curr_tag == "DataDigest" => {
+                data_digest_b64 = text.to_string();
+            },
+            Ok(Token::Attribute { local, value, .. }) if (curr_tag == "DataDigest" )  => {
+                if !(local=="SignatureVersion" && value=="A005") {panic!(" Only Signatures A005 supported.")};
+            },
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             },
@@ -315,23 +365,31 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
             },
         }
     }
+
     assert_ne!(digest_value_b64.len(),0);
     assert_ne!(transaction_key_b64.len(),0);
     assert_ne!(bank_timestamp.len(),0);
     assert_ne!(signature_value_b64.len(),0);
     assert_ne!(signed_info_hashed.len(),0);
     assert_ne!(order_data_b64.len(),0);
+    assert_ne!(signature_data_b64.len(),0);
+    assert_ne!(data_digest_b64.len(),0);
 
     let authenticated_xml_c14n_hashed=*Impl::hash_bytes(authenticated_xml_c14n.as_bytes());
 
-    Request {digest_value_b64:digest_value_b64,autheticated_hashed:authenticated_xml_c14n_hashed.as_bytes().to_vec(),
-            transaction_key_b64:transaction_key_b64,bank_timestamp:bank_timestamp, 
-            signature_value_b64:signature_value_b64,signed_info_hashed:signed_info_hashed,
-            order_data_b64:order_data_b64}
+    Request {digest_value_b64:digest_value_b64,
+            autheticated_hashed:authenticated_xml_c14n_hashed.as_bytes().to_vec(),
+            transaction_key_b64:transaction_key_b64,
+            bank_timestamp:bank_timestamp, 
+            signature_value_b64:signature_value_b64,
+            signed_info_hashed:signed_info_hashed,
+            order_data_b64:order_data_b64,
+            signature_data_b64:signature_data_b64,
+            data_digest_b64:data_digest_b64,
+        }
  
    
 }
-
 
 
 /// The Transaction key is transmitted as base64. 
@@ -428,6 +486,16 @@ fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<
     println!(" decrypting payload with transaction key");
     
     let order_data_bin =general_purpose::STANDARD.decode(&&request.order_data_b64).unwrap();
+    // Todo: walter - check Digest first if it matches the xml
+       // Compute SHA-256 hash
+    let sha = *Impl::hash_bytes(&order_data_bin);
+
+    // Convert hash to hexadecimal strings
+    let sha_hex=hex_encode(sha.as_bytes());
+    let sha_hex_xml=hex_encode(general_purpose::STANDARD.decode(&request.data_digest_b64).unwrap());
+    assert_eq!(&sha_hex,&sha_hex_xml,"Digest (<DataDigest ..> does not match digest of data");
+
+
     // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
     // Decrypt the AES key using RSA (not shown, replace with your RSA decryption code)
