@@ -206,7 +206,8 @@ orderdata_signature_value=$(awk '/<SignatureData authenticate="true">/,/<\/Signa
 echo "$orderdata_signature_value"  | openssl enc -d -a -A -out $orderdata_signature_file
 echo "Verify Signature of OrderData (Payload):"
 openssl pkeyutl  -verify -in "$orderdata_digest_file" -sigfile "$orderdata_signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
-
+# extract DataDigest 
+perl -ne 'print $1 if /(<DataDigest.*<\/DataDigest>)/' $xml_file > "$dir_name/${xml_file}-DataDigest"
 
 # the result is a compressed binary using standard RFC 1951 which is just (de)compressing a stream
 zlib-flate -uncompress  < $decrypted_file > $dir_name/$xml_file.zip

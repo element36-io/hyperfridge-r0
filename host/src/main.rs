@@ -36,6 +36,7 @@ fn main() {
     let authenticated_xml_c14n = fs::read_to_string(args[1].to_string()+"-authenticated").expect("Failed to read authenticated file");
     let signature_value_xml = fs::read_to_string(args[1].to_string()+"-SignatureValue").expect("Failed to read SignatureValue file") ;
     let order_data_xml =  fs::read_to_string(args[1].to_string()+"-OrderData").expect("Failed to read OrderData file") ;
+    let order_data_digest_xml =  fs::read_to_string(args[1].to_string()+"-DataDigest").expect("Failed to read OrderData file") ;
 
     let decrypted_tx_key:Vec<u8> =  Vec::new();
 
@@ -44,6 +45,7 @@ fn main() {
         &authenticated_xml_c14n,
         &signature_value_xml,
         &order_data_xml,
+        &order_data_digest_xml,
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
         &decrypted_tx_key, // todo: remove this later
@@ -61,6 +63,8 @@ fn proove_camt53(
     authenticated_xml_c14n: &str,
     signature_value_xml: &str,
     order_data_xml: &str,
+    order_data_digest_xml: &str,
+    
     bank_public_key_x002_pem: &str,
     user_private_key_e002_pem: &str,
     decrypted_tx_key:&Vec<u8> ,  // Todo: remove this later
@@ -95,6 +99,7 @@ fn proove_camt53(
         .write(&authenticated_xml_c14n).unwrap()
         .write(&signature_value_xml).unwrap()
         .write(&order_data_xml).unwrap()
+        .write(&order_data_digest_xml).unwrap()
         .write(&modulus_str).unwrap()
         .write(&exponent_str).unwrap()
         .write(&user_private_key_e002_pem).unwrap()
@@ -171,6 +176,7 @@ mod tests {
             fs::read_to_string(EBICS_FILE.to_string()+"-authenticated").unwrap().as_str(), 
             fs::read_to_string(EBICS_FILE.to_string()+"-SignatureValue").unwrap().as_str(),
             fs::read_to_string(EBICS_FILE.to_string()+"-OrderData").unwrap().as_str(),
+            fs::read_to_string(EBICS_FILE.to_string()+"-DataDigest").unwrap().as_str(),
             fs::read_to_string("../data/bank_public.pem").unwrap().as_str(),
             fs::read_to_string("../data/client.pem").unwrap().as_str(),
             &decrypted_tx_key,
