@@ -31,6 +31,13 @@ jobs:
           rustup target add wasm32-unknown-unknown
           rustup component add rustfmt
           rustup component add clippy
+
+      - name: Run fmt
+        run: cargo fmt --all -- --check
+      
+      - name: Run clippy
+        run: cargo clippy --all-targets
+        
       - name: Check Build
         run: |
           SKIP_WASM_BUILD=1 cargo check --release
