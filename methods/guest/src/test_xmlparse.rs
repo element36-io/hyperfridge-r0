@@ -28,6 +28,8 @@ const SIGNED_INFO_XML_C14N: &str = include_resource!("SignedInfo");
 const AUTHENTICATED_XML_C14N: &str = include_resource!("authenticated");
 const SIGNATURE_VALUE_XML: &str = include_resource!("SignatureValue");
 const ORDER_DATA_XML: &str = include_resource!("OrderData");
+const ORDER_DATA_DIGEST_XML: &str = include_resource!("DataDigest");
+
 
 
 
@@ -44,7 +46,7 @@ fn test_digest() {
   //A SHA-256 digest is a 256-bit string. 
   //The content of the DigestValue element shall be the base64 
   //encoding of this bit string viewed as a 32-octet octet stream.
-  let res=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
+  let res=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML,ORDER_DATA_DIGEST_XML);
   let authenticated=AUTHENTICATED_XML_C14N.as_bytes();
   println!("  authenticated file length {:?}",&authenticated.len());
   
@@ -65,12 +67,8 @@ fn test_validate_signature( )  {//-> Result<bool, Box<dyn Error>> {
 
   let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
   let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create bank public key");
-  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
+  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML,ORDER_DATA_DIGEST_XML);
 
-  // let signed_data = base64_to_bytes(SIGNED_INFO_C14N);
-  // let signature = base64_to_bytes(SIGNATURE_VALUE);
-  //verify_signature(&bank_public_key, request);
-    //let data_hash=base64_to_bytes(DIGEST);
   verify_bank_signature(&bank_public_key, &request);
 }
 
@@ -78,7 +76,7 @@ fn test_validate_signature( )  {//-> Result<bool, Box<dyn Error>> {
 #[test]
 fn test_decrypt_txkey( )  {//-> Result<bool, Box<dyn Error>> {
   // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
-  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
+  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML,ORDER_DATA_DIGEST_XML);
     // Parse the private key from PEM format
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
   let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&Vec::new());
@@ -107,7 +105,7 @@ fn test_decrypt_txkey( )  {//-> Result<bool, Box<dyn Error>> {
 #[test]
 fn test_decrypt_txkey_reverse( )  {//-> Result<bool, Box<dyn Error>> {
   // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
-  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
+  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML,ORDER_DATA_DIGEST_XML);
     // Parse the private key from PEM format
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
 
@@ -136,7 +134,7 @@ fn test_decrypt_txkey_reverse( )  {//-> Result<bool, Box<dyn Error>> {
 #[test]
 fn test_parse( )  {//-> Result<bool, Box<dyn Error>> {
   // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
-  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML);
+  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML,ORDER_DATA_DIGEST_XML);
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
   let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&Vec::new());
   let files=decrypt_order_data(&request, &transaction_key_bin); 
