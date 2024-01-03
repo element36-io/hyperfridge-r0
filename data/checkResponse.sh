@@ -18,7 +18,7 @@ set -e
 
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default."
-    xml_file="productive_example.xml"
+    xml_file="response_template.xml"
 fi
 dir_name="${xml_file%.xml}"
 
