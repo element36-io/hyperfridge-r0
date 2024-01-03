@@ -29,6 +29,8 @@ jobs:
         run: |
           rustup update stable --no-self-update
           rustup target add wasm32-unknown-unknown
+          cargo binstall cargo-risczero
+          cargo risczero install
           rustup component add rustfmt
           rustup component add clippy
 
