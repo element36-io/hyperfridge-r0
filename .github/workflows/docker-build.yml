@@ -1,0 +1,66 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [ buildfile ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  # , self-hosted
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2 
+
+    - name: Login to DockerHub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Build Docker image (manual)
+      run: |
+        docker build . -t e36io/hyperfridge-r0:${{ github.run_id }} --no-cache
+        
+
+    # - name: Build Docker image
+    #   uses: docker/build-push-action@v2
+    #   with:
+    #     no-cache: true
+    #     context: .
+    #     file: ./Dockerfile
+    #     push: false
+    #     load: true
+    #     tags: e36io/hyperfridge-r0:${{ github.run_id }}
+
+    - name: Create and Run Temporary Container
+      run: |
+        docker create --name temp-container e36io/hyperfridge-r0:${{ github.run_id }}
+        docker cp temp-container:/host/out/IMAGE_ID.hex ./IMAGE_ID.hex
+        docker rm temp-container  
+
+    - name: Read the Image Tag
+      id: read_tag
+      run: echo "IMAGE_TAG=$(cat IMAGE_ID.hex)" >> $GITHUB_ENV        
+
+    - name: Build and Push Docker image with custom tag
+      if: github.event_name != 'pull_request'
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: e36io/hyperfridge-r0:${{ env.IMAGE_TAG }}
+
+    - name: Create GitHub Tag
+      if: github.event_name != 'pull_request'
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git tag ${{ env.IMAGE_TAG }}
+        git push origin ${{ env.IMAGE_TAG }}        

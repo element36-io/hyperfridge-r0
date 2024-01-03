@@ -18,7 +18,7 @@ set -e
 
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default."
-    xml_file="productive_example.xml"
+    xml_file="response_template.xml"
 fi
 dir_name="${xml_file%.xml}"
 
@@ -68,6 +68,7 @@ expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c25
 add_namespaces=" xmlns=\"http://www.ebics.org/H003\"" 
 perl -ne 'print $1 if /(<header.*<\/header>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<header +<header${add_namespaces} +" > "$header_file"
 perl -ne 'print $1 if /(<DataEncryptionInfo.*<\/DataEncryptionInfo>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<DataEncryptionInfo +<DataEncryptionInfo${add_namespaces} +" >> "$header_file"
+perl -ne 'print $1 if /(<SignatureData.*<\/SignatureData>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<SignatureData +<SignatureData${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<ReturnCode +<ReturnCode${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
 
@@ -167,7 +168,7 @@ cat  "$dir_name/${xml_file}-OrderData-value" | tr -d '\n' | base64 --decode > $o
 openssl enc -d -aes-128-cbc -nopad -in $orderdata_bin_file -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -pass file:transaction_key.bin -iv 00000000000000000000000000000000
 echo "size $(stat -c %s "$orderdata_bin_file") and hash of orderdata bin file:" $(openssl dgst -sha256 -r "$orderdata_bin_file")
-echo "size $(stat -c %s "$decrypted_file") and hash of decrypted orderdaa bin file:" $(openssl dgst -sha256 -r "$decrypted_file")
+echo "size $(stat -c %s "$decrypted_file") and hash of decrypted orderdata bin file:" $(openssl dgst -sha256 -r "$decrypted_file")
 
 
 # Check if the decrypted file exists, wo do not want to mess with the dd command. 
@@ -175,6 +176,38 @@ if [ ! -f "$decrypted_file" ]; then
     echo "Error: Decrypted file ($decrypted_file) does not exist."
     exit 1
 fi
+
+# check hash and Signature of OrderData payload
+
+# first check sha256 of binary encrypted file and then compare with xml value
+orderdata_digest_hex=$( openssl dgst -sha256 -r $orderdata_bin_file | cut -d ' ' -f 1 )
+# extract content from <DataDigest SignatureVersion="A005">..</DataDigest>
+orderdata_digest_expected_base64=$(awk '/<DataDigest SignatureVersion="A005">/,/<\/DataDigest>/' "$xml_file" | sed 's/.*<DataDigest SignatureVersion="A005">//' | sed 's/<\/DataDigest>.*$//' | tr -d '\n')
+# Base64 --> binary --> hex
+orderdata_digest_expected_hex=$(echo $orderdata_digest_expected_base64 | openssl enc -d -a -A | xxd -p -c256)
+if  [ "$orderdata_digest_expected_hex" == "$orderdata_digest_hex" ]; then 
+    echo "digest of Order Data is matching! - Checking signature." 
+else 
+    echo "digest is not matching - look for authenticate=true attribues which indicate the Tags which are digested." 
+    echo calculated digest headertag hex: $orderdata_digest_expected_base64
+    echo expected digest headertag hex: $orderdata_digest_hex
+    exit -1;
+fi
+# check Signature
+# First we need need order data digest in binary format
+orderdata_signature_output_file="./tmp/orderdata_signaturecheck_$timestamp.bin"
+orderdata_digest_file="./tmp/orderdata_digescheck_$timestamp.bin"
+# we need the digest as a digest file; digest again with -binary 
+openssl dgst -sha256 -binary -r $orderdata_bin_file > "$orderdata_digest_file"
+orderdata_signature_file="./tmp/orderdata_signature_$timestamp.bin"
+# signature value from xml 
+orderdata_signature_value=$(awk '/<SignatureData authenticate="true">/,/<\/SignatureData>/' "$xml_file" | sed 's/.*<SignatureData authenticate="true">//' | sed 's/<\/SignatureData>.*$//' | tr -d '\n')
+# convert from base64 to binary openssl format
+echo "$orderdata_signature_value"  | openssl enc -d -a -A -out $orderdata_signature_file
+echo "Verify Signature of OrderData (Payload):"
+openssl pkeyutl  -verify -in "$orderdata_digest_file" -sigfile "$orderdata_signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
+# extract DataDigest 
+perl -ne 'print $1 if /(<DataDigest.*<\/DataDigest>)/' $xml_file > "$dir_name/${xml_file}-DataDigest"
 
 # the result is a compressed binary using standard RFC 1951 which is just (de)compressing a stream
 zlib-flate -uncompress  < $decrypted_file > $dir_name/$xml_file.zip
