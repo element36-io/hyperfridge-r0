@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ebicsResponse xmlns="http://www.ebics.org/H003" Revision="1" Version="H003">
+  <header authenticate="true">
+    <static>
+      <TransactionID>DD85DCE9DD8442B3DA74A2C174BEACE3</TransactionID>
+      <NumSegments>1</NumSegments>
+    </static>
+    <mutable>
+      <TransactionPhase>Initialisation</TransactionPhase>
+      <SegmentNumber lastSegment="true">1</SegmentNumber>
+      <ReturnCode>000000</ReturnCode>
+      <ReportText>[EBICS_OK] OK</ReportText>
+    </mutable>
+  </header>
+  <AuthSignature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+      <ds:Reference URI="#xpointer(//*[@authenticate='true'])">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+        <ds:DigestValue>stdSstLvBnwVGWlWQdVE6LxrJlQ7tHCd5McH5lpVwmk=</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>KgddERAm4fixjU1yr1ybs8NPpfWEd5E26Kp4cXT9iv8FHrJ5yF6uW86QKZZZahx74RIU6aFOKnj7Km1YYSsvzwg1JfJ7MwD17r+u03fH7cV5N5xo9Bk61EudYYEhMV3LrMb+RPixLkf31PEl3UiY4EIFwHZ4eVfFDzmBEDwgJX8dSCFnP+8R4mV706S4z0D3EOg4jIMp8V7YEnJ/zVpYAvcNIYfoIfZqpyt4TELCsapLvj3qqh9vzYQrZHjgHI2vpRqh3lXMSDBANtA7LWnbk8sdc+oBu+EXt8DMXUqBZWismMk+i6fPg++QxwZfHxMSwlh7DKscA/dJvA+kNfBkiw==</ds:SignatureValue>
+  </AuthSignature>
+  <body>
+    <DataTransfer>
+      <DataEncryptionInfo authenticate="true">
+        <EncryptionPubKeyDigest Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" Version="E002">iHehyz6aY84DY6T3ubzm0k/RfvbENVc3yHX8EUm7WdU=</EncryptionPubKeyDigest>
+        <TransactionKey>mPIGQDip5NNzUGdmicx9+1PSpsJtyst7Ao4xM1PH3qkmeRNvARuZ7AQVVCUVdMrscc1lR5N6IT+LmjxsHVHQauy+Me7dQOxU7Tn8L0k47FmG0eSoBe/2CD5hx01mBO9o8Ngn0tx8EsEQenK9Qmt9sLrjt0JMMJh+M6MOIMfKSjTd4HKN9nxAP/ahKHPQWEybjjf2W94TllBp3C9DnDiFTH4Li0s93OeZl6vZ1dPO5kSsMeOO9ZyhCrm2ck/FSViWAGm900+loB3coAppvGJv3wsrusvF9hplb+fJ83xfNjBUlvC7+Toex+0fv/2r1XY2yahs4SH4kYB/Fr4XImO8Mw==</TransactionKey>
+      </DataEncryptionInfo>
+      <OrderData>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</OrderData>
+      <SignatureData authenticate="true">iN/x3lS7ikdiChkuT249dKmWmXP/YhSKw6wQIuvHRzVUOc/8HUhjcFNLL5HcfeQSZIL3w1AcPWjgqAzK15w9/1fipLM86DrMrt4jtSIHRZssaeEepZZBnTvxci9vz3WmqF9A2yp+k2QtZApcxsdR2VBoxFVV8NyuUIsCiFiHmyxPO4E4yVRlu2/voJalQ/umcXMWj3Nqm0GKNElo/4VvIBIPQcCKcMJlb6gpLHT6ajeipizlo+AM3JQuoCKZ5kglqmWp4a1j21Iv7DQvll6ppGMwwlpA0atD4EWudCQ6kzWNlMCjRY5dUy6qWzwdoAhzZ0BZfQnI/0jE8qTPR+VL/g==</SignatureData>
+      <DataDigest SignatureVersion="A005">yVs5auiHvcbPLNtncA9d9yaM2l2UMEcTw3CaO+kfEtI=</DataDigest>
+    </DataTransfer>
+    <ReturnCode authenticate="true">000000</ReturnCode>
+    <TimestampBankParameter authenticate="true">2023-11-30T08:38:11.8835379Z</TimestampBankParameter>
+  </body>
+</ebicsResponse>

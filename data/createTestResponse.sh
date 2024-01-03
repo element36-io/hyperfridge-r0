@@ -48,7 +48,7 @@ decrypted_file="$original_dir_name/orderdata_decrypted.zip"
 
 # Check if all files exist
 if [ ! -f "$decrypted_file" ] ; then
-    echo "Zip to encrypt (payload) is missing."
+    echo "Zip to encrypt (payload) is missing - looked for: $decrypted_file"
     exit 1
 fi
        
@@ -95,19 +95,22 @@ perl -pi -e "s|<OrderData>.*?</OrderData>|<OrderData>$base64_encrypted</OrderDat
 
 # get sha256 hex value; cut removes the filename in the output
 encrypted_file_sha256=$( openssl dgst -sha256 -r $encrypted_file | cut -d ' ' -f 1 )
-echo "Sha256 encrypted_file: $encrypted_file_sha256"
+echo "Sha256 of encrypted payload file: $encrypted_file_sha256"
 # hex --> binary --> to base64;
-encrypted_file_sha256_base64=$(echo "$encrypted_file_sha256" | xxd -r -p | openssl enc -a -A)
+export encrypted_file_sha256_base64=$(echo "$encrypted_file_sha256" | xxd -r -p | openssl enc -a -A)
 # Insert the Base64 encoded hash the XML file:   <SignatureData authenticate="true">...</SignatureData>
-perl -pi -e 's|<DataDigest SignatureVersion="A005">.*?</DataDigest>|<DataDigest SignatureVersion="A005">${encrypted_file_sha256_base64}<DataDigest>|s' "$created_file"
+perl -pi -e 's|<DataDigest SignatureVersion="A005">.*?</DataDigest>|<DataDigest SignatureVersion="A005">$ENV{encrypted_file_sha256_base64}</DataDigest>|s' "$created_file"
 # Now do the signing with bank key according to A005
-orderdata_digest_file="./tmp/orderdata_digest_$timestamp.bin"
 orderdata_signature_output_file="./tmp/orderdata_signature_$timestamp.bin"
+orderdata_digest_file="./tmp/orderdata_digest_$timestamp.bin"
+# we need the digest as a digest file; digest again with -binary 
+openssl dgst -sha256 -binary  -r $encrypted_file > "$orderdata_digest_file"
+# now sign it
 openssl pkeyutl -sign -inkey "bank.pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
 # Convert the signature to Base64
-orderdata_signature_base64=$(base64 -w 0 "$orderdata_signature_output_file")
+export orderdata_signature_base64=$(base64 -w 0 "$orderdata_signature_output_file")
 # Insert base64 encoded signature into XML file:  <SignatureData authenticate="true">....</SignatureData>
-perl -pi -e 's|<SignatureData authenticate="true">.*?</SignatureData>|<SignatureData authenticate="true">${orderdata_signature_base64}<SignatureData>|s' "$created_file"
+perl -pi -e 's|<SignatureData authenticate="true">.*?</SignatureData>|<SignatureData authenticate="true">$ENV{orderdata_signature_base64}</SignatureData>|s' "$created_file"
 
 
 # As  next step, encrypt the binary transaction key (bin file) with  public key of client.pem, then base64 it. 
@@ -120,8 +123,7 @@ openssl rsautl -encrypt -pubin -inkey client_public.pem -in $txkey_file_bin -out
 base64_encrypted_transaction_key=$(base64 -w 0 $encrypted_txkey_file_bin)
 # Insert the Base64 encoded encrypted transaction key into the XML file
 perl -pi -e "s|<TransactionKey>.*?</TransactionKey>|<TransactionKey>$base64_encrypted_transaction_key</TransactionKey>|s" "$created_file"
-echo "Transaction key encrypted and inserted into the XML file. Next calculate DigestValue of all Tags markeed with authenticated=true"
-
+echo "Transaction key encrypted and inserted into the XML file. Next calculate DigestValue of all Tags marked with authenticated=true"
 
 # get all tags with authtenticated= true; then process it according to C14N rulez. 
 header_file=$dir_name/$created_file-authenticated
