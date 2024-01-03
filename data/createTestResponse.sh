@@ -22,7 +22,7 @@ set -e
 timestamp=$(date +%Y%m%d%H%M%S)
 
 # Use productive example as template
-xml_file="productive_example.xml"
+xml_file="response_template.xml"
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default. ${xml_file}"
     #exit 1
@@ -83,13 +83,31 @@ encrypted_file="./tmp/create_orderdata_$timestamp.bin"
 # Encrypting the ZIP file
 openssl enc -e -aes-128-cbc -nopad -in "$decrypted_file" -out "$encrypted_file" -K "$transaction_key_hex" -iv 00000000000000000000000000000000
 echo "Encrypted file: $encrypted_file   - convert to base64 nd put it as value into the OrderData Tag "
-# echo "Sha256 eynrypted_file: $(sha256sum $encrypted_file)"
-# echo "Sha256 decrypted_file: $(sha256sum $decrypted_file)"
-
 
 base64_encrypted=$(base64 -w 0 "$encrypted_file")
 # Use Perl to replace the content inside the OrderData tag
 perl -pi -e "s|<OrderData>.*?</OrderData>|<OrderData>$base64_encrypted</OrderData>|s" "$created_file"
+
+
+# Sign OrderData with A005 = EMSA-PKCS1-v1_5 with SHA-256 
+# This is marked as optional in the standard, but only if included we can make sure that 
+# the client (client of the bank) is not tempering the data
+
+# get sha256 hex value; cut removes the filename in the output
+encrypted_file_sha256=$( openssl dgst -sha256 -r $encrypted_file | cut -d ' ' -f 1 )
+echo "Sha256 encrypted_file: $encrypted_file_sha256"
+# hex --> binary --> to base64;
+encrypted_file_sha256_base64=$(echo "$encrypted_file_sha256" | xxd -r -p | openssl enc -a -A)
+# Insert the Base64 encoded hash the XML file:   <SignatureData authenticate="true">...</SignatureData>
+perl -pi -e 's|<DataDigest SignatureVersion="A005">.*?</DataDigest>|<DataDigest SignatureVersion="A005">${encrypted_file_sha256_base64}<DataDigest>|s' "$created_file"
+# Now do the signing with bank key according to A005
+orderdata_digest_file="./tmp/orderdata_digest_$timestamp.bin"
+orderdata_signature_output_file="./tmp/orderdata_signature_$timestamp.bin"
+openssl pkeyutl -sign -inkey "bank.pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
+# Convert the signature to Base64
+orderdata_signature_base64=$(base64 -w 0 "$orderdata_signature_output_file")
+# Insert base64 encoded signature into XML file:  <SignatureData authenticate="true">....</SignatureData>
+perl -pi -e 's|<SignatureData authenticate="true">.*?</SignatureData>|<SignatureData authenticate="true">${orderdata_signature_base64}<SignatureData>|s' "$created_file"
 
 
 # As  next step, encrypt the binary transaction key (bin file) with  public key of client.pem, then base64 it. 
@@ -108,12 +126,14 @@ echo "Transaction key encrypted and inserted into the XML file. Next calculate D
 # get all tags with authtenticated= true; then process it according to C14N rulez. 
 header_file=$dir_name/$created_file-authenticated
 add_namespaces=" xmlns=\"http://www.ebics.org/H003\"" 
-perl -ne 'print $1 if /(<header.*<\/header>)/' "$created_file"| xmllint -exc-c14n - | sed "s+<header +<header${add_namespaces} +" > "$header_file"
-perl -ne 'print $1 if /(<DataEncryptionInfo.*<\/DataEncryptionInfo>)/' "$created_file"| xmllint -exc-c14n - | sed "s+<DataEncryptionInfo +<DataEncryptionInfo${add_namespaces} +" >> "$header_file"
-perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$created_file" | xmllint -exc-c14n - | sed "s+<ReturnCode +<ReturnCode${add_namespaces} +" >> "$header_file"
+perl -ne 'print $1 if /(<header.*<\/header>)/' "$created_file"                                 | xmllint -exc-c14n - | sed "s+<header +<header${add_namespaces} +" > "$header_file"
+perl -ne 'print $1 if /(<DataEncryptionInfo.*<\/DataEncryptionInfo>)/' "$created_file"         | xmllint -exc-c14n - | sed "s+<DataEncryptionInfo +<DataEncryptionInfo${add_namespaces} +" >> "$header_file"
+perl -ne 'print $1 if /(<SignatureData.*<\/SignatureData>)/' "$created_file"                   | xmllint -exc-c14n - | sed "s+<SignatureData +<SignatureData${add_namespaces} +" >> "$header_file"
+perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$created_file"                    | xmllint -exc-c14n - | sed "s+<ReturnCode +<ReturnCode${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$created_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
 
 echo "size of authenticate file:" $(stat --format="%s" "$header_file")
+# get sha256 hex value; cut removes the filename in the output
 calculated_digest_hex=$( openssl dgst -sha256 -r $header_file | cut -d ' ' -f 1 )
 echo calculated digest headertag hex: $calculated_digest_hex
 # hex --> binary --> to base64;
@@ -144,7 +164,6 @@ base64_signature=$(base64 -w 0 "$signature_output_file")
 
 # Replace the <ds:SignatureValue> content in the XML file
 perl -pi -e "s|<ds:SignatureValue>.*?</ds:SignatureValue>|<ds:SignatureValue>$base64_signature</ds:SignatureValue>|s" "$created_file"
-
 echo "Signature inserted into the XML file."
 
 # archive new file to new name; call checkResponse with new name
