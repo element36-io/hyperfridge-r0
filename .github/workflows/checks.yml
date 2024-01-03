@@ -36,8 +36,8 @@ jobs:
         run: cargo fmt --all -- --check
       
       - name: Run clippy
-        run: cargo clippy --all-targets
-        
+        run: RISC0_SKIP_BUILD=true cargo clippy --all-targets
+
       - name: Check Build
         run: |
           SKIP_WASM_BUILD=1 cargo check --release
