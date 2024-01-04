@@ -51,12 +51,6 @@ fn test_digest() {
   println!("  authenticated file length {:?}",&authenticated.len());
   
   let sha = *Impl::hash_bytes(&authenticated);
-  // println!("  digest object {:?}",&sha);
-  // println!("  digest calculated b64 {:?}",bytes_to_base64(sha.as_bytes()));
-  // println!("  digest should be in b64  {:?}",res.digest_value_b64);
-  // println!("  digest calculated hex {:?}",bytes_to_hex(sha.as_bytes()));
-  // println!("  digest should be in hex  {:?}",base64_to_hex(&res.digest_value_b64));
-
   assert_eq!(res.digest_value_b64, general_purpose::STANDARD.encode(sha.as_bytes()));
 }
 
@@ -72,6 +66,17 @@ fn test_validate_signature( )  {//-> Result<bool, Box<dyn Error>> {
   verify_bank_signature(&bank_public_key, &request);
 }
 
+#[test]
+fn test_validate_orderdata( )  {//-> Result<bool, Box<dyn Error>> {
+  //openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" 
+  //-pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
+
+  let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
+  let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create bank public key");
+  let request=parse_ebics_response(AUTHENTICATED_XML_C14N,SIGNED_INFO_XML_C14N,SIGNATURE_VALUE_XML,ORDER_DATA_XML,ORDER_DATA_DIGEST_XML);
+
+  verify_order_data_signature(&bank_public_key, &request);
+}
 
 #[test]
 fn test_decrypt_txkey( )  {//-> Result<bool, Box<dyn Error>> {
@@ -175,4 +180,5 @@ fn test_parse( )  {//-> Result<bool, Box<dyn Error>> {
     }
   }
 }
+
 
