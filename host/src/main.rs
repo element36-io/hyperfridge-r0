@@ -56,6 +56,7 @@ fn main() {
 }
 
 /// Generates the proof of computation and returning the receipt as JSON
+#[allow(clippy::too_many_arguments)]
 fn proove_camt53(
     signed_info_xml_c14n: &str,
     authenticated_xml_c14n: &str,
@@ -158,8 +159,8 @@ fn write_image_id() -> Result<(), Error> {
     // Convert image_id to a hexadecimal string
     let hex_string = HYPERFRIDGE_ID
         .iter()
-        .map(|&num| format!("{:08x}", num))
-        .collect::<String>();
+        .fold(String::new(), |acc, &num| acc + &format!("{:08x}", num));
+
 
     // Write hex string to IMAGE_ID.hex
     let mut hex_file = File::create("./out/IMAGE_ID.hex")?;
