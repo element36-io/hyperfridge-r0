@@ -4,7 +4,6 @@
 
 // If you want to try std support, also update the guest Cargo.toml file
 // #![no_std]  // std support is experimental
-
 // #[cfg(not(feature = "debug_mode"))]
 // #[cfg_attr(not(feature = "debug_mode"), no_main)]
 
@@ -63,19 +62,21 @@ pub fn main() {
     let private_key = RsaPrivateKey::from_pkcs8_pem(&private_key_pem).expect("Failed to create private key form pem");
 
     // do the actual work
-    let document=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
+    let documents=load(&authenticated_xml_c14n,&signed_info_xml_c14n,
             &signature_value_xml,&order_data_xml,&public_key,&private_key,&decrypted_tx_key_bin);
 
     println!(">>> cycle count {}k", (env::get_cycle_count())/1000);
-    env::log("proof done walter"); // writes to journal
-    env::log(&document.stmts[0].balances[0].amt);
-
+    env::log("proof done "); // writes to journal
     // public committed data, that is what we want to prove
-    env::commit(&document.stmts[0].elctrnc_seq_nb);
-    env::commit(&document.stmts[0].iban);
-    env::commit(&document.stmts[0].fr_dt_tm);
-    env::commit(&document.stmts[0].to_dt_tm);
-    env::commit(&document.stmts[0].balances[0].amt);
+
+    for document in documents {
+        // publicly committed data, that is what we want to prove
+        env::commit(&document.stmts[0].elctrnc_seq_nb);
+        env::commit(&document.stmts[0].iban);
+        env::commit(&document.stmts[0].fr_dt_tm);
+        env::commit(&document.stmts[0].to_dt_tm);
+        env::commit(&document.stmts[0].balances[0].amt);
+    }
 }
 
 /// Calls all the steps necessary for the proof.
@@ -84,7 +85,7 @@ fn load(authenticated_xml_c14n: &str,
     signature_value_xml: &str,
     order_data_xml :&str, public_key: &RsaPublicKey, private_key: &RsaPrivateKey,
     decrypted_tx_key:&Vec<u8> ,
-    ) -> Document {
+    ) -> Vec<Document> {
 
     // cycle count 1800k
     let request=parse_ebics_response(&authenticated_xml_c14n,
@@ -102,7 +103,21 @@ fn load(authenticated_xml_c14n: &str,
     let order_data=decrypt_order_data(&request, &transaction_key);
 
     // cycle count 101274k : adds 1'236k
-    parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap()) 
+    // parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap());
+
+    // order_data holts Vec or Vec<u8> which are the xml documents; we can have 
+    // more than one camt53 file. Parse each of them. 
+    order_data.iter()
+        .enumerate()  // Get the index and the data
+        .filter_map(|(index, data)| {
+            if index % 2 == 0 {
+                Some(parse_camt53(std::str::from_utf8(data).expect("Failed to parse order data camt53 as UTF-8 ")))  // Assuming parse_camt53 takes a &str and returns a Document
+            } else {
+                None
+            }
+        })
+    .collect::<Vec<Document>>()  // Collect into a Vec<Document>
+
 }
 
 // Todo: shall we check the hash from public sources as well?
@@ -611,7 +626,7 @@ fn parse_camt53(camt53_file: &str)  -> Document {
             },
             Ok(_) => {},
             Err(e) => {
-                println!("Error parsing XML: {:?}", e);
+                println!("Error parsing XML: {:?} document:  {}", e, &camt53_file);
                 panic!("error parsing camt53");
             },
         }

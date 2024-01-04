@@ -140,8 +140,8 @@ fn test_parse( )  {//-> Result<bool, Box<dyn Error>> {
   let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
   let transaction_key_bin= decrypt_transaction_key(&request,&private_key,&Vec::new());
   let files=decrypt_order_data(&request, &transaction_key_bin); 
-
-  for (index, item) in files.iter().enumerate() {
+   for (index, item) in files.iter().enumerate() {
+    pintln!(" ....file:sdfdff {}",item);
     if index  == 1 {
       let camt=parse_camt53(std::str::from_utf8(&item).expect("Failed to convert to string"));
     
@@ -174,7 +174,13 @@ fn test_parse( )  {//-> Result<bool, Box<dyn Error>> {
       assert_eq!(camt.stmts[0].balances[1].cdt_dbt_ind,"CRDT");
       assert_eq!(camt.stmts[0].balances[1].dt,"2023-11-29");
 
+    } else if (index % 2) == 0 { // filename, content, filename, content in the vector
+        // just parse
+        let _=parse_camt53(std::str::from_utf8(&item).expect("Failed to convert to string"));
+    } else {
+      pintln!(" ....file: {}",item);
     }
+    
   }
 }
 
