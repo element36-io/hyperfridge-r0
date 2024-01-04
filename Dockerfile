@@ -1,6 +1,7 @@
 FROM rust:1.74-bookworm as build
 
 RUN cargo install cargo-binstall
+ENV PATH="/root/.cargo/bin:${PATH}"
 RUN cargo binstall cargo-risczero -y
 RUN cargo risczero install
 
