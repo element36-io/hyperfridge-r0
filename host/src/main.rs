@@ -161,7 +161,6 @@ fn write_image_id() -> Result<(), Error> {
         .iter()
         .fold(String::new(), |acc, &num| acc + &format!("{:08x}", num));
 
-
     // Write hex string to IMAGE_ID.hex
     let mut hex_file = File::create("./out/IMAGE_ID.hex")?;
     hex_file.write_all(hex_string.as_bytes())?;
