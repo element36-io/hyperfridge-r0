@@ -1,3 +1,9 @@
+# Todos
+
+- check for libs, eg. serde is double
+- use risc0 sha --> check for more
+- Paper: plug-in TradFi assets like Fiat accounts, and portfolios. Sepa, Indian, british
+
 # How to run with test data
 
 ```bash
