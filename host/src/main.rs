@@ -56,6 +56,7 @@ fn main() {
 }
 
 /// Generates the proof of computation and returning the receipt as JSON
+#[allow(clippy::too_many_arguments)]
 fn proove_camt53(
     signed_info_xml_c14n: &str,
     authenticated_xml_c14n: &str,
@@ -86,7 +87,7 @@ fn proove_camt53(
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
     println!("Starting guest code, load environment");
     env_logger::init();
-    let pem = parse(&bank_public_key_x002_pem).expect("Failed to parse bank public key PEM");
+    let pem = parse(bank_public_key_x002_pem).expect("Failed to parse bank public key PEM");
     let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem))
         .expect("Failed to create bank public key");
     let modulus_str = bank_public_key.n().to_str_radix(10);
@@ -134,7 +135,7 @@ fn proove_camt53(
             result = serde_json::to_string(&receipt).expect("Failed to serialize receipt");
             println!("Receipt result: {:?}", &result);
             println!("verify receipt: ");
-            let _ = receipt.verify(HYPERFRIDGE_ID).expect("verify failed");
+            receipt.verify(HYPERFRIDGE_ID).expect("verify failed");
             let journal = receipt.journal;
             println!(
                 "Receipt result (commitment) - first element {}. ",
@@ -158,8 +159,7 @@ fn write_image_id() -> Result<(), Error> {
     // Convert image_id to a hexadecimal string
     let hex_string = HYPERFRIDGE_ID
         .iter()
-        .map(|&num| format!("{:08x}", num))
-        .collect::<String>();
+        .fold(String::new(), |acc, &num| acc + &format!("{:08x}", num));
 
     // Write hex string to IMAGE_ID.hex
     let mut hex_file = File::create("./out/IMAGE_ID.hex")?;
@@ -214,14 +214,13 @@ mod tests {
         let result_string = String::from_utf8(receipt_parsed.journal.bytes)
             .expect("Failed to convert bytes to string");
         print!(" commitments in receipt {}", result_string);
-        assert_eq!(result_string.ends_with("31709.14"), true);
+        assert!(result_string.ends_with("31709.14"));
 
         let mut file =
             File::create(EBICS_FILE.to_string() + "-Receipt").expect("Unable to create file");
         file.write_all(receipt_json.as_bytes())
             .expect("Unable to write data");
 
-        return;
         //         // verify your receipt
         //         receipt.verify(HYPERFRIDGE_ID).unwrap();
         // let data = include_str!("../res/example.json");

@@ -25,7 +25,7 @@ jobs:
 
     - name: Build Docker image (manual)
       run: |
-        docker build . -t e36io/hyperfridge-r0:${{ github.run_id }} --no-cache
+        docker build --no-cache -t e36io/hyperfridge-r0:${{ github.run_id }} .
         
 
     # - name: Build Docker image
