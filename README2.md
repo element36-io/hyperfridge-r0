@@ -21,6 +21,16 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocap
 RUST_LOG="executor=info"
 
 
+
+Generate coverage data
+
+```bash
+cd methods/guest
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode 
+# with output 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+```
+
 # Unstructured notes
 
 cd /host

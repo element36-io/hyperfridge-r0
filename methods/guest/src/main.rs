@@ -90,33 +90,42 @@ fn load(authenticated_xml_c14n: &str,
     order_data_digest_xml: &str,
     public_key: &RsaPublicKey, 
     private_key: &RsaPrivateKey,
-    decrypted_tx_key:&Vec<u8> ,
+    encrypted_tx_key:&Vec<u8> ,
     ) -> Document {
+    // star is with 1586k
+    println!(" >>>>> Cycle count start {}k",(env::get_cycle_count())/1000);
 
-    // cycle count 1800k
+    // cycle count 1864k (plus 3k)
     let request=parse_ebics_response(&authenticated_xml_c14n,
                     &signed_info_xml_c14n, 
                     &signature_value_xml,
                     &order_data_xml,
                     &order_data_digest_xml,);
+    println!(" >>>>>  Cycle count parse_ebics_response {}k",(env::get_cycle_count())/1000);
 
-    // cycle count 12502k: adds 10`702k
+    // cycle count 12635k (plus 10k)
     verify_bank_signature( &public_key, &request);
+    println!(" >>>>> Cycle count verify_bank_signature {}k",(env::get_cycle_count())/1000);
 
-    // cycle count ....
+    // cycle count 23336k (plus 10k)
     verify_order_data_signature( &public_key, &request);
+    println!(" >>>>> Cycle count verify_order_data_signature {}k",(env::get_cycle_count())/1000);
     
-    // cycle count 98347k: adds 85'845k
-    let transaction_key=decrypt_transaction_key(&request,private_key,decrypted_tx_key);
+    // cycle count 33979k (plus 10k)
+    let transaction_key=decrypt_transaction_key(&request,private_key,encrypted_tx_key);
+    println!(" >>>>> Cycle count decrypt_transaction_key {}k",(env::get_cycle_count())/1000);
 
-    // cycle count 100038k: adds 1'691k
+    // cycle count 35906k (plus 2k)
     let order_data=decrypt_order_data(&request, &transaction_key);
+    println!(" >>>>> Cycle count decrypt_order_data {}k",(env::get_cycle_count())/1000);
 
-    // cycle count 101274k : adds 1'236k
-    parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap()) 
+    // cycle count 36330k (plus 1k)
+    let document=parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap());
+    println!(" >>>>> Cycle count parse_camt53 {}k",(env::get_cycle_count())/1000);
+    document
 }
 
-// Todo: shall we check the hash from public sources as well?
+
 ///
 /// Returns the digest value of a given public key - needs to match  with published hash
 ///
@@ -237,13 +246,14 @@ fn verify_order_data_signature(
     println!(" verify the bank signature");
     // Decode the signature
     let signature_value_bytes =  general_purpose::STANDARD.decode(&request.signature_data_b64).unwrap();
+    let signature_data_hashed =  general_purpose::STANDARD.decode(&request.data_digest_b64).unwrap();
 
     // We checked for Schema A005  which enforces: 
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
 
     // Verify the signature
     let res=  public_key.verify( scheme ,// verifying_key.verify(//public_key.verify( scheme ,
-        &request.signed_info_hashed,
+        &signature_data_hashed,
         &signature_value_bytes
     );
 
@@ -303,13 +313,13 @@ fn parse_ebics_response(authenticated_xml_c14n: &str,
     for token in tokens {
         match token {
             Ok(Token::ElementStart { local, .. }) => {
-                println!("   open tag  as_str {:?}", local.as_str());
+                //println!("   open tag  as_str {:?}", local.as_str());
                 curr_tag=local.as_str();
             },
             Ok(Token::ElementEnd {end,..}) => {
                 match end {
                     ElementEnd::Close(.., _local) => {
-                        println!("   close tag  as_str {:?}", _local.as_str());
+                        //println!("   close tag  as_str {:?}", _local.as_str());
                         // handling Close variant
                         curr_tag = "";
                 
@@ -458,7 +468,7 @@ fn decrypt_transaction_key(request: &Request, private_key: &RsaPrivateKey,decryp
         &transaction_key_bin,
     );
 
-    // todo: better error handling
+    // todo: check error handling (panics)
     match decrypted_data {
         Ok(res) => {
             println!("  transaction key to decrypt payload could be decrypted");
