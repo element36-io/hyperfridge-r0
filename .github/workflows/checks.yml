@@ -39,7 +39,9 @@ jobs:
         run: cargo fmt --all -- --check
       
       - name: Run clippy
-        run: RISC0_SKIP_BUILD=true cargo clippy --all-targets
+        run: |
+          RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build 
+          RISC0_SKIP_BUILD=true cargo clippy --all-targets
 
       - name: Check Build
         run: |
