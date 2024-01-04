@@ -86,6 +86,24 @@ fn test_validate_signature() {
 }
 
 #[test]
+fn test_validate_orderdata( )  {//-> Result<bool, Box<dyn Error>> {
+  //openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" 
+  //-pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
+
+  let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
+  let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create bank public key");
+  let request=parse_ebics_response(
+        AUTHENTICATED_XML_C14N,
+        SIGNED_INFO_XML_C14N,
+        SIGNATURE_VALUE_XML,
+        ORDER_DATA_XML,
+        ORDER_DATA_DIGEST_XML,
+    );
+
+  verify_order_data_signature(&bank_public_key, &request);
+}
+
+#[test]
 fn test_decrypt_txkey() {
     //-> Result<bool, Box<dyn Error>> {
     // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
