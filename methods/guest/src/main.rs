@@ -91,6 +91,7 @@ pub fn main() {
 }
 
 /// Calls all the steps necessary for the proof.
+#[allow(clippy::too_many_arguments)]
 fn load(
     authenticated_xml_c14n: &str,
     signed_info_xml_c14n: &str,
@@ -99,7 +100,6 @@ fn load(
     order_data_digest_xml: &str,
     public_key: &RsaPublicKey,
     private_key: &RsaPrivateKey,
-
     encrypted_tx_key:&Vec<u8>,
     ) -> Document {
     // star is with 1586k
@@ -116,11 +116,11 @@ fn load(
     println!(" >>>>>  Cycle count parse_ebics_response {}k",(env::get_cycle_count())/1000);
 
     // cycle count 12635k (plus 10k)
-    verify_bank_signature( &public_key, &request);
+    verify_bank_signature( public_key, &request);
     println!(" >>>>> Cycle count verify_bank_signature {}k",(env::get_cycle_count())/1000);
 
     // cycle count 23336k (plus 10k)
-    verify_order_data_signature( &public_key, &request);
+    verify_order_data_signature( public_key, &request);
     println!(" >>>>> Cycle count verify_order_data_signature {}k",(env::get_cycle_count())/1000);
     
     // cycle count 33979k (plus 10k)
