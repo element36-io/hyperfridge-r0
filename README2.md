@@ -28,7 +28,7 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocap
 RUST_LOG="executor=info"
 
 RISC0_SKIP_BUILD=true  cargo clippy
-cargo fmt --all 
+cargo fmt --all
 cargo fmt --all -- --check
 
 RISC0_SKIP_BUILD=true  cargo clippy
