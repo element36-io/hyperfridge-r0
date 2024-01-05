@@ -2,7 +2,7 @@ name: Docker Build
 
 on:
   push:
-    branches: [ buildfile, verifier ]
+    branches: [ proxybranch ]
   pull_request:
     branches: [ main ]
 
