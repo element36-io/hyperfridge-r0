@@ -6,19 +6,37 @@ RUN cargo risczero install
 
 COPY data data
 COPY host host
+COPY verifier verifier
 COPY methods methods
 COPY Cargo.toml /
 COPY rust-toolchain.toml /
 
+# create directory holding generated Id of Computation which will be proved. 
 WORKDIR /host
 RUN mkdir out; touch out/test.touch
-RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
 
-WORKDIR /methods/guest
-RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+RUN ls -la
+WORKDIR /
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release 
+# creates fake proof for test data, so that calling "verifier" without parameters works
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
 
-RUN ls -la /host
+# Final Stage - Alpine Image
+FROM alpine:latest as run
 
-#COPY host/out host/out
+# add glibc 
+RUN apk --no-cache add ca-certificates libgcc gcompat
 
-CMD ["RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --nocapture "]
+# Copy the compiled binaries from the build stage
+COPY --from=build /target/release/host /app/host
+COPY --from=build /target/release/verifier /app/verifier
+COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
+COPY --from=build /host/out/IMAGE_ID.binary /app/IMAGE_ID.binary
+COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
+COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
+
+COPY --from=build /data /data
+
+WORKDIR /app
+
+CMD ["./verifier"]
