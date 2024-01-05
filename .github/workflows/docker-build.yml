@@ -80,6 +80,6 @@ jobs:
     - name: Create GitHub Release with zipped binaries
       if: github.event_name != 'pull_request'
       run: |
-          gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }} hyperfridge-${{ github.run_id }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
+          gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }} hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
