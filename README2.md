@@ -12,11 +12,10 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --release -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem  ../data/test/test.xml-decrypted_tx_key.binary
-
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem 
 ```
 
-Run tests for verifier - need to enable main function with feature flag:
+Run tests for verifier - need to enable main function with feature flag, use RUST_LOG="executor=info" as needed.  
 
 ```bash
 cd methods/guest
@@ -25,13 +24,14 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
 
-RUST_LOG="executor=info"
+When pushing run clippy and fmt: 
 
+```bash
 RISC0_SKIP_BUILD=true  cargo clippy
 cargo fmt --all
 cargo fmt --all -- --check
-
 RISC0_SKIP_BUILD=true  cargo clippy
+```
 
 Generate coverage data
 

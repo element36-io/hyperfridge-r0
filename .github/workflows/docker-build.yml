@@ -30,7 +30,7 @@ jobs:
     - name: Create and Run Temporary Container
       run: |
         docker create --name temp-container e36io/hyperfridge-r0:${{ github.run_id }}
-        docker cp temp-container:/host/out/IMAGE_ID.hex ./IMAGE_ID.hex
+        docker cp temp-container:/app/IMAGE_ID.hex ./IMAGE_ID.hex
         docker cp temp-container:/app ./app
         docker cp temp-container:/data ./data
         docker rm temp-container  

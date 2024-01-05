@@ -16,9 +16,9 @@ use std::env;
 fn main() {
     let args: Vec<String> = env::args().collect();
     // Ensure there are enough arguments
-    if args.len() < 4 {
-        eprintln!("Usage: program<bank_public_key> <user_private_key> <ebics_response_xml> <decrypted_transactionkey_binary> ");
-        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem ../data/test/test.xml-decrypted_tx_key.binary");
+    if args.len() < 3 {
+        eprintln!("Usage: program<bank_public_key> <user_private_key> <ebics_response_xml> ");
+        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem ");
         return;
     }
 
@@ -28,9 +28,13 @@ fn main() {
         fs::read_to_string(&args[2]).expect("Failed to read bank_public_key file");
     let user_private_key_e002_pem =
         fs::read_to_string(&args[3]).expect("Failed to read user_private_key file");
-    let decrypted_tx_key =
-        fs::read(&args[4]).expect("Failed to read decrypted transaction key file");
 
+    // we decrypting the transaction key add around 75k cycles, but the reverse function
+    // encrypting with privte key is much faster. So we expect the decrypted transaction 
+    // key, encrypt it and check if it matches with the encrypted transaction key 
+    // in the XML file. 
+    let decrypted_tx_key = fs::read(args[1].to_string() + "-decrypted_tx_key.binary")
+        .expect("Failed to read decrypted transaction key file");
     let signed_info_xml_c14n = fs::read_to_string(args[1].to_string() + "-SignedInfo")
         .expect("Failed to read SignedInfo file");
     let authenticated_xml_c14n = fs::read_to_string(args[1].to_string() + "-authenticated")
