@@ -34,6 +34,7 @@ jobs:
           cargo risczero install
           rustup component add rustfmt
           rustup component add clippy
+          cargo add cargo-tarpaulin
 
       - name: Run tests (with coverage)
         run: |
