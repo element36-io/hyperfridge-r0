@@ -76,7 +76,6 @@ See further below for more information on generating the input files.
 Upon successful execution, the program prints a receipt in JSON format stored under 'data/test.xml-Receipt'
 'data/<ebics_response_xml>-Receipt'.
 
-
 ### Use as docker image
 
 Find the docker image which contains host, guest and verifier [here][hf-dockerhub].
