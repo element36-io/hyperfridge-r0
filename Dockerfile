@@ -10,7 +10,6 @@ COPY verifier verifier
 COPY methods methods
 COPY Cargo.toml /
 COPY rust-toolchain.toml /
-RUN ls -la
 
 # create directory holding generated Id of Computation which will be proved. 
 WORKDIR /host
@@ -21,8 +20,6 @@ WORKDIR /
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release 
 # creates fake proof for test data, so that calling "verifier" without parameters works
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
-RUN ls -la /host/out/
-RUN find / -name IMAGE_ID.hex
 
 # Final Stage - Alpine Image
 FROM alpine:latest as run
@@ -34,10 +31,7 @@ RUN apk --no-cache add ca-certificates libgcc gcompat
 COPY --from=build /target/release/host /app/host
 COPY --from=build /target/release/verifier /app/verifier
 COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
-COPY --from=build /host/out/IMAGE_ID.binary /app/IMAGE_ID.binary
 COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
-
-
 COPY --from=build /data /data
 
 WORKDIR /app
