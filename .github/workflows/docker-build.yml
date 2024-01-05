@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest  # , self-hosted
+    runs-on: self-hosted, ubuntu-latest  # , self-hosted
     steps:
     - name: Check out code
       uses: actions/checkout@v2
@@ -59,7 +59,8 @@ jobs:
         git config --local user.name "GitHub Action"
         git tag ${{ env.IMAGE_TAG }}
         git push origin ${{ env.IMAGE_TAG }}        
-    - name: Create GitHub Release
+
+    - name: Create GitHub Release with zipped binaries
       if: github.event_name != 'pull_request'
       run: |
           gh release create ${{ env.IMAGE_TAG }} hyperfridge-${{ github.run_id }}.zip --title "Release ${{ env.IMAGE_TAG }}"
