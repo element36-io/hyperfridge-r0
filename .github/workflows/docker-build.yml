@@ -22,7 +22,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
         DRY_RUN: false
-        INITIAL_VERSION: 0.1.0
     - name: echo tag
       run: |
         echo "The current tag is: ${{ steps.taggerDryRun.outputs.new_tag }}"
