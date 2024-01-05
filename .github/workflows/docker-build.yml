@@ -23,7 +23,7 @@ jobs:
     - name: echo tag
       run: |
         echo "The current tag is: ${{ steps.taggerDryRun.outputs.tag }}"
-        
+
     - name: echo part
       run: |
         echo "The version increment was: ${{ steps.taggerDryRun.outputs.part }}"
@@ -65,19 +65,19 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: e36io/hyperfridge-r0:${{ env.IMAGE_TAG }}
+        tags: e36io/hyperfridge-r0:${{ steps.taggerDryRun.outputs.tag }}-${{ env.IMAGE_TAG }}
 
     - name: Create GitHub Tag
       if: github.event_name != 'pull_request'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git tag ${{ env.IMAGE_TAG }}
-        git push origin ${{ env.IMAGE_TAG }}        
+        git tag ${{ steps.taggerDryRun.outputs.tag }}-${{ env.IMAGE_TAG }}
+        git push origin ${{ steps.taggerDryRun.outputs.tag }}-${{ env.IMAGE_TAG }}        
 
     - name: Create GitHub Release with zipped binaries
       if: github.event_name != 'pull_request'
       run: |
-          gh release create ${{ env.IMAGE_TAG }} hyperfridge-${{ github.run_id }}.zip --title "Release ${{ env.IMAGE_TAG }}"
+          gh release create ${{ steps.taggerDryRun.outputs.tag }}-${{ env.IMAGE_TAG }} hyperfridge-${{ github.run_id }}.zip --title "Release Version ${{ steps.taggerDryRun.outputs.tag }} Image ID:${{ env.IMAGE_TAG }}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
