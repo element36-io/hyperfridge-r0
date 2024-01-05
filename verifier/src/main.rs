@@ -11,18 +11,21 @@ const DEFAULT_PROOF_JSON: &str = "../data/test/test.xml-Receipt";
 
 
 fn main() {
-    println!("Start Verify");
+    println!("Start Verify, argument count: {}", );
     // Get the first argument from command line, if available
     let args: Vec<String> = env::args().collect();
-    let binding = DEFAULT_PROOF_JSON.to_string();
-    let proof_json_path = args.get(1).unwrap_or(&binding);
+    let proof_json_path = if args.len() > 1 {
+        &args[1]
+    } else {
+        DEFAULT_PROOF_JSON
+    };
 
     let receipt_json: Vec<u8> = fs::read(proof_json_path)
         .unwrap_or_else(|_| panic!("Failed to read file at {}", proof_json_path));
-
+    println!("Proof: {}",&receipt_json);
     let receipt: Receipt = serde_json::from_slice(&receipt_json)
         .expect("Failed to parse proof JSON");
     let result_string = String::from_utf8(receipt.journal.bytes)
         .expect("Failed to convert bytes to string");
-    print!("Commitments in receipt: {}", result_string);
+    println!("Commitments in receipt: {}", result_string);
 }
