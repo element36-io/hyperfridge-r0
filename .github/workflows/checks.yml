@@ -35,6 +35,10 @@ jobs:
           rustup component add rustfmt
           rustup component add clippy
 
+      - name: Run tests (with coverage)
+        run: |
+          RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode
+      
       - name: Run fmt
         run: cargo fmt --all -- --check
       
