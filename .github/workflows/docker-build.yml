@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: w-l5, ubuntu-latest  # , w-l5
+    runs-on: l5, ubuntu-latest  # , w-l5
     steps:
     - name: Check out code
       uses: actions/checkout@v2
