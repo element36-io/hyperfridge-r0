@@ -51,13 +51,13 @@ jobs:
         docker cp temp-container:/data ./data
         docker rm temp-container  
 
-    - name: Zip App and Data Directories to create a release
-      run: |
-        zip -r hyperfridge-${{ github.run_id }}.zip ./app ./data
-
     - name: Read the Image Tag
       id: read_tag
       run: echo "IMAGE_TAG=$(cat IMAGE_ID.hex)" >> $GITHUB_ENV        
+
+    - name: Zip App and Data Directories to create a release
+      run: |
+        zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerDryRun.outputs.tag }}.zip ./app ./data
 
     - name: Build and Push Docker image with custom tag
       if: github.event_name != 'pull_request'
