@@ -30,9 +30,9 @@ fn main() {
         fs::read_to_string(&args[3]).expect("Failed to read user_private_key file");
 
     // we decrypting the transaction key add around 75k cycles, but the reverse function
-    // encrypting with privte key is much faster. So we expect the decrypted transaction 
-    // key, encrypt it and check if it matches with the encrypted transaction key 
-    // in the XML file. 
+    // encrypting with privte key is much faster. So we expect the decrypted transaction
+    // key, encrypt it and check if it matches with the encrypted transaction key
+    // in the XML file.
     let decrypted_tx_key = fs::read(args[1].to_string() + "-decrypted_tx_key.binary")
         .expect("Failed to read decrypted transaction key file");
     let signed_info_xml_c14n = fs::read_to_string(args[1].to_string() + "-SignedInfo")

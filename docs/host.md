@@ -15,7 +15,6 @@ importantly to other systems or ledgers with Smart Contracts. As a result, you c
 use Smart Contracts to "wrap" functionality around TradFi accounts, similar like you can
 do it today with blockchain wallets and cryptocurrencies.
 
-
 ## Verifier
 
 ### Usage of host program
@@ -23,7 +22,6 @@ do it today with blockchain wallets and cryptocurrencies.
 This program processes EBICS (Electronic Banking Internet Communication Standard) responses.
 It takes various input parameters, including cryptographic keys and XML data, performs
 decryption and authentication operations, and outputs a receipt in JSON format.
-
 
 #### Command line arguments
 
@@ -147,10 +145,10 @@ TODO:wasa/dastan- show TOML as well; how to import? Do we need a library?
 ### Standards involved
 
 - [EBICS](http://www.ebics.org) describes the transport protocol of the bank and how elements are signed or hashed - hyperfridge has
-implemented E002, A005, adding others (like A006) should be trivial. 
+implemented E002, A005, adding others (like A006) should be trivial.    
 - [ISO20022](https://www.iso20022.org/): After data has been transmitted and decrypted,
 bank data is represented via XML documents following the ISO20022 standard.
-- [XML Signature](http://www.w3.org/2000/09/xmldsig#): Defines the standard how to sign areas of an XML document. EBICS uses this 
+- [XML Signature](http://www.w3.org/2000/09/xmldsig#): Defines the standard how to sign areas of an XML document. EBICS uses this
 standard to encrypt, hash or sign data.
 - [XML C14N (canonization)](http://www.w3.org/TR/2001/REC-xml-c14n-20010315):
 For hashing, it describes how to come up with a canonised presentation. C14N (canonization) of XML:
