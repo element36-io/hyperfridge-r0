@@ -17,8 +17,8 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     // Ensure there are enough arguments
     if args.len() < 3 {
-        eprintln!("Usage: program<bank_public_key> <user_private_key> <ebics_response_xml>");
-        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem");
+        eprintln!("Usage: program<bank_public_key> <user_private_key> <ebics_response_xml> ");
+        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem ");
         return;
     }
 
@@ -29,6 +29,12 @@ fn main() {
     let user_private_key_e002_pem =
         fs::read_to_string(&args[3]).expect("Failed to read user_private_key file");
 
+    // we decrypting the transaction key add around 75k cycles, but the reverse function
+    // encrypting with privte key is much faster. So we expect the decrypted transaction
+    // key, encrypt it and check if it matches with the encrypted transaction key
+    // in the XML file.
+    let decrypted_tx_key = fs::read(args[1].to_string() + "-decrypted_tx_key.binary")
+        .expect("Failed to read decrypted transaction key file");
     let signed_info_xml_c14n = fs::read_to_string(args[1].to_string() + "-SignedInfo")
         .expect("Failed to read SignedInfo file");
     let authenticated_xml_c14n = fs::read_to_string(args[1].to_string() + "-authenticated")
@@ -40,8 +46,6 @@ fn main() {
     let order_data_digest_xml = fs::read_to_string(args[1].to_string() + "-DataDigest")
         .expect("Failed to read OrderData file");
 
-    let decrypted_tx_key: Vec<u8> = Vec::new();
-
     let json = proove_camt53(
         &signed_info_xml_c14n,
         &authenticated_xml_c14n,
@@ -50,7 +54,7 @@ fn main() {
         &order_data_digest_xml,
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
-        &decrypted_tx_key, // todo: remove this later
+        &decrypted_tx_key,
     );
     println!("Receipt  {}", json);
 }
