@@ -347,7 +347,7 @@ fn parse_ebics_response(
             }
             Ok(Token::ElementEnd { end, .. }) => {
                 if let ElementEnd::Close(.., _local) = end {
-                    println!("   close tag  as_str {:?}", _local.as_str());
+                    // println!("   close tag  as_str {:?}", _local.as_str());
                     // handling Close variant
                     curr_tag = "";
                 }
