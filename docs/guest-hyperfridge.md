@@ -12,7 +12,7 @@ to generate (or fake) the proof on its own. So either the bank or the banks clie
 because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard)
 defines the key ceremony which has been used for many years.
 - **Privacy**: Financial data - like medical data - is prone to highest data security standards. Bank documents contain names
-and bank details of clients, which should not be leaked. With Zerko-Knowledge technology we are able generate proofs that.
+and bank details of clients, which should not be leaked. With Zero-Knowledge technology we are able generate proofs that,
 e.g. a client has sent a specific amount, without revealing the data.
 - **Low execution time**: Most banking backends still operate on a daily basis, thus generated proofs is not time critical.
 But banking is [moving rapidly towards instant payments][sepa-instant], means time of finality for transaction will be
