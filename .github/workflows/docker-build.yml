@@ -1,8 +1,6 @@
 name: Docker Build
 
 on:
-  push:
-    branches: [ verifier ]
   pull_request:
     branches: [ main ]
 
@@ -16,6 +14,7 @@ jobs:
       uses: actions/checkout@v3
     
     - name:  Bump version and push tag, Minor version for each merge
+      if: github.event_name != 'pull_request'
       uses: anothrNick/github-tag-action@1.64.0
       id: taggerRun
       env:
@@ -23,10 +22,12 @@ jobs:
         WITH_V: true
         
     - name: echo tag
+      if: github.event_name != 'pull_request'
       run: |
         echo "The current tag is: ${{ steps.taggerRun.outputs.new_tag }}"
 
     - name: echo part
+      if: github.event_name != 'pull_request'
       run: |
         echo "The version increment was: ${{ steps.taggerRun.outputs.part }}"
 
@@ -57,6 +58,7 @@ jobs:
       run: echo "IMAGE_TAG=$(cat IMAGE_ID.hex)" >> $GITHUB_ENV        
 
     - name: Zip App and Data Directories to create a release
+      if: github.event_name != 'pull_request'
       run: |
         zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip ./app ./data
 

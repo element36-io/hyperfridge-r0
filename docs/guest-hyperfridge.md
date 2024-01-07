@@ -6,27 +6,17 @@ This module provides the logic to check the soundness of data coming from the ba
 
 The proof aims for following properties:
 
-- **Proofing soundness**: We want to prove that the presented data is correct and relyable and has not been tempered with.
-We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able
-to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs,
-because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard)
+- **Proofing soundness**: We want to prove that the presented data is correct and relyable and has not been tempered with. We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs, because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard)
 defines the key ceremony which has been used for many years.
-- **Privacy**: Financial data - like medical data - is prone to highest data security standards. Bank documents contain names
-and bank details of clients, which should not be leaked. With Zerko-Knowledge technology we are able generate proofs that.
-e.g. a client has sent a specific amount, without revealing the data.
+- **Privacy**: Financial data - like medical data - is prone to highest data security standards. Bank documents contain names and bank details of clients, which should not be leaked. With Zerko-Knowledge technology we are able generate proofs that. e.g. a client has sent a specific amount, without revealing the data.
 - **Low execution time**: Most banking backends still operate on a daily basis, thus generated proofs is not time critical.
-But banking is [moving rapidly towards instant payments][sepa-instant], means time of finality for transaction will be
-close to what can be achieved on blockchain today. Then proofing time may become a limiting factor.
+But banking is [moving rapidly towards instant payments][sepa-instant], means time of finality for transaction will be close to what can be achieved on blockchain today. Then proofing time may become a limiting factor.
 
 How were the goals achieved whith this implementation?
 
-- **Proofing soundness**: Singing payload data is still optional in the Ebics standard, so a bank backend needs to
-support that explicitly, and we cannot fully rely on the standard. As alternative we introduce the concept
-of a "data processor" as an additional entitiy next to the bank and the client. The data processor downloads
-and signs the document (and payload) and acts as third-party witness.
+- **Proofing soundness**: Singing payload data is still optional in the Ebics standard, so a bank backend needs to support that explicitly, and we cannot fully rely on the standard. As alternative we introduce the concept of a "data processor" as an additional entitiy next to the bank and the client. The data processor downloads and signs the document (and payload) and acts as third-party witness.
 - **Privacy**: Fully achieved - its trivial so include or not include data in proofs ([receipts][receipt]).
-- **Low execution time**: Execution time is around 45 minutes to generate a proof. This is sufficient for
-current scenarios but too much in case of instant payments.
+- **Low execution time**: Execution time is around 45 minutes to generate a proof. This is sufficient for current scenarios but too much in case of instant payments.
 
 ## Fundamental properties of the banking interface (ISO20022 and Ebics)
 
