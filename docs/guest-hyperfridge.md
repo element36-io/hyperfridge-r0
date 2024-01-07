@@ -6,7 +6,7 @@ This module provides the logic to check the soundness of data coming from the ba
 
 The proof aims for following properties:
 
-- **Proofing soundness**: We want to prove that the presented data is correct and relyable and has not been tempered with.
+- **Proofing soundness**: We want to prove that the presented data is correct and reliable and has not been tampered with.
 We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able
 to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs,
 because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard)
