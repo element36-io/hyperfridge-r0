@@ -181,6 +181,7 @@ mod tests {
     use crate::proove_camt53;
     use std::fs::File;
     use std::io::Write;
+    use chrono::Local;
 
     #[test]
     fn do_main() {
@@ -220,11 +221,22 @@ mod tests {
         print!(" commitments in receipt {}", result_string);
         assert!(result_string.ends_with("31709.14"));
 
-        let mut file =
-            File::create(EBICS_FILE.to_string() + "-Receipt").expect("Unable to create file");
+        // create file with latest proof
+        let mut file =File::create(EBICS_FILE.to_string() + "-Receipt").expect("Unable to create file");
         file.write_all(receipt_json.as_bytes())
             .expect("Unable to write data");
 
+        // create a copy with timestamp.
+        let now = Local::now();
+        let formatted_date = format!("{}", now.format("%Y-%m-%d"));
+        let formatted_time = format!("{}", now.format("%H:%M:%S"));
+        let timestamp_string = format!("{}_{}", formatted_date, formatted_time);
+
+        file = File::create(EBICS_FILE.to_string() + "-Receipt-" + &timestamp_string)
+            .expect("Unable to create file with timestamp");
+        file.write_all(receipt_json.as_bytes())
+            .expect("Unable to write data");
+        
         //         // verify your receipt
         //         receipt.verify(HYPERFRIDGE_ID).unwrap();
         // let data = include_str!("../res/example.json");
