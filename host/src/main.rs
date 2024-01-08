@@ -17,8 +17,8 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     // Ensure there are enough arguments
     if args.len() < 3 {
-        eprintln!("Usage: program<bank_public_key> <user_private_key> <ebics_response_xml> ");
-        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem ");
+        eprintln!("Usage: host <bank_public_key> <user_private_key> <ebics_response_xml> <IBAN>");
+        eprintln!("To use with test data use parameters: ../data/test/test.xml ../data/bank_public.pem ../data/client.pem CH4308307000289537312");
         return;
     }
 
@@ -28,6 +28,9 @@ fn main() {
         fs::read_to_string(&args[2]).expect("Failed to read bank_public_key file");
     let user_private_key_e002_pem =
         fs::read_to_string(&args[3]).expect("Failed to read user_private_key file");
+    let iban =
+        fs::read_to_string(&args[4]).expect("Failed to read IBAN");
+    
 
     // we decrypting the transaction key add around 75k cycles, but the reverse function
     // encrypting with privte key is much faster. So we expect the decrypted transaction
@@ -55,6 +58,7 @@ fn main() {
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
         &decrypted_tx_key,
+        &iban
     );
     println!("Receipt  {}", json);
 }
@@ -70,7 +74,8 @@ fn proove_camt53(
 
     bank_public_key_x002_pem: &str,
     user_private_key_e002_pem: &str,
-    decrypted_tx_key: &Vec<u8>, // Todo: remove this later
+    decrypted_tx_key: &Vec<u8>, 
+    iban: &str,
 ) -> String {
     println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
     let _ = write_image_id();
@@ -115,6 +120,8 @@ fn proove_camt53(
         .write(&user_private_key_e002_pem)
         .unwrap()
         .write(&decrypted_tx_key)
+        .unwrap()
+        .write(&iban)
         .unwrap()
         .build()
         .unwrap();
@@ -186,6 +193,7 @@ mod tests {
     #[test]
     fn do_main() {
         const EBICS_FILE: &str = "../data/test/test.xml";
+        const IBAN: &str="CH4308307000289537312";
 
         let decrypted_tx_key: Vec<u8> =
             fs::read(EBICS_FILE.to_string() + "-decrypted_tx_key.binary")
@@ -212,6 +220,7 @@ mod tests {
                 .as_str(),
             fs::read_to_string("../data/client.pem").unwrap().as_str(),
             &decrypted_tx_key,
+            IBAN,
         );
         println!(" receipt_json {}", &receipt_json);
         let receipt_parsed: Receipt =

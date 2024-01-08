@@ -52,11 +52,12 @@ pub fn main() {
     let public_key_exp: String = env::read();
     let private_key_pem: String = env::read();
     let decrypted_tx_key_bin: Vec<u8> = env::read();
+    let iban: String = env::read();
 
     let exp: BigUint = BigUint::parse_bytes(public_key_exp.as_bytes(), 10)
-        .expect("error parsing EXP of public bank key"); //BigUint::from_bytes_be(EXP.as_bytes()); // Commonly used exponent
+        .expect("error parsing EXP of public bank key"); 
     let modu: BigUint = BigUint::parse_bytes(public_key_mod.as_bytes(), 10)
-        .expect("error parsing MODULUS of public bank key"); //from_bytes_be(MOD.as_bytes()); // Your modulus as a BigUint
+        .expect("error parsing MODULUS of public bank key"); 
 
     // U256, use crypto_bigint::U256; does not work with RsaPublicKey
     // let exp = U256::from_be_hex(&public_key_exp);
@@ -76,6 +77,7 @@ pub fn main() {
         &public_key,
         &private_key,
         &decrypted_tx_key_bin,
+        &iban
     );
 
     println!(">>> cycle count {}k", (env::get_cycle_count()) / 1000);
@@ -88,6 +90,7 @@ pub fn main() {
     env::commit(&document.stmts[0].fr_dt_tm);
     env::commit(&document.stmts[0].to_dt_tm);
     env::commit(&document.stmts[0].balances[0].amt);
+    // TODO add currency, Iban
 }
 
 /// Calls all the steps necessary for the proof.
@@ -101,11 +104,12 @@ fn load(
     public_key: &RsaPublicKey,
     private_key: &RsaPrivateKey,
     encrypted_tx_key:&Vec<u8>,
+    iban: &str,
     ) -> Document {
     // star is with 1586k
     println!(" >>>>> Cycle count start {}k",(env::get_cycle_count())/1000);
 
-    // cycle count 1864k (plus 3k)
+
     let request = parse_ebics_response(
         authenticated_xml_c14n,
         signed_info_xml_c14n,
@@ -114,27 +118,67 @@ fn load(
         order_data_digest_xml,
     );
     println!(" >>>>>  Cycle count parse_ebics_response {}k",(env::get_cycle_count())/1000);
+    // cycle count 1864k (plus 3k)
 
-    // cycle count 12635k (plus 10k)
     verify_bank_signature( public_key, &request);
     println!(" >>>>> Cycle count verify_bank_signature {}k",(env::get_cycle_count())/1000);
+        // cycle count 12635k (plus 10k)
 
-    // cycle count 23336k (plus 10k)
+
     verify_order_data_signature( public_key, &request);
     println!(" >>>>> Cycle count verify_order_data_signature {}k",(env::get_cycle_count())/1000);
+        // cycle count 23336k (plus 10k)
     
-    // cycle count 33979k (plus 10k)
+
     let transaction_key=decrypt_transaction_key(&request,private_key,encrypted_tx_key);
     println!(" >>>>> Cycle count decrypt_transaction_key {}k",(env::get_cycle_count())/1000);
+    // cycle count 33979k (plus 10k)    
 
     // cycle count 35906k (plus 2k)
     let order_data=decrypt_order_data(&request, &transaction_key);
     println!(" >>>>> Cycle count decrypt_order_data {}k",(env::get_cycle_count())/1000);
 
-    // cycle count 36330k (plus 1k)
-    let document=parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap());
+
+    //let document=parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap());
+    let mut documents = Vec::new();
+
+    for (index, data) in order_data.iter().enumerate() {
+        // Process only odd indices
+        if index % 2 != 0 {
+            let document = parse_camt53(std::str::from_utf8(data).unwrap());
+    
+            // Retain only those statements where iban matches IBAN
+            let mut document = document; // Make it mutable
+            document.stmts.retain(|stmt| stmt.iban == iban);
+        
+            // Add document to the documents vector only if it has at least one matching statement
+            if !document.stmts.is_empty() {
+                documents.push(document);
+            } else {
+                println!(" >>>>>> IBAN not found, ignore camt document {}",String::from_utf8_lossy(&order_data[index-1]));
+            }
+            println!(" >>>>> Cycle count for camt document {}k",(env::get_cycle_count())/1000);
+        } else {
+            println!(" >>>>>> processing camt document {}",String::from_utf8_lossy(&order_data[index]));
+        }
+    }
+
+    // for document in order_data.iter().map(|data| parse_camt53(std::str::from_utf8(data).unwrap())) {
+
+    //     // Retain only those statements where iban matches IBAN
+    //     let mut document = document; // Make it mutable
+    //     document.stmts.retain(|stmt| stmt.iban == iban);
+    
+    //     // Add document to the documents vector only if it has at least one matching statement
+    //     if !document.stmts.is_empty() {
+    //         documents.push(document);
+    //     }
+    // }
+
+
     println!(" >>>>> Cycle count parse_camt53 {}k",(env::get_cycle_count())/1000);
-    document
+    // cycle count 36330k (plus 1k)
+    documents.get(0).unwrap().clone()
 }
 
 
@@ -542,6 +586,9 @@ use zip::ZipArchive;
 /// The payload is considered a stream which is compressed with the deflate alogrithm.
 /// The stream is actually a ZIP file, which containts the XML documents which hold the
 /// daily statements and account data.
+/// 
+/// Result is a vector where each odd index is a filename, even index is the files conent, 
+/// both as Vec(u8)
 fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<u8>> {
     println!(" decrypting payload with transaction key");
 
@@ -604,13 +651,13 @@ fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<
     file_contents
 }
 /// Root structure of a Camt53 XML respose
-#[derive(Debug, Default)]
+#[derive(Debug, Default,Clone)]
 struct Document {
     grp_hdr: GrpHdr, // creatin time
     stmts: Vec<Stmt>,
 }
 /// GrpHdr structure of a Camt53 XML respose
-#[derive(Debug, Default)]
+#[derive(Debug, Default,Clone)]
 struct GrpHdr {
     cre_dt_tm: String, // creating time
     msg_id: String,    // unique ebics message id - identifies ebics xml message
@@ -618,7 +665,7 @@ struct GrpHdr {
     last_pg_ind: bool,
 }
 /// Stmt structure of a Camt53 XML respose
-#[derive(Debug, Default)]
+#[derive(Debug, Default,Clone)]
 struct Stmt {
     elctrnc_seq_nb: String,
     iban: String,
@@ -630,7 +677,7 @@ struct Stmt {
 /// Balance structure of a Camt53 XML respose
 /// code or proprietory - OPBD = opening balance,CLBD is closing balance
 /// cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
-#[derive(Debug, Default)]
+#[derive(Debug, Default,Clone)]
 struct Balance {
     cd: String,  // code or proprietory - OPBD = opening balance,CLBD is closing balance
     ccy: String, // currency
