@@ -103,7 +103,6 @@ pub fn main() {
     let decrypted_tx_key_bin: Vec<u8> = env::read();
     let iban: String = env::read();
     let host_info: String = env::read();
-    
 
     let exp: BigUint = BigUint::parse_bytes(public_key_exp.as_bytes(), 10)
         .expect("error parsing EXP of public bank key");
@@ -145,7 +144,7 @@ pub fn main() {
         );
         let commitment = format!(
             "{{\"elctrnc_seq_nb\":\"{}\",\"fr_dt_tm\":\"{}\",\"to_dt_tm\":\"{}\",\"amt\":\"{}\",\"ccy\":\"{}\",\"cd\":\"{}\"}}",
-            &document.stmts[0].elctrnc_seq_nb, 
+            &document.stmts[0].elctrnc_seq_nb,
             &document.stmts[0].fr_dt_tm,
             &document.stmts[0].to_dt_tm,
             &document.stmts[0].balances[0].amt,
@@ -412,8 +411,6 @@ fn verify_order_data_signature(public_key: &RsaPublicKey, request: &Request) {
         }
     };
 }
-
-
 
 /// Parse the XML file, return a structure
 /// See  https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf

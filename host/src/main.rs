@@ -135,8 +135,8 @@ fn main() {
                 "{}-Receipt-{}-{}-{}.json",
                 &camt53_filename, &image_id_hex, &receipt_file_id, &timestamp_string
             );
-            let mut file =
-                File::create(&file_name).unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
+            let mut file = File::create(&file_name)
+                .unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
 
             file.write_all(receipt_json_string.as_bytes())
                 .unwrap_or_else(|_| panic!("Unable to write data in file {}", &file_name));
@@ -171,7 +171,7 @@ fn proove_camt53(
 
     // Todo:wasa
     // Using r0 implementation crypto-bigint does not work with RsaPUblicKey?
-    // ==> Research shows not - needs reimplementation of RSA modue which might speed things up. 
+    // ==> Research shows not - needs reimplementation of RSA modue which might speed things up.
 
     // let exp_bigint = BigInt::from_str_radix(&BANK_X002_EXP, 10)
     // .expect("error parsing EXP of public bank key");
