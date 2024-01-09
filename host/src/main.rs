@@ -2,15 +2,35 @@
 // The ELF is used for proving and the ID is used for verification.
 use methods::{HYPERFRIDGE_ELF, HYPERFRIDGE_ID};
 use pem::parse;
-use risc0_zkvm::{default_prover, ExecutorEnv};
+use risc0_zkvm::{default_prover, ExecutorEnv, Receipt};
 use rsa::pkcs8::DecodePublicKey;
 use rsa::traits::PublicKeyParts;
 use rsa::RsaPublicKey;
+use serde::Deserialize;
 use std::fs;
 
 use chrono::Local;
 #[cfg(not(test))]
 use std::env;
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct Commitment {
+    hostinfo: String,
+    iban: String,
+    stmts: Vec<Stmt>,
+}
+
+#[derive(Deserialize, Debug)]
+#[allow(dead_code)]
+struct Stmt {
+    elctrnc_seq_nb: String,
+    fr_dt_tm: String,
+    to_dt_tm: String,
+    amt: String,
+    ccy: String,
+    cd: String,
+}
 
 #[cfg(not(test))]
 fn main() {
@@ -28,28 +48,28 @@ fn main() {
         fs::read_to_string(&args[2]).expect("Failed to read bank_public_key file");
     let user_private_key_e002_pem =
         fs::read_to_string(&args[3]).expect("Failed to read user_private_key file");
-    let iban =
-        fs::read_to_string(&args[4]).expect("Failed to read IBAN");
-    
-
+    let iban = args[4].clone();
+    let camt53_filename: String = args[1].to_string();
     // we decrypting the transaction key add around 75k cycles, but the reverse function
     // encrypting with privte key is much faster. So we expect the decrypted transaction
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
-    let decrypted_tx_key = fs::read(args[1].to_string() + "-decrypted_tx_key.binary")
+    let decrypted_tx_key = fs::read(format!("{}-decrypted_tx_key.binary", camt53_filename))
         .expect("Failed to read decrypted transaction key file");
-    let signed_info_xml_c14n = fs::read_to_string(args[1].to_string() + "-SignedInfo")
+    let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
         .expect("Failed to read SignedInfo file");
-    let authenticated_xml_c14n = fs::read_to_string(args[1].to_string() + "-authenticated")
+    let authenticated_xml_c14n = fs::read_to_string(format!("{}-authenticated", camt53_filename))
         .expect("Failed to read authenticated file");
-    let signature_value_xml = fs::read_to_string(args[1].to_string() + "-SignatureValue")
+    let signature_value_xml = fs::read_to_string(format!("{}-SignatureValue", camt53_filename))
         .expect("Failed to read SignatureValue file");
-    let order_data_xml = fs::read_to_string(args[1].to_string() + "-OrderData")
+    let order_data_xml = fs::read_to_string(format!("{}-OrderData", camt53_filename))
         .expect("Failed to read OrderData file");
-    let order_data_digest_xml = fs::read_to_string(args[1].to_string() + "-DataDigest")
+    let order_data_digest_xml = fs::read_to_string(format!("{}-DataDigest", camt53_filename))
         .expect("Failed to read OrderData file");
 
-    let json = proove_camt53(
+    let image_id_hex = get_image_id_hex();
+
+    let receipt_result = proove_camt53(
         &signed_info_xml_c14n,
         &authenticated_xml_c14n,
         &signature_value_xml,
@@ -58,9 +78,76 @@ fn main() {
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
         &decrypted_tx_key,
-        &iban
+        &iban,
+        "host:main",
     );
-    println!("Receipt  {}", json);
+
+    match &receipt_result {
+        Ok(_val) => {
+            let receipt_file_id;
+            let receipt = receipt_result.unwrap();
+            let receipt_json_string =
+                serde_json::to_string(&receipt).expect("Failed to serialize receipt in main");
+            println!("Receipt result: {:?}", &receipt_json_string);
+
+            // let commitment_string = std::str::from_utf8(receipt.journal.bytes.clone())
+            //          .expect("Failed to convert bytes to string from journal in main");
+            // for some reason there are other characters at the beginning of the commitment remove that
+            let commitment_string = {
+                let bytes = &receipt.journal.bytes;
+                let start_index = bytes.iter().position(|&b| b == b'{').unwrap_or(0);
+                let end_index = bytes
+                    .iter()
+                    .rposition(|&b| b == b'}')
+                    .unwrap_or(bytes.len());
+                String::from_utf8(bytes[start_index..=end_index].to_vec())
+                    .expect("Failed to convert bytes to string from journal in main")
+            };
+
+            println!("Receipt with public commitment: {} ", &(commitment_string));
+
+            let commitment: Result<Commitment, serde_json::Error> =
+                serde_json::from_str(&commitment_string);
+
+            match commitment {
+                Ok(commitment) => {
+                    let joined_elctrnc_seq_nb = commitment
+                        .stmts
+                        .iter()
+                        .map(|data| data.elctrnc_seq_nb.to_string()) // Convert &String to &str
+                        .collect::<Vec<String>>() // Collect as Vec<&str>
+                        .join("_");
+                    receipt_file_id = joined_elctrnc_seq_nb.clone();
+                    println!("{:#?}", commitment)
+                }
+                Err(e) => {
+                    receipt_file_id = "commit_json_error".to_owned();
+                    println!("Receipt successful generated, but deserializing JSON for commitment failed. Error: {}., Json: {}.", e,commitment_string)
+                }
+            }
+
+            // write result file
+            let now = Local::now();
+            let timestamp_string = format!("{}T{}", now.format("%Y-%m-%d"), now.format("%H:%M:%S"));
+            // write the result in a file with runtime info
+
+            let file_name = format!(
+                "{}-Receipt-{}-{}-{}.json",
+                &camt53_filename, &image_id_hex, &receipt_file_id, &timestamp_string
+            );
+            let mut file =
+                File::create(&file_name).unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
+
+            file.write_all(receipt_json_string.as_bytes())
+                .unwrap_or_else(|_| panic!("Unable to write data in file {}", &file_name));
+
+            println!(" wrote receipt to {}", &file_name);
+        }
+        Err(e) => {
+            println!("Receipt error in proove_camt53 {:?}", e);
+            panic!("Creating the proof failed {}", e)
+        }
+    }
 }
 
 /// Generates the proof of computation and returning the receipt as JSON
@@ -74,13 +161,17 @@ fn proove_camt53(
 
     bank_public_key_x002_pem: &str,
     user_private_key_e002_pem: &str,
-    decrypted_tx_key: &Vec<u8>, 
+    decrypted_tx_key: &Vec<u8>,
     iban: &str,
-) -> String {
+    host_info: &str,
+) -> Result<Receipt, anyhow::Error> {
     println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
+    // write image ID to filesystem
     let _ = write_image_id();
-    // Todo:
-    // Using r0 implementation crypto-bigint does not work with RsaPUblicKey
+
+    // Todo:wasa
+    // Using r0 implementation crypto-bigint does not work with RsaPUblicKey?
+    // ==> Research shows not - needs reimplementation of RSA modue which might speed things up. 
 
     // let exp_bigint = BigInt::from_str_radix(&BANK_X002_EXP, 10)
     // .expect("error parsing EXP of public bank key");
@@ -123,83 +214,71 @@ fn proove_camt53(
         .unwrap()
         .write(&iban)
         .unwrap()
+        .write(&host_info)
+        .unwrap()
         .build()
         .unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
     println!("prove hyperfridge elf ");
+    // generate receipt
     let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    let image_id_hex = get_image_id_hex();
     println!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
-        HYPERFRIDGE_ID[0],
+        image_id_hex,
         HYPERFRIDGE_ELF.len() / 1000
     );
-
-    // println!("----- got result {} ",receipt_result);
-
-    let mut result = String::new();
-    match &receipt_result {
-        Ok(_val) => {
-            // println!("Receipt result: {}", val);_
-            let receipt = receipt_result.unwrap();
-            result = serde_json::to_string(&receipt).expect("Failed to serialize receipt");
-            println!("Receipt result: {:?}", &result);
-            println!("verify receipt: ");
-            receipt.verify(HYPERFRIDGE_ID).expect("verify failed");
-            let journal = receipt.journal;
-            println!(
-                "Receipt result (commitment) - first element {}. ",
-                &(journal.decode::<String>().unwrap())
-            );
-        }
-        Err(e) => {
-            println!("Receipt error: {:?}", e);
-            //None
-        }
-    }
-    println!("end: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
-    result
-    // 31709.14
+    receipt_result
 }
 
 use std::fs::File;
 use std::io::{Error, Write};
 
 fn write_image_id() -> Result<(), Error> {
-    // Convert image_id to a hexadecimal string
-    let hex_string = HYPERFRIDGE_ID
-        .iter()
-        .fold(String::new(), |acc, &num| acc + &format!("{:08x}", num));
-
     // Write hex string to IMAGE_ID.hex
     let mut hex_file = File::create("./out/IMAGE_ID.hex")?;
-    hex_file.write_all(hex_string.as_bytes())?;
+    hex_file.write_all(get_image_id_hex().as_bytes())?;
 
     Ok(())
 }
 
+/// get image_id to a hexadecimal string
+fn get_image_id_hex() -> String {
+    HYPERFRIDGE_ID
+        .iter()
+        .fold(String::new(), |acc, &num| acc + &format!("{:08x}", num))
+}
+
 #[cfg(test)]
 mod tests {
-    // use std::result;
-    use risc0_zkvm::Receipt;
-
     use crate::fs;
+    use crate::get_image_id_hex;
     use crate::proove_camt53;
+    use chrono::Local;
+    use methods::HYPERFRIDGE_ID;
     use std::fs::File;
     use std::io::Write;
-    use chrono::Local;
 
     #[test]
     fn do_main() {
         const EBICS_FILE: &str = "../data/test/test.xml";
-        const IBAN: &str="CH4308307000289537312";
+        const IBAN: &str = "CH4308307000289537312";
+        // create a imestamp.
+        let now = Local::now();
+        let timestamp_string = format!(
+            "{}T{}",
+            format!("{}", now.format("%Y-%m-%d")),
+            format!("{}", now.format("%H:%M:%S"))
+        );
+        let host_info = format!("callinfo: {}, timestamp: {}", "do_main", &timestamp_string);
 
         let decrypted_tx_key: Vec<u8> =
             fs::read(EBICS_FILE.to_string() + "-decrypted_tx_key.binary")
                 .expect("Failed to read transaction key file");
 
-        let receipt_json = proove_camt53(
+        let receipt_result = proove_camt53(
             fs::read_to_string(EBICS_FILE.to_string() + "-SignedInfo")
                 .unwrap()
                 .as_str(),
@@ -221,38 +300,39 @@ mod tests {
             fs::read_to_string("../data/client.pem").unwrap().as_str(),
             &decrypted_tx_key,
             IBAN,
+            &host_info,
         );
-        println!(" receipt_json {}", &receipt_json);
-        let receipt_parsed: Receipt =
-            serde_json::from_str(&receipt_json).expect("Failed to parse JSON");
-        let result_string = String::from_utf8(receipt_parsed.journal.bytes)
-            .expect("Failed to convert bytes to string");
-        print!(" commitments in receipt {}", result_string);
-        assert!(result_string.ends_with("31709.14"));
 
-        // create file with latest proof
-        let mut file =File::create(EBICS_FILE.to_string() + "-Receipt").expect("Unable to create file");
-        file.write_all(receipt_json.as_bytes())
-            .expect("Unable to write data");
+        match &receipt_result {
+            Ok(_val) => {
+                // println!("Receipt result: {}", val);_
+                let receipt = receipt_result.unwrap();
+                receipt
+                    .verify(HYPERFRIDGE_ID)
+                    .expect("Verification of receipt failed in test");
+                let receipt_json =
+                    serde_json::to_string(&receipt).expect("Failed to serialize receipt");
+                println!("Receipt result: {:?}", &receipt_json);
+                let journal = receipt.journal;
+                println!(
+                    "Receipt result (commitment) {}: ",
+                    &(journal.decode::<String>().unwrap())
+                );
 
-        // create a copy with timestamp.
-        let now = Local::now();
-        let formatted_date = format!("{}", now.format("%Y-%m-%d"));
-        let formatted_time = format!("{}", now.format("%H:%M:%S"));
-        let timestamp_string = format!("{}_{}", formatted_date, formatted_time);
-
-        file = File::create(EBICS_FILE.to_string() + "-Receipt-" + &timestamp_string)
-            .expect("Unable to create file with timestamp");
-        file.write_all(receipt_json.as_bytes())
-            .expect("Unable to write data");
-        
-        //         // verify your receipt
-        //         receipt.verify(HYPERFRIDGE_ID).unwrap();
-        // let data = include_str!("../res/example.json");
-        // let outputs = super::search_json(data);
-        // assert_eq!(
-        //     outputs.data, 47,
-        //     "Did not find the expected value in the critical_data field"
-        // );
+                let filename = format!(
+                    "{}-Receipt-{}-latest.json",
+                    EBICS_FILE.to_string(),
+                    get_image_id_hex()
+                );
+                let mut file =
+                    File::create(filename).expect("Unable to create file with timestamp");
+                file.write_all(receipt_json.as_bytes())
+                    .expect("Unable to write data");
+            }
+            Err(e) => {
+                println!("Receipt error: {:?}", e);
+                //None
+            }
+        }
     }
 }

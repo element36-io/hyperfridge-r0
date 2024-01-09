@@ -18,6 +18,7 @@ pkcs1 = "0.7.5"
 chrono = "0.4"
 pem = "3"
 serde_json = "1.0"
+anyhow = "1.0"
 
 [features]
 #cuda = ["risc0-zkvm/cuda"]
