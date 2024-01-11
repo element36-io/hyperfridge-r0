@@ -28,3 +28,4 @@ data/test2/*
 
 data/test/test.xml-Receipt-*
 *.log
+data/test/tmp/*
