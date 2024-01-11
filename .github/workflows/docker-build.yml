@@ -25,6 +25,7 @@ jobs:
         DEFAULT_BUMP: patch
         DRY_RUN: true
         VERBOSE: true
+        INITIAL_VERSION: 0.1.0
         
     - name:  Bump version and push tag, Minor version for each merge
       if: github.event_name != 'pull_request'
@@ -83,15 +84,7 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}
-
-    # - name: Create GitHub Tag
-    #   if: github.event_name != 'pull_request'
-    #   run: |
-    #     git config --local user.email "action@github.com"
-    #     git config --local user.name "GitHub Action"
-    #     git tag ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}
-    #     git push origin ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}        
+        tags: e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}      
 
     - name: Create GitHub Release with zipped binaries
       if: github.event_name != 'pull_request'

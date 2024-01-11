@@ -11,7 +11,7 @@ use rsa::RsaPublicKey;
 use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
-use std::process::{Command};
+use std::process::Command;
 #[cfg(not(test))]
 
 static mut VERBOSE: bool = false; // print verbose
@@ -25,7 +25,6 @@ macro_rules! v {
         }
     };
 }
-
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -48,7 +47,6 @@ struct Stmt {
 
 //#[cfg(not(test))]
 fn main() {
-
     let cli = parse_cli();
 
     if cli.markdown_help {
@@ -62,21 +60,25 @@ fn main() {
     let camt53_filename: String;
 
     match &cli.command {
-         Some(Commands::ProveCamt53 {script,bankkey,
+        Some(Commands::ProveCamt53 {
+            script,
+            bankkey,
             clientkey,
             clientiban,
-            request,}) => {
-        
+            request,
+        }) => {
             bank_public_key_x002_pem_filename = (*bankkey
                 .as_ref()
-                .expect("extracting path for file").clone()
+                .expect("extracting path for file")
+                .clone()
                 .into_os_string())
             .to_str()
             .unwrap()
             .to_string();
             user_private_key_e002_pem_filename = (*clientkey
                 .as_ref()
-                .expect("extracting path for file").clone()
+                .expect("extracting path for file")
+                .clone()
                 .into_os_string())
             .to_str()
             .unwrap()
@@ -84,7 +86,8 @@ fn main() {
             iban = clientiban.clone();
             camt53_filename = (*request
                 .as_ref()
-                .expect("extracting path for file").clone()
+                .expect("extracting path for file")
+                .clone()
                 .into_os_string())
             .to_str()
             .unwrap()
@@ -92,7 +95,9 @@ fn main() {
 
             // calls checkResponse.sh
             if let Some(script_path) = script {
-                let script_dir = script_path.parent().expect("Script path has no parent directory");
+                let script_dir = script_path
+                    .parent()
+                    .expect("Script path has no parent directory");
                 let script_file_stem = request
                     .as_ref()
                     .and_then(|req| req.file_stem())
@@ -102,25 +107,31 @@ fn main() {
 
                 let script_full_path = script_dir.join(script_file_stem);
 
-                v!("calling {} {} {} ", &camt53_filename,&bank_public_key_x002_pem_filename,&user_private_key_e002_pem_filename);
-   
-                let output = Command::new(&script_path)
-                   // .current_dir(&script_dir)
+                v!(
+                    "calling {} {} {} ",
+                    &camt53_filename,
+                    &bank_public_key_x002_pem_filename,
+                    &user_private_key_e002_pem_filename
+                );
+
+                let output = Command::new(script_path)
+                    // .current_dir(&script_dir)
                     .env("dir_name", &script_full_path)
                     .env("xml_file", &camt53_filename)
                     .env("pem_file", &bank_public_key_x002_pem_filename)
                     .env("private_pem_file", &user_private_key_e002_pem_filename)
                     .output()
                     .expect("failed to execute script");
-        
+
                 if output.status.success() {
-                    v!("Script {:?} executed successfully.",script_path.clone());
+                    v!("Script {:?} executed successfully.", script_path.clone());
                 } else {
                     eprintln!("Script output ----------------------------------------");
                     eprintln!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
                     eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
                     panic!(
-                        "Script {:?} failed with exit code {} - see output above",script_path.clone(),
+                        "Script {:?} failed with exit code {} - see output above",
+                        script_path.clone(),
                         output.status.code().unwrap()
                     );
                 }
@@ -218,7 +229,6 @@ fn main() {
                     receipt_file_id = joined_elctrnc_seq_nb.clone();
 
                     print!("{:#?}", commitment)
-
                 }
                 Err(e) => {
                     receipt_file_id = "commit_json_error".to_owned();
@@ -250,10 +260,13 @@ fn main() {
     }
 }
 
-
 fn is_verbose() -> String {
     unsafe {
-        if VERBOSE { "verbose".to_string() } else { "".to_string() }
+        if VERBOSE {
+            "verbose".to_string()
+        } else {
+            "".to_string()
+        }
     }
 }
 
@@ -299,7 +312,6 @@ fn proove_camt53(
         .expect("Failed to create bank public key");
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
-  
 
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
@@ -398,7 +410,6 @@ struct Cli {
 enum Commands {
     /// proves a camt53 file
     ProveCamt53 {
-
         #[arg(
             short,
             long,
@@ -427,7 +438,7 @@ enum Commands {
         clientkey: Option<PathBuf>,
 
         #[arg(
-            short ='i',
+            short = 'i',
             long,
             help = "IBAN of the account as used in camt53 files.",
             required = true
@@ -438,10 +449,9 @@ enum Commands {
             short,
             long,
             help = "Path to Shell Script which does pre-processing - if omitted, we assume pre-processing already happened.",
-            required = false,
+            required = false
         )]
         script: Option<PathBuf>,
-
     },
     /// Uses test data - you may need RISC0_DEV_MODE=true environment variable
     Test,
