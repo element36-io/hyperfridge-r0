@@ -11,6 +11,7 @@ use rsa::RsaPublicKey;
 use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
+use std::process::{Command};
 #[cfg(not(test))]
 
 static mut VERBOSE: bool = false; // print verbose
@@ -24,6 +25,7 @@ macro_rules! v {
         }
     };
 }
+
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -44,8 +46,9 @@ struct Stmt {
     cd: String,
 }
 
-#[cfg(not(test))]
+//#[cfg(not(test))]
 fn main() {
+
     let cli = parse_cli();
 
     if cli.markdown_help {
@@ -59,12 +62,11 @@ fn main() {
     let camt53_filename: String;
 
     match &cli.command {
-        Some(Commands::Proveraw {
-            bankkey,
+         Some(Commands::ProveCamt53 {script,bankkey,
             clientkey,
             clientiban,
-            request,
-        }) => {
+            request,}) => {
+        
             bank_public_key_x002_pem_filename = (*bankkey
                 .as_ref()
                 .expect("extracting path for file").clone()
@@ -87,6 +89,42 @@ fn main() {
             .to_str()
             .unwrap()
             .to_string();
+
+            // calls checkResponse.sh
+            if let Some(script_path) = script {
+                let script_dir = script_path.parent().expect("Script path has no parent directory");
+                let script_file_stem = request
+                    .as_ref()
+                    .and_then(|req| req.file_stem())
+                    .expect("Script path has no file stem")
+                    .to_str()
+                    .expect("Failed to convert file stem to string");
+
+                let script_full_path = script_dir.join(script_file_stem);
+
+                v!("calling {} {} {} ", &camt53_filename,&bank_public_key_x002_pem_filename,&user_private_key_e002_pem_filename);
+   
+                let output = Command::new(&script_path)
+                   // .current_dir(&script_dir)
+                    .env("dir_name", &script_full_path)
+                    .env("xml_file", &camt53_filename)
+                    .env("pem_file", &bank_public_key_x002_pem_filename)
+                    .env("private_pem_file", &user_private_key_e002_pem_filename)
+                    .output()
+                    .expect("failed to execute script");
+        
+                if output.status.success() {
+                    v!("Script {:?} executed successfully.",script_path.clone());
+                } else {
+                    eprintln!("Script output ----------------------------------------");
+                    eprintln!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
+                    eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
+                    panic!(
+                        "Script {:?} failed with exit code {} - see output above",script_path.clone(),
+                        output.status.code().unwrap()
+                    );
+                }
+            }
         }
         Some(Commands::Test) => {
             v!("Proofing with test data.");
@@ -170,6 +208,7 @@ fn main() {
 
             match commitment {
                 Ok(commitment) => {
+                    // collect the sequence numbers from the camt53 files to use them in the filename of the receipt json
                     let joined_elctrnc_seq_nb = commitment
                         .stmts
                         .iter()
@@ -177,7 +216,9 @@ fn main() {
                         .collect::<Vec<String>>() // Collect as Vec<&str>
                         .join("_");
                     receipt_file_id = joined_elctrnc_seq_nb.clone();
-                    println!("{:#?}", commitment)
+
+                    print!("{:#?}", commitment)
+
                 }
                 Err(e) => {
                     receipt_file_id = "commit_json_error".to_owned();
@@ -209,6 +250,13 @@ fn main() {
     }
 }
 
+
+fn is_verbose() -> String {
+    unsafe {
+        if VERBOSE { "verbose".to_string() } else { "".to_string() }
+    }
+}
+
 /// Generates the proof of computation and returning the receipt as JSON
 #[allow(clippy::too_many_arguments)]
 fn proove_camt53(
@@ -224,7 +272,7 @@ fn proove_camt53(
     iban: &str,
     host_info: &str,
 ) -> Result<Receipt, anyhow::Error> {
-    println!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
+    v!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
     // write image ID to filesystem
     let _ = write_image_id();
 
@@ -244,13 +292,14 @@ fn proove_camt53(
     // .write(&modu_hex).unwrap()
 
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
-    println!("Starting guest code, load environment");
+    v!("Starting guest code, load environment");
     env_logger::init();
     let pem = parse(bank_public_key_x002_pem).expect("Failed to parse bank public key PEM");
     let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem))
         .expect("Failed to create bank public key");
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
+  
 
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
@@ -274,6 +323,8 @@ fn proove_camt53(
         .write(&iban)
         .unwrap()
         .write(&host_info)
+        .unwrap()
+        .write(&is_verbose())
         .unwrap()
         .build()
         .unwrap();
@@ -345,12 +396,13 @@ struct Cli {
 // https://docs.rs/clap/latest/clap/struct.Arg.html
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Validates a proof generated by a sealed risc0 elf binary.
-    Proveraw {
+    /// proves a camt53 file
+    ProveCamt53 {
+
         #[arg(
             short,
             long,
-            help = "The ebics response file (XML) - verifyraw assume that the response has been pre-processed.",
+            help = "The ebics response file (XML) - assumes that the response has been pre-processed; or use --script=\"./data/checkResponse.sh\" to pre-process data.",
             value_name = "FILE",
             required = true
         )]
@@ -381,6 +433,15 @@ enum Commands {
             required = true
         )]
         clientiban: String,
+
+        #[arg(
+            short,
+            long,
+            help = "Path to Shell Script which does pre-processing - if omitted, we assume pre-processing already happened.",
+            required = false,
+        )]
+        script: Option<PathBuf>,
+
     },
     /// Uses test data - you may need RISC0_DEV_MODE=true environment variable
     Test,
@@ -447,16 +508,16 @@ mod tests {
 
         match &receipt_result {
             Ok(_val) => {
-                // println!("Receipt result: {}", val);_
+                // v!("Receipt result: {}", val);_
                 let receipt = receipt_result.unwrap();
                 receipt
                     .verify(HYPERFRIDGE_ID)
                     .expect("Verification of receipt failed in test");
                 let receipt_json =
                     serde_json::to_string(&receipt).expect("Failed to serialize receipt");
-                println!("Receipt result: {:?}", &receipt_json);
+                v!("Receipt result: {:?}", &receipt_json);
                 let journal = receipt.journal;
-                println!(
+                v!(
                     "Receipt result (commitment) {}: ",
                     &(journal.decode::<String>().unwrap())
                 );
@@ -472,8 +533,7 @@ mod tests {
                     .expect("Unable to write data");
             }
             Err(e) => {
-                println!("Receipt error: {:?}", e);
-                //None
+                eprintln!("Receipt error: {:?}", e);
             }
         }
     }
