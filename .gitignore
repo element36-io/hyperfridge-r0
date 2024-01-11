@@ -21,8 +21,9 @@ data/*.bin
 data/tmp/*
 data/hello.txt
 data/test.sh
-host/out/IMAGE_ID.binary
-host/out/IMAGE_ID.hex
 data/test2/*
 
 
+data/test/test.xml-Receipt-*
+*.log
+data/test/tmp/*

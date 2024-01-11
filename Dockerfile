@@ -6,19 +6,33 @@ RUN cargo risczero install
 
 COPY data data
 COPY host host
+COPY verifier verifier
 COPY methods methods
 COPY Cargo.toml /
 COPY rust-toolchain.toml /
 
+# create directory holding generated Id of Computation which will be proved. 
 WORKDIR /host
-RUN mkdir out; touch out/test.touch
-RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
+RUN mkdir out; touch out/test.touch; rm out/test.touch
 
-WORKDIR /methods/guest
-RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+WORKDIR /
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release 
+# creates fake proof for test data, so that calling "verifier" without parameters works
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
 
-RUN ls -la /host
+# Final Stage - Alpine Image
+FROM debian:bookworm-slim as runtime
+#FROM alpine:latest as runteim
+# add glibc 
+# RUN apk --no-cache add ca-certificates libgcc gcompat
 
-#COPY host/out host/out
+# Copy the compiled binaries from the build stage
+COPY --from=build /target/release/host /app/host
+COPY --from=build /target/release/verifier /app/verifier
+COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
+COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
+COPY --from=build /data /data
 
-CMD ["RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --nocapture "]
+WORKDIR /app
+
+CMD ["./verifier"]

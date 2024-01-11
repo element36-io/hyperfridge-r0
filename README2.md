@@ -1,15 +1,32 @@
+# Todos
+
+- check for libs, eg. serde is double
+- use risc0 sha --> check for more
+- Paper: plug-in TradFi assets like Fiat accounts, and portfolios. Sepa, Indian, british
+
 # How to run with test data
 
 ```bash
 cd host
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  -- 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --release -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
-RUST_BACKTRACE=1 cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem  
+
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose proveraw -r "../data/test/test.xml" -b "../data/bank_public.pem" -c "../data/client.pem" -i CH4308307000289537312
+
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt -r "./test/test.xml" -b "./bank_public.pem" -c "./client.pem" -i CH4308307000289537312
+
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt53  -r "../data/test/test.xml" -b "../data/bank_public.pem" -c "../data/client.pem" -i CH4308307000289537312 --script "../data/checkResponse.sh"
+
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test 
+
+date && RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem CH4308307000289537312 > "create-receipt-$(date).log" && date
 
 ```
 
-Run tests for verifier - need to enable main function with feature flag:
+
+Run tests for verifier - need to enable main function with feature flag, use RUST_LOG="executor=info" as needed.  
 
 ```bash
 cd methods/guest
@@ -18,9 +35,15 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
 
-RUST_LOG="executor=info"
+When pushing run clippy and fmt: 
 
+```bash
+cargo fmt --all
+cargo fmt --all -- --check
+RISC0_SKIP_BUILD=true  cargo clippy
 
+cargo doc --no-deps --open
+```
 
 Generate coverage data
 
@@ -30,6 +53,20 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode
 # with output 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
+
+## gernate documentation
+
+```bash
+
+(cd host && \
+     cargo run -- --markdown-help > ../docs/verifier-cli.md && \
+     cargo doc --no-deps --document-private-items --open
+)
+
+# with output 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+```
+
 
 # Unstructured notes
 

@@ -1,7 +1,5 @@
-
 #!/bin/bash
 set -e
-
 
 # deb packages needed: 	libxml2-utils (xmllint), perl, openssl, openssl-dev, qpdf (zlib-flate)
 #
@@ -22,11 +20,13 @@ set -e
 timestamp=$(date +%Y%m%d%H%M%S)
 
 # Use productive example as template
-xml_file="response_template.xml"
+echo "============================"
 if [ -z "${xml_file}" ]; then
-    echo "xml_file variable is not set. Set to default. ${xml_file}"
-    #exit 1
+    xml_file="response_template.xml"
+    echo "xml_file variable is not set, defaults to: ${xml_file}"
 fi
+
+# template dir
 original_dir_name="${xml_file%.xml}"
 
 created_file="${xml_file%.xml}-generated.xml"
@@ -39,18 +39,21 @@ if [ ! -d "$dir_name" ]; then
 fi
 
 
-echo "============================"
-echo "response template xml_file: ${xml_file} - created xml file $created_file" 
+echo "response template: ${xml_file} - created new xml file from template: $created_file" 
+pwd
 
-# actual starting point - we need to encrypt this
-decrypted_file="$original_dir_name/orderdata_decrypted.zip"
+# actual starting point - we need to zip, flate-comopress then encrypt payload this
 
+cd "$original_dir_name/camt53" && zip ../orderdata_decrypted.zip * && cd ../..
+zlib-flate -compress  < "$original_dir_name/orderdata_decrypted.zip" > $original_dir_name/orderdata_decrypted-flated.zip
+decrypted_file="$original_dir_name/orderdata_decrypted-flated.zip"
 
 # Check if all files exist
 if [ ! -f "$decrypted_file" ] ; then
     echo "Zip to encrypt (payload) is missing - looked for: $decrypted_file"
     exit 1
 fi
+echo "Zip with payload: $decrypted_file"
        
 # generate bank and use keys RSA
 if [ -z "bank.pem" ]; then
@@ -81,7 +84,8 @@ echo "transaction key from file should be same as above: $transaction_key_hex"
 encrypted_file="./tmp/create_orderdata_$timestamp.bin"
 
 # Encrypting the ZIP file
-openssl enc -e -aes-128-cbc -nopad -in "$decrypted_file" -out "$encrypted_file" -K "$transaction_key_hex" -iv 00000000000000000000000000000000
+echo "..."
+openssl enc -e -aes-128-cbc -in "$decrypted_file" -out "$encrypted_file" -K "$transaction_key_hex" -iv 00000000000000000000000000000000
 echo "Encrypted file: $encrypted_file   - convert to base64 nd put it as value into the OrderData Tag "
 
 base64_encrypted=$(base64 -w 0 "$encrypted_file")
