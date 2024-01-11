@@ -13,7 +13,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-
 static mut VERBOSE: bool = false; // print verbose
 
 macro_rules! v {
@@ -471,7 +470,8 @@ fn parse_cli() -> Cli {
 mod tests {
     use crate::fs;
     use crate::{
-        get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_EBICS_FILE, TEST_IBAN, VERBOSE,
+        get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_EBICS_FILE, TEST_IBAN,
+        VERBOSE,
     };
 
     use chrono::Local;
