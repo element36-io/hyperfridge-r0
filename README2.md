@@ -12,7 +12,9 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --release -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose proveraw -r "../data/test/test.xml" -b "../data/bank_public.pem" -c "../data/client.pem" -i CH4308307000289537312
+
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test 
 
 date && RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem CH4308307000289537312 > "create-receipt-$(date).log" && date
 

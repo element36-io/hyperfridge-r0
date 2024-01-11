@@ -17,8 +17,9 @@ The roundtrip looks like this:
 
 ## Releases and installation
 
-
 ## Test the installation
+
+### Integration tests with provided test data
 
 We included all test data which is necessary to run a quick shake-down test to generate
 and validate a proof in one go:
@@ -28,12 +29,37 @@ host --validate test
 # or with docker: 
 TODO: wasa
 # or with cargo: 
+```
 
+### Unit tests
+
+Most important, run unit test for the guest code in `methods/guest`:
+
+```bash
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+# or with docker: 
+TODO: wasa
+# or with cargo: 
+```
+
+Unit tests for the host program in `host` will create receipt for the test data:
+
+```bash
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
+# or with docker: 
+TODO: wasa 
+```
+
+Run the tests on your own data with: 
+
+```bash
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem CH4308307000289537312 > "create-receipt-$(date).log"
+# or with docker: 
+TODO: wasa
 ```
 
 
 ## Proofing workflows
-
 
 ### Proofing workflow with provided test data
 
@@ -91,7 +117,7 @@ host --verify -verbose --response=./mytest/mytest.xml
 TODO: wasa
 ```
 
-The receipt is stored in `mytest/mytest.xml-Receipt`.
+The receipt is stored in `mytest/mytest.xml-Receipt`. I you want to modify the payload as well, see [further down](#generate-new-test-data).
 
 ### Validate the Receipt
 
@@ -105,18 +131,27 @@ TODO
 docker run TODO ./verifier verify ../data/mytest/mytest.xml-Receipt
 ```
 
-## Generate new test data
+## Create new test data
 
+Modify ISO20022 Camt53 files in `response_template/camt53` and `respone_template.xml`. To redeploy your modifcations
+as new test data, first create a new Ebics response file which contains the new 
+payload as an encrypted base64 string with: 
 
-## Use with productive data
+```bash
+./createTestResponse.sh 
+# or with docker: 
+TODO: wasa
+```
 
-[test][ebics-java-client2]
+```bash
+./deploy_new_testdata.sh 
+# or with docker: 
+TODO: wasa
+```
 
-[ebics-java-client2]: [links.json#ebics-java-client]
-[r0-dev-mode]: [links.json#r0-dev-mode]
+Now you may create a new receipt as [shown before](#creating-the-receipt).
+
 
 
 [ebics-java-client2]: [references.json#ebics-java-client]
 [r0-dev-mode]: [references.json#r0-dev-mode]
-
-
