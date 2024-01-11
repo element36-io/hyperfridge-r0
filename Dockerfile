@@ -21,7 +21,7 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
 
 # Final Stage - Alpine Image
-FROM rust:1.74-bookworm as runtime
+FROM debian:bookworm-slim as runtime
 #FROM alpine:latest as runteim
 # add glibc 
 # RUN apk --no-cache add ca-certificates libgcc gcompat

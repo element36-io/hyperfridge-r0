@@ -48,6 +48,20 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
 
+## gernate documentation
+
+```bash
+
+(cd host && \
+     cargo run -- --markdown-help > ../docs/verifier-cli.md && \
+     cargo doc --no-deps --document-private-items --open
+)
+
+# with output 
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+```
+
+
 # Unstructured notes
 
 cd /host
