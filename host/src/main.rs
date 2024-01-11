@@ -12,7 +12,7 @@ use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-#[cfg(not(test))]
+
 
 static mut VERBOSE: bool = false; // print verbose
 
@@ -471,7 +471,7 @@ fn parse_cli() -> Cli {
 mod tests {
     use crate::fs;
     use crate::{
-        get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_EBICS_FILE, TEST_IBAN,
+        get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_EBICS_FILE, TEST_IBAN, VERBOSE,
     };
 
     use chrono::Local;
