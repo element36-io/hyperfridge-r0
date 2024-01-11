@@ -30,7 +30,6 @@ risc0_zkvm::guest::entry!(main);
 #[cfg(test)]
 mod test_xmlparse;
 
-
 static mut VERBOSE: bool = false; // print verbose or not
 
 macro_rules! v {
@@ -180,12 +179,12 @@ pub fn main() {
     env::commit(&final_commitment);
 }
 
-fn set_flags(flags:String) {
+fn set_flags(flags: String) {
     if flags.contains("verbose") {
         unsafe {
-            VERBOSE=true;
+            VERBOSE = true;
         }
-    } 
+    }
 }
 /// Calls all the steps necessary for the proof.
 #[allow(clippy::too_many_arguments)]
