@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/element36-io/hyperfridge-r0/graph/badge.svg?token=JNQZL1G2OM)](https://codecov.io/gh/element36-io/hyperfridge-r0)
+
 # Todos
 
 - check for libs, eg. serde is double
@@ -81,6 +83,11 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocap
 
 
 # Unstructured notes
+
+xmllint --schema yourxsd.xsd yourxml.xml --noout
+
+xmllint --schema schematas/ebics_response_H004.xsd response_template.xml
+
 
 cd /host
 pprof -http=127.0.0.1:8089 ../target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge ./profile-output 
