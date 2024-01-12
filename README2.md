@@ -40,7 +40,7 @@ When pushing run clippy and fmt:
 ```bash
 cargo fmt --all
 cargo fmt --all -- --check
-RISC0_SKIP_BUILD=true  cargo clippy
+RISC0_SKIP_BUILD=1  cargo clippy
 
 cargo doc --no-deps --open
 ```
@@ -52,6 +52,10 @@ cd methods/guest
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode 
 # with output 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+
+RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo tarpaulin 
+
+RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
 ```
 
 ## gernate documentation

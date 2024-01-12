@@ -37,7 +37,14 @@ jobs:
 
       - name: Run tests (with coverage)
         run: |
-          RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode
+          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+          
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2
+        with:
+          fail_ci_if_error: true
+        env: 
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       
       - name: Run fmt
         run: cargo fmt --all -- --check

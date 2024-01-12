@@ -124,13 +124,16 @@ pub fn main() {
     let modu: BigUint = BigUint::parse_bytes(public_key_mod.as_bytes(), 10)
         .expect("error parsing MODULUS of public bank key");
 
+
     // U256, use crypto_bigint::U256; does not work with RsaPublicKey
     // let exp = U256::from_be_hex(&public_key_exp);
     // let modu = U256::from_be_hex(&public_key_mod);
 
     let public_key = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+    v!("public_key {} bit",public_key.n().bits());
     let private_key = RsaPrivateKey::from_pkcs8_pem(&private_key_pem)
         .expect("Failed to create private key form pem");
+    v!("private_key {} bit",private_key.n().bits());
 
     // do the actual work
     let documents = load(
