@@ -1,12 +1,7 @@
-// #![no_main]
-// #![forbid(unsafe_code)]
 #![cfg_attr(not(feature = "debug_mode"), no_main)]
 
 // If you want to try std support, also update the guest Cargo.toml file
 // #![no_std]  // std support is experimental
-
-// #[cfg(not(feature = "debug_mode"))]
-// #[cfg_attr(not(feature = "debug_mode"), no_main)]
 
 use core::panic;
 use miniz_oxide::inflate::decompress_to_vec_zlib;
@@ -103,6 +98,7 @@ struct Balance {
     cdt_dbt_ind: String, // cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
 }
 
+//#[cfg(not(tarpaulin))]
 pub fn main() {
     let signed_info_xml_c14n: String = env::read();
     let authenticated_xml_c14n: String = env::read();
@@ -189,6 +185,8 @@ fn set_flags(flags: String) {
         }
     }
 }
+
+
 /// Calls all the steps necessary for the proof.
 #[allow(clippy::too_many_arguments)]
 fn load(
