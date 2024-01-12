@@ -81,6 +81,14 @@ custom.rs:109: undefined reference to `__getrandom_custom'
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 ```
 
+# Generate witness keys or new test keys
+
+```bash
+# password "witness"
+openssl genpkey -algorithm RSA -out witness.pem -aes256
+openssl rsa -pubout -in witness.pem -out witness-pub.pem
+openssl rsa -in witness.pem -out witness-unencrypted.pem
+```
 
 # Unstructured notes
 

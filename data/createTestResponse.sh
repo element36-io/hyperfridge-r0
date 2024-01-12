@@ -25,6 +25,8 @@ if [ -z "${xml_file}" ]; then
     xml_file="response_template.xml"
     echo "xml_file variable is not set, defaults to: ${xml_file}"
 fi
+xml_file_stem=$(basename "$xml_file")
+
 
 # template dir
 original_dir_name="${xml_file%.xml}"
@@ -33,20 +35,22 @@ created_file="${xml_file%.xml}-generated.xml"
 # target file where we put our hashes and signatures
 cp "$xml_file" "$created_file"
 
-dir_name="${created_file%.xml}"
-if [ ! -d "$dir_name" ]; then
-    mkdir "$dir_name"
+if [ -z "${dir_name}" ]; then
+    echo "xml_dir variable is not set. Set to default."
+    dir_name="${xml_file%.xml}"
 fi
 
+mkdir -p "$dir_name"
+mkdir -p "${dir_name}/tmp" 
 
 echo "response template: ${xml_file} - created new xml file from template: $created_file" 
 pwd
 
 # actual starting point - we need to zip, flate-comopress then encrypt payload this
 
-cd "$original_dir_name/camt53" && zip ../orderdata_decrypted.zip * && cd ../..
-zlib-flate -compress  < "$original_dir_name/orderdata_decrypted.zip" > $original_dir_name/orderdata_decrypted-flated.zip
-decrypted_file="$original_dir_name/orderdata_decrypted-flated.zip"
+cd "$original_dir_name/camt53" && zip ../tmp/orderdata_decrypted.zip * && cd ../..
+zlib-flate -compress  < "$original_dir_name/tmp/orderdata_decrypted.zip" > $original_dir_name/tmp/orderdata_decrypted-flated.zip
+decrypted_file="$original_dir_name/tmp/orderdata_decrypted-flated.zip"
 
 # Check if all files exist
 if [ ! -f "$decrypted_file" ] ; then
@@ -69,7 +73,7 @@ if [ -z "client.pem" ]; then
     echo "new client generated"
 fi
 
-txkey_file_bin="./tmp/create_tx_key_$timestamp.bin"
+txkey_file_bin="${dir_name}/tmp/create_tx_key_$timestamp.bin"
 # 1. Generate a new 128-bit AES key in hexadecimal format
 transaction_key_hex_temp=$(openssl rand -hex 16)
 echo "Generated transaction key (hex): $transaction_key_hex_temp"
@@ -81,7 +85,7 @@ echo "transaction key from file should be same as above: $transaction_key_hex"
 
 # Encrypt the ZIP file
 # Replace 'your_zip_file.zip' with the path to your ZIP file
-encrypted_file="./tmp/create_orderdata_$timestamp.bin"
+encrypted_file="${dir_name}/tmp/create_orderdata_$timestamp.bin"
 
 # Encrypting the ZIP file
 echo "..."
@@ -96,6 +100,7 @@ perl -pi -e "s|<OrderData>.*?</OrderData>|<OrderData>$base64_encrypted</OrderDat
 # Sign OrderData with A005 = EMSA-PKCS1-v1_5 with SHA-256 
 # This is marked as optional in the standard, but only if included we can make sure that 
 # the client (client of the bank) is not tempering the data
+# Until the standard covers this, we add a "witness" who is signing the data instead of the bank. 
 
 # get sha256 hex value; cut removes the filename in the output
 encrypted_file_sha256=$( openssl dgst -sha256 -r $encrypted_file | cut -d ' ' -f 1 )
@@ -103,25 +108,28 @@ echo "Sha256 of encrypted payload file: $encrypted_file_sha256"
 # hex --> binary --> to base64;
 export encrypted_file_sha256_base64=$(echo "$encrypted_file_sha256" | xxd -r -p | openssl enc -a -A)
 # Insert the Base64 encoded hash the XML file:   <SignatureData authenticate="true">...</SignatureData>
-perl -pi -e 's|<DataDigest SignatureVersion="A005">.*?</DataDigest>|<DataDigest SignatureVersion="A005">$ENV{encrypted_file_sha256_base64}</DataDigest>|s' "$created_file"
 # Now do the signing with bank key according to A005
-orderdata_signature_output_file="./tmp/orderdata_signature_$timestamp.bin"
-orderdata_digest_file="./tmp/orderdata_digest_$timestamp.bin"
+orderdata_signature_output_file="${dir_name}/tmp/orderdata_signature_$timestamp.bin"
+orderdata_digest_file="${dir_name}/tmp/orderdata_digest_$timestamp.bin"
 # we need the digest as a digest file; digest again with -binary 
 openssl dgst -sha256 -binary  -r $encrypted_file > "$orderdata_digest_file"
 # now sign it
-openssl pkeyutl -sign -inkey "bank.pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
+openssl pkeyutl -sign -inkey "witness.pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
 # Convert the signature to Base64
 export orderdata_signature_base64=$(base64 -w 0 "$orderdata_signature_output_file")
 # Insert base64 encoded signature into XML file:  <SignatureData authenticate="true">....</SignatureData>
 perl -pi -e 's|<SignatureData authenticate="true">.*?</SignatureData>|<SignatureData authenticate="true">$ENV{orderdata_signature_base64}</SignatureData>|s' "$created_file"
 
 
+
+
+
+
 # As  next step, encrypt the binary transaction key (bin file) with  public key of client.pem, then base64 it. 
 # openssl defaults to PKCS#1, Ebics page 265, process for asymmetrical encryption of the transaction key
 
 # Encrypt the transaction key with the public key
-encrypted_txkey_file_bin="./tmp/create_ecrypted_tx_key_$timestamp.bin"
+encrypted_txkey_file_bin="${dir_name}/tmp/create_ecrypted_tx_key_$timestamp.bin"
 openssl rsautl -encrypt -pubin -inkey client_public.pem -in $txkey_file_bin -out $encrypted_txkey_file_bin
 # Convert the encrypted key to Base64
 base64_encrypted_transaction_key=$(base64 -w 0 $encrypted_txkey_file_bin)
@@ -156,11 +164,11 @@ export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
 # need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
 export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
 perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$created_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "$dir_name/${created_file}-SignedInfo"
-signedinfo_digest_file="./tmp/signedinfo_digest_$timestamp.bin"
-openssl dgst -sha256 -binary  "$dir_name/${created_file}-SignedInfo" > "$signedinfo_digest_file"
+signedinfo_digest_file="${dir_name}/tmp/signedinfo_digest_$timestamp.bin"
+openssl dgst -sha256 -binary  "${dir_name}/${created_file}-SignedInfo" > "$signedinfo_digest_file"
 echo "created digest for SignedInfo from XML, now creating Signature"
 
-signature_output_file="./tmp/created_signature-output-$timestamp.bin"
+signature_output_file="${dir_name}/tmp/created_signature-output-$timestamp.bin"
 # Create a signature
 openssl pkeyutl -sign -inkey "bank.pem" -in "$signedinfo_digest_file" -out "$signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
 
@@ -174,6 +182,6 @@ echo "Signature inserted into the XML file."
 
 # archive new file to new name; call checkResponse with new name
 cp  "$created_file" "$dir_name/$created_file"
-xmllint -format "$dir_name/$created_file"  > $dir_name/$dir_name-pretty.xml
+xmllint -format "$dir_name/$created_file"  > $dir_name/tmp/${xml_file_stem}-pretty.xml
 echo "Test XMLs created, calling checkResponse.sh with the generated XML to check it:"
 xml_file="$created_file" pem_file="bank_public.pem"  private_pem_file="client.pem" ./checkResponse.sh

@@ -30,7 +30,6 @@ fi
 mkdir -p "$dir_name"
 mkdir -p "${dir_name}/tmp" 
 
-ls -la "${dir_name}/tmp" 
 
 if [ -z "${pem_file}" ]; then
     echo "pem_file variable for bank public key X002 is not set. Set to default."
