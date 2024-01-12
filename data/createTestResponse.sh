@@ -29,7 +29,7 @@ xml_file_stem=$(basename "$xml_file")
 
 
 # template dir
-original_dir_name="${xml_file%.xml}"
+template_dir="${xml_file%.xml}"
 
 created_file="${xml_file%.xml}-generated.xml"
 # target file where we put our hashes and signatures
@@ -37,7 +37,7 @@ cp "$xml_file" "$created_file"
 
 if [ -z "${dir_name}" ]; then
     echo "xml_dir variable is not set. Set to default."
-    dir_name="${xml_file%.xml}"
+    dir_name="${created_file%.xml}"
 fi
 
 mkdir -p "$dir_name"
@@ -45,12 +45,13 @@ mkdir -p "${dir_name}/tmp"
 
 echo "response template: ${xml_file} - created new xml file from template: $created_file" 
 pwd
+ls
 
 # actual starting point - we need to zip, flate-comopress then encrypt payload this
-
-cd "$original_dir_name/camt53" && zip ../tmp/orderdata_decrypted.zip * && cd ../..
-zlib-flate -compress  < "$original_dir_name/tmp/orderdata_decrypted.zip" > $original_dir_name/tmp/orderdata_decrypted-flated.zip
-decrypted_file="$original_dir_name/tmp/orderdata_decrypted-flated.zip"
+ls -la  "$template_dir/camt53/*"
+zip "${dir_name}/tmp/orderdata_decrypted.zip" "$template_dir/camt53/*"
+zlib-flate -compress  < "${dir_name}/tmp/orderdata_decrypted.zip" > ${dir_name}/tmp/orderdata_decrypted-flated.zip
+decrypted_file="${dir_name}/tmp/orderdata_decrypted-flated.zip"
 
 # Check if all files exist
 if [ ! -f "$decrypted_file" ] ; then
@@ -72,6 +73,7 @@ if [ -z "client.pem" ]; then
     openssl rsa -in client.pem -pubout -out client_public.pem
     echo "new client generated"
 fi
+
 
 txkey_file_bin="${dir_name}/tmp/create_tx_key_$timestamp.bin"
 # 1. Generate a new 128-bit AES key in hexadecimal format
@@ -114,7 +116,7 @@ orderdata_digest_file="${dir_name}/tmp/orderdata_digest_$timestamp.bin"
 # we need the digest as a digest file; digest again with -binary 
 openssl dgst -sha256 -binary  -r $encrypted_file > "$orderdata_digest_file"
 # now sign it
-openssl pkeyutl -sign -inkey "witness.pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
+openssl pkeyutl -sign -inkey "witness-nopwd.pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
 # Convert the signature to Base64
 export orderdata_signature_base64=$(base64 -w 0 "$orderdata_signature_output_file")
 # Insert base64 encoded signature into XML file:  <SignatureData authenticate="true">....</SignatureData>
