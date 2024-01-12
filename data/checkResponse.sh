@@ -27,8 +27,6 @@ if [ -z "${dir_name}" ]; then
     dir_name="${xml_file%.xml}"
 fi
 
-echo "....xxxxxx$dir_name"
-
 mkdir -p "$dir_name"
 mkdir -p "${dir_name}/tmp" 
 

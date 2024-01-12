@@ -423,7 +423,7 @@
 						</complexContent>
 					</complexType>
 				</element>
-				<element name="SignatureData" minOccurs="0" maxOccurs="0">
+				<element name="SignatureData" minOccurs="0" maxOccurs="1">
 					<annotation>
 						<documentation xml:lang="de">enthält Signaturdaten (EUs).</documentation>
 					</annotation>

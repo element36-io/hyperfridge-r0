@@ -3,7 +3,7 @@
 xmlns="urn:org:ebics:H004"
 xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-xsi:schemaLocation="urn:org:ebics:H004 schematas/H004/ebics_response_H004.xsd"
+xsi:schemaLocation="urn:org:ebics:H004 H004/ebics_response_H004.xsd"
 Version="H004" Revision="1">
     <header authenticate="true">
         <static>
