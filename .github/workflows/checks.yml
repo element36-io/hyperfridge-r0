@@ -39,7 +39,7 @@ jobs:
         run: |
           rustup install stable
           cargo install cargo-tarpaulin
-          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable test --features debug_mode
+          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable test 
           RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
           
       - name: Upload to codecov.io

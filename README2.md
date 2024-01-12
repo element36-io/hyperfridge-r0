@@ -56,6 +56,14 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocap
 RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo tarpaulin 
 
 RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+
+     RUSTFLAGS="-C link-arg=-fuse-ld=lld"  RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --packages=hyperfridge --skip-clean  --features debug_mode
+
+
+ "-C", "link-arg=-fuse-ld=lld",
+
+custom.rs:109: undefined reference to `__getrandom_custom'
+
 ```
 
 ## gernate documentation
