@@ -37,7 +37,8 @@ jobs:
 
       - name: Run tests (with coverage)
         run: |
-          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+          rustup install stable 
+          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
           
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2
