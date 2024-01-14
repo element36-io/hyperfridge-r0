@@ -44,7 +44,6 @@ struct Stmt {
     cd: String,
 }
 
-//#[cfg(not(test))]
 fn main() {
     let cli = parse_cli();
 

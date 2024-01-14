@@ -35,6 +35,21 @@ jobs:
           rustup component add rustfmt
           rustup component add clippy
 
+      - name: Run tests (with coverage)
+        run: |
+          rustup install stable
+          cargo install cargo-tarpaulin
+          RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo +stable build --release 
+          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable test 
+          RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+          
+      - name: Upload to codecov.io
+        uses: codecov/codecov-action@v2
+        with:
+          fail_ci_if_error: true
+        env: 
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      
       - name: Run fmt
         run: cargo fmt --all -- --check
       

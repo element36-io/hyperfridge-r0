@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/element36-io/hyperfridge-r0/graph/badge.svg?token=JNQZL1G2OM)](https://codecov.io/gh/element36-io/hyperfridge-r0)
+
 # Todos
 
 - check for libs, eg. serde is double
@@ -40,7 +42,7 @@ When pushing run clippy and fmt:
 ```bash
 cargo fmt --all
 cargo fmt --all -- --check
-RISC0_SKIP_BUILD=true  cargo clippy
+RISC0_SKIP_BUILD=1  cargo clippy
 
 cargo doc --no-deps --open
 ```
@@ -52,6 +54,18 @@ cd methods/guest
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --features debug_mode 
 # with output 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
+
+RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo tarpaulin 
+
+RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+
+     RUSTFLAGS="-C link-arg=-fuse-ld=lld"  RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo tarpaulin --packages=hyperfridge --skip-clean  --features debug_mode
+
+
+ "-C", "link-arg=-fuse-ld=lld",
+
+custom.rs:109: undefined reference to `__getrandom_custom'
+
 ```
 
 ## gernate documentation
@@ -69,6 +83,11 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocap
 
 
 # Unstructured notes
+
+xmllint --schema yourxsd.xsd yourxml.xml --noout
+
+xmllint --schema schematas/ebics_response_H004.xsd response_template.xml
+
 
 cd /host
 pprof -http=127.0.0.1:8089 ../target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge ./profile-output 
