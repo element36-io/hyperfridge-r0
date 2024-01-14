@@ -33,12 +33,17 @@ mkdir -p "${dir_name}/tmp"
 
 if [ -z "${pem_file}" ]; then
     echo "pem_file variable for bank public key X002 is not set. Set to default."
-    pem_file="productive_bank_x002.pem"
+    pem_file="bank.pem"
 fi
 
 if [ -z "${private_pem_file}" ]; then
     echo "pem_file variable for client private key E002 is not set. Set to default."
-    private_pem_file="../secrets/e002_private_key.pem"
+    private_pem_file="client.pem"
+fi
+
+if [ -z "${pub_witness_pem}" ]; then
+    echo "pem_file variable for client private key E002 is not set. Set to default."
+    pub_witness_pem="pub_witness.pem"
 fi
 
 decrypted_file="$dir_name/tmp/${xml_file_stem}_payload_camt53_decrypted.zip"
@@ -186,10 +191,12 @@ fi
 
 # first check sha256 of binary encrypted file and then compare with xml value
 orderdata_digest_hex=$( openssl dgst -sha256 -r $orderdata_bin_file | cut -d ' ' -f 1 )
-# extract content from <DataDigest SignatureVersion="A005">..</DataDigest>
-orderdata_digest_expected_base64=$(awk '/<DataDigest SignatureVersion="A005">/,/<\/DataDigest>/' "$xml_file" | sed 's/.*<DataDigest SignatureVersion="A005">//' | sed 's/<\/DataDigest>.*$//' | tr -d '\n')
-# Base64 --> binary --> hex
-orderdata_digest_expected_hex=$(echo $orderdata_digest_expected_base64 | openssl enc -d -a -A | xxd -p -c256)
+orderdata_signature_hex_output_file=${dir_name}/${xml_file_stem}-Witness.hex
+orderdata_digest_expected_hex=$(xxd -p -c256 -u < "$orderdata_signature_hex_output_file")
+# check signature. Signature is in -Witness.hex and check it with the digest hex
+openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in <(echo -n "$orderdata_digest_hex" | xxd -r -p) -sigfile "$orderdata_signature_hex_output_file" -pkeyopt digest:sha256
+
+
 if  [ "$orderdata_digest_expected_hex" == "$orderdata_digest_hex" ]; then 
     echo "digest of Order Data is matching! - Checking signature." 
 else 

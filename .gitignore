@@ -29,3 +29,4 @@ data/test/test.xml-Receipt-*
 data/test/tmp/*
 cobertura.xml
 methods/guest/build_rs_cov.profraw
+tmp/
