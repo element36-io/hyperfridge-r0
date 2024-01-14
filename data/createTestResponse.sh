@@ -77,8 +77,6 @@ check_generate_keys() {
 
 check_generate_keys "bank"
 check_generate_keys "client"
-check_generate_keys "witness"
-
 
 txkey_file_bin="${dir_name}/tmp/create_tx_key_$timestamp.bin"
 # 1. Generate a new 128-bit AES key in hexadecimal format
@@ -101,28 +99,6 @@ echo "Encrypted file: $encrypted_file   - convert to base64 and put it as value 
 base64_encrypted=$(base64 -w 0 "$encrypted_file")
 # Use Perl to replace the content inside the OrderData tag
 perl -pi -e "s|<OrderData>.*?</OrderData>|<OrderData>$base64_encrypted</OrderData>|s" "$generated_file"
-
-
-# Sign OrderData  = EMSA-PKCS1-v1_5 with SHA-256 
-# Signing order data is is marked as planned in the standard
-# Until the standard covers this, we add a "witness" who is signing the data instead of the bank. 
-
-# get sha256 hex value; cut removes the filename in the output
-encrypted_file_sha256=$( openssl dgst -sha256 -r $encrypted_file | cut -d ' ' -f 1 )
-echo "Sha256 of encrypted payload file: $encrypted_file_sha256"
-# hex --> binary --> to base64;
-export encrypted_file_sha256_base64=$(echo "$encrypted_file_sha256" | xxd -r -p | openssl enc -a -A)
-# Insert the Base64 encoded hash the XML file:   <SignatureData authenticate="true">...</SignatureData>
-# Now do the signing with bank key according to A005
-orderdata_signature_output_file="${dir_name}/tmp/orderdata_signature_$timestamp.bin"
-orderdata_digest_file="${dir_name}/tmp/orderdata_digest_$timestamp.bin"
-# we need the digest as a digest file; digest again with -binary 
-openssl dgst -sha256 -binary  -r $encrypted_file > "$orderdata_digest_file"
-# now sign it
-openssl pkeyutl -sign -inkey "$witness_pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
-orderdata_signature_hex_output_file=${dir_name}/${xml_file_stem}-Witness.hex
-# Create the signature
-openssl pkeyutl -sign -inkey "$witness_pem" -in "$orderdata_digest_file" -out "$orderdata_signature_hex_output_file" -pkeyopt digest:sha256
 
 
 # As  next step, encrypt the binary transaction key (bin file) with  public key of client.pem, then base64 it. 
