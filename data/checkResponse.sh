@@ -134,14 +134,14 @@ echo "hash of signature bin file:" $(openssl dgst -r -sha256 "$signature_file")
 
 # decript and unzip base64 data
 # Base64 decoding, Decrypting, Decompressing, Verifying the signature
-awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "$dir_name/${xml_file_stem}-TransactionKey"
+awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "$dir_name/tmp/${xml_file_stem}-TransactionKey"
 awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "$dir_name/tmp/${xml_file_stem}-OrderData-value"
 perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "$dir_name/${xml_file_stem}-OrderData"
 
 # the transaction key is ecrypted with the clients public key - so first we have to decrypt the 
 # tx key before we can use it for decrypting the payload. 
 encrypted_txkey_file_bin="${dir_name}/tmp/${timestamp}_encrypted_transaction_key.bin"
-cat "$dir_name/${xml_file_stem}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
+cat "$dir_name/tmp/${xml_file_stem}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
 
 decrypted_txkey_file_bin="${dir_name}/tmp/${timestamp}_transaction_key.bin"
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
