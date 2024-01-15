@@ -48,7 +48,6 @@ struct Request {
     signature_value_b64: String,
     signed_info_hashed: Vec<u8>,
     order_data_b64: String,
-    signature_data_b64: String,
 }
 
 #[allow(dead_code)]
@@ -423,7 +422,6 @@ fn parse_ebics_response(
 
     let mut digest_value_b64: String = String::new();
     let mut signature_value_b64: String = String::new();
-    let mut signature_data_b64: String = String::new();
     let mut bank_timestamp: String = String::new();
     let mut transaction_key_b64: String = String::new();
     let mut order_data_b64: String = String::new();
@@ -491,9 +489,6 @@ fn parse_ebics_response(
             Ok(Token::Text { text }) if curr_tag == "TimestampBankParameter" => {
                 bank_timestamp = text.to_string();
             }
-            Ok(Token::Text { text }) if curr_tag == "SignatureData" => {
-                signature_data_b64 = text.to_string();
-            }
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             }
@@ -511,7 +506,6 @@ fn parse_ebics_response(
     assert_ne!(signature_value_b64.len(), 0, "Asserting longer than 0: signature_value_b64");
     assert_ne!(signed_info_hashed.len(), 0, "Asserting longer than 0: signed_info_hashed");
     assert_ne!(order_data_b64.len(), 0, "Asserting longer than 0: order_data_b64");
-    assert_ne!(signature_data_b64.len(), 0, "Asserting longer than 0: signature_data_b64");
 
     let authenticated_xml_c14n_hashed = *Impl::hash_bytes(authenticated_xml_c14n.as_bytes());
 
@@ -523,7 +517,6 @@ fn parse_ebics_response(
         signature_value_b64,
         signed_info_hashed,
         order_data_b64,
-        signature_data_b64,
     }
 }
 
@@ -582,7 +575,7 @@ fn decrypt_transaction_key(
         assert_eq!(
             BigUint::from_bytes_be(&transaction_key_bin),
             encrypted_recreated, 
-            "the provided de-encrypted transaction key does not math the one provided by the XML file" 
+            "the provided decrypted transaction key does not math the one provided by the XML file" 
         );
 
         // lets return the decrypted tx key from the provided one - so we do not have to to the expensive RSA.decrypt.

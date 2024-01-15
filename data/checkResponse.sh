@@ -86,11 +86,11 @@ expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c25
 # take the real document get transmitted by the backend - there is no other way knowing which blanks they might use inbetween 
 # tags. This is quite unfortunate for a c14n algorithm, but it defined as such in the w3c standard. 
 # We hardcode the add_namespaces here because this script is a tool for analyzing how the XML need to be processed. 
-# 
+#
+
 add_namespaces=" xmlns=\"http://www.ebics.org/H003\"" 
 perl -ne 'print $1 if /(<header.*<\/header>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<header +<header${add_namespaces} +" > "$header_file"
 perl -ne 'print $1 if /(<DataEncryptionInfo.*<\/DataEncryptionInfo>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<DataEncryptionInfo +<DataEncryptionInfo${add_namespaces} +" >> "$header_file"
-perl -ne 'print $1 if /(<SignatureData.*<\/SignatureData>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<SignatureData +<SignatureData${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<ReturnCode +<ReturnCode${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
 

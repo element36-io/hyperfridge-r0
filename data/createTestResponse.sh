@@ -118,7 +118,6 @@ header_file=$dir_name/$generated_file-authenticated
 add_namespaces=" xmlns=\"http://www.ebics.org/H003\"" 
 perl -ne 'print $1 if /(<header.*<\/header>)/' "$generated_file"                                 | xmllint -exc-c14n - | sed "s+<header +<header${add_namespaces} +" > "$header_file"
 perl -ne 'print $1 if /(<DataEncryptionInfo.*<\/DataEncryptionInfo>)/' "$generated_file"         | xmllint -exc-c14n - | sed "s+<DataEncryptionInfo +<DataEncryptionInfo${add_namespaces} +" >> "$header_file"
-perl -ne 'print $1 if /(<SignatureData.*<\/SignatureData>)/' "$generated_file"                   | xmllint -exc-c14n - | sed "s+<SignatureData +<SignatureData${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$generated_file"                    | xmllint -exc-c14n - | sed "s+<ReturnCode +<ReturnCode${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$generated_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
 
