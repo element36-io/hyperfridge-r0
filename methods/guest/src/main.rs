@@ -17,7 +17,6 @@ use base64::{engine::general_purpose, Engine as _};
 use sha2::Sha256 as RsaSha256;
 use xmlparser::{ElementEnd, Token, Tokenizer};
 
-use hex::encode as hex_encode;
 use hex::FromHex;
 
 #[cfg(not(feature = "debug_mode"))]
@@ -106,7 +105,7 @@ pub fn main() {
     let pub_bank_mod: String = env::read();
     let pub_bank_exp: String = env::read();
     let client_key_pem: String = env::read();
-    let decrypted_tx_key_hex: String = env::read();
+    let decrypted_tx_key_bin: Vec<u8> = env::read();
     let iban: String = env::read();
     let host_info: String = env::read();
     let witness_signature_hex:String = env::read();
@@ -134,9 +133,6 @@ pub fn main() {
 
     let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
          .expect("Failed to create pub_witness_key");
-
-    let decrypted_tx_key_bin = Vec::from_hex(decrypted_tx_key_hex.trim())
-        .expect("Failed to parse hexadecimal string decrypted_tx_key_hex");
 
     let witness_signature_bytes  = Vec::from_hex(witness_signature_hex.trim().replace(" ", "").replace("\n", ""))
         .expect("Failed to parse hexadecimal string witness_signature_hex");
@@ -207,7 +203,7 @@ fn load(
     order_data_xml: &str,
     pub_bank: &RsaPublicKey,
     client_key: &RsaPrivateKey,
-    encrypted_tx_key: &Vec<u8>,
+    decrypted_tx_key: &Vec<u8>,
     iban: &str,
     witness_signature_bytes: &Vec<u8>,
     pub_witness: &RsaPublicKey,
@@ -238,7 +234,7 @@ fn load(
  
     // cycle count 23336k (plus 10k)
 
-    let transaction_key = decrypt_transaction_key(&request, client_key, encrypted_tx_key);
+    let transaction_key = decrypt_transaction_key(&request, client_key, decrypted_tx_key);
     v!(
         " >>>>> Cycle count decrypt_transaction_key {}k",
         (env::get_cycle_count()) / 1000
@@ -556,31 +552,11 @@ fn decrypt_transaction_key(
         .decode(&request.transaction_key_b64)
         .unwrap();
 
-        println!("tx from base64 {}",hex::encode(request.transaction_key_b64.clone()));
-    println!("tx from xml {}",hex::encode(transaction_key_bin.clone()));
-    println!("tx from param {}",hex::encode(decrypted_tx_key));
-    
-
     if !decrypted_tx_key.is_empty() {
         // its still padded
         v!("WARNING: binary transaction key was provided - we use this to decrypt");
-        let pub_key = RsaPublicKey::from(client_key);
-        // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
-        // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
-        // We check if if provided decrypted key was using the decrypted key in the XML as source.
-        let encrypted_recreated =
-            rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
 
-        // most important - check if the recreated, encrypted tx key equalx to the one provided by the XML file
-        assert_eq!(
-            BigUint::from_bytes_be(&transaction_key_bin),
-            encrypted_recreated, 
-            "the provided decrypted transaction key does not math the one provided by the XML file" 
-        );
-
-        // lets return the decrypted tx key from the provided one - so we do not have to to the expensive RSA.decrypt.
-        // remove the padding, return the decrypted key
-        // Ensure that the data is long enough and has the correct PKCS#1 v1.5 padding prefix.
+        // Do some check on the provided key - ensure that the data is long enough and has the correct PKCS#1 v1.5 padding prefix.
         assert!(
             decrypted_tx_key.len() >= 3,
             "Invalid data: Too short to contain PKCS#1 v1.5 padding"
@@ -593,6 +569,22 @@ fn decrypt_transaction_key(
             decrypted_tx_key[1] == 0x02,
             "Invalid data: Missing 0x02 following the initial 0x00 in PKCS#1 v1.5 padding"
         );
+
+        // most important - check if the recreated, encrypted tx key equalx to the one provided by the XML file
+        let pub_key = RsaPublicKey::from(client_key);
+        // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
+        // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
+        // We check if if provided decrypted key was using the decrypted key in the XML as source.
+        let encrypted_recreated =
+            rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();        
+        assert_eq!(
+            BigUint::from_bytes_be(&transaction_key_bin),
+            encrypted_recreated, 
+            "the provided decrypted transaction key does not math the one provided by the XML file" 
+        );
+
+        // lets return the decrypted tx key from the provided one - so we do not have to to the expensive RSA.decrypt.
+        // remove the padding, return the decrypted key
 
         // look for first 00 which marks the end of the padding - but be aware that the padding always starts with 0002
         match decrypted_tx_key
@@ -669,14 +661,6 @@ fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8],witness_sign
              panic!(" Order Data Signature could not be verified")
          }
      };
-
-    let sha_hex_xml = hex_encode(&order_data_bin);
-    // Convert hash to hexadecimal strings
-    let sha_hex = hex_encode(sha.as_bytes());
-    assert_eq!(
-        &sha_hex, &sha_hex_xml,
-        "Digest does not match digest of data"
-    );
 
     // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000

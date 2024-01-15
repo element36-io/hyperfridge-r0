@@ -181,7 +181,7 @@ fn main() {
     // encrypting with privte key is much faster. So we expect the decrypted transaction
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
-    let decrypted_tx_key_hex: String= fs::read_to_string(format!("{}-TransactionKeyDecrypt.hex", camt53_filename))
+    let decrypted_tx_key_bin: Vec<u8>= fs::read(format!("{}-TransactionKeyDecrypt.bin", camt53_filename))
         .expect("Failed to read decrypted transaction key file");
     // other pre-processed files, mainly to c14n for XML
     let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
@@ -204,7 +204,7 @@ fn main() {
         &order_data_xml,
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
-        &decrypted_tx_key_hex,
+        decrypted_tx_key_bin,
         &iban,
         &witness_signature_hex,
         &pub_witness_pem,
@@ -300,7 +300,7 @@ fn proove_camt53(
     order_data_xml: &str,
     bank_public_key_x002_pem: &str,
     user_private_key_e002_pem: &str,
-    decrypted_tx_key_hex: &str,
+    decrypted_tx_key_bin: Vec<u8>,
     iban: &str,
     witness_signature_hex:&str,
     pub_witness_pem: &str,
@@ -349,7 +349,7 @@ fn proove_camt53(
         .unwrap()
         .write(&user_private_key_e002_pem)
         .unwrap()
-        .write(&decrypted_tx_key_hex)
+        .write(&decrypted_tx_key_bin)
         .unwrap()
         .write(&iban)
         .unwrap()

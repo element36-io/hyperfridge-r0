@@ -17,7 +17,7 @@ fn test_signature_x() {
 const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../../data/pub_bank.pem");
 const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../../data/client.pem");
 const TX_KEY_DECRYPTED: &[u8] =
-    include_bytes!("../../../data/test/test.xml-TransactionKeyDecrypt.hex");
+    include_bytes!("../../../data/test/test.xml-TransactionKeyDecrypt.bin");
 
 macro_rules! include_resource {
     ($file:expr) => {

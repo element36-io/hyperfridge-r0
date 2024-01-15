@@ -163,11 +163,10 @@ openssl pkeyutl -decrypt -in "${encrypted_txkey_file_bin}" -out "${decrypted_txk
 openssl pkeyutl -decrypt --in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}-raw" -inkey $client_pem -pkeyopt rsa_padding_mode:none
 # echo "size tx key (should be 16) $(stat -c %s "$decrypted_txkey_file_bin") "
 [ $(stat --format=%s "$decrypted_txkey_file_bin") -eq 16 ] || { echo "Wrong filesize of decrypted tx key"; exit 1; }
+cp  "${decrypted_txkey_file_bin}-raw" "$dir_name/${xml_file_stem}-TransactionKeyDecrypt.bin"
 
 # AES-128 bit key in hex
 transaction_key_hex=$(xxd -p -c256 $decrypted_txkey_file_bin  | tr -d '\n')
-echo "transaction_key_hex: $transaction_key_hex"
-echo "$transaction_key_hex" > "$dir_name/${xml_file_stem}-TransactionKeyDecrypt.hex"
 
 key_length=${#transaction_key_hex}
 # For AES-128, the key should be 32 hex characters
