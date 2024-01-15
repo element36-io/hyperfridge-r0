@@ -13,7 +13,7 @@ cd host
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --release -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  -- --nocapture
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true RISC0_DEV_MODE=true cargo test  -- --nocapture
 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose proveraw -r "../data/test/test.xml" -b "../data/bank_public.pem" -c "../data/client.pem" -i CH4308307000289537312
 
