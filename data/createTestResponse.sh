@@ -159,5 +159,5 @@ echo "Signature inserted into the XML file."
 # archive new file to new name; call checkResponse with new name
 cp  "$generated_file" "$dir_name/$generated_file"
 xmllint -format "$dir_name/$generated_file"  > $dir_name/tmp/${xml_file_stem}-pretty.xml
-echo "Test XMLs created, calling checkResponse.sh with the generated XML to check it:"
+echo "Test XMLs created, calling checkResponse.sh with the generated XML to check it - $pub_bank_pem $client_pem"
 xml_file="$generated_file" pem_file=$pub_bank_pem  private_pem_file=$client_pem ./checkResponse.sh

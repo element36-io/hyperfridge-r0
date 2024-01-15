@@ -167,7 +167,7 @@ openssl pkeyutl -decrypt --in "${encrypted_txkey_file_bin}" -out "${decrypted_tx
 # AES-128 bit key in hex
 transaction_key_hex=$(xxd -p -c256 $decrypted_txkey_file_bin  | tr -d '\n')
 echo "transaction_key_hex: $transaction_key_hex"
-echo "$transaction_key_hex" > "$dir_name/${xml_file_stem}-TransactionKeyDecrypt"
+echo "$transaction_key_hex" > "$dir_name/${xml_file_stem}-TransactionKeyDecrypt.hex"
 
 key_length=${#transaction_key_hex}
 # For AES-128, the key should be 32 hex characters

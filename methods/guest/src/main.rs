@@ -563,6 +563,11 @@ fn decrypt_transaction_key(
         .decode(&request.transaction_key_b64)
         .unwrap();
 
+        println!("tx from base64 {}",hex::encode(request.transaction_key_b64.clone()));
+    println!("tx from xml {}",hex::encode(transaction_key_bin.clone()));
+    println!("tx from param {}",hex::encode(decrypted_tx_key));
+    
+
     if !decrypted_tx_key.is_empty() {
         // its still padded
         v!("WARNING: binary transaction key was provided - we use this to decrypt");
