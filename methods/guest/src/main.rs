@@ -134,12 +134,9 @@ pub fn main() {
     let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
         .expect("Failed to create pub_witness_key");
 
-    let witness_signature_bytes = Vec::from_hex(
-        witness_signature_hex
-            .trim()
-            .replace([' ', '\n'], ""),
-    )
-    .expect("Failed to parse hexadecimal string witness_signature_hex");
+    let witness_signature_bytes =
+        Vec::from_hex(witness_signature_hex.trim().replace([' ', '\n'], ""))
+            .expect("Failed to parse hexadecimal string witness_signature_hex");
 
     // do the actual work
     let documents = load(
