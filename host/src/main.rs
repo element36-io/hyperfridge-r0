@@ -183,18 +183,19 @@ fn main() {
     // in the XML file.
     let decrypted_tx_key_bin: Vec<u8> =
         fs::read(format!("{}-TransactionKeyDecrypt.bin", camt53_filename))
-            .expect("Failed to read decrypted transaction key file");
+            .unwrap_or_else(|_| panic!("Failed to read decrypted transaction key file (ends with -TransactionKeyDecript.bin) {}",camt53_filename));
+
     // other pre-processed files, mainly to c14n for XML
     let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
-        .expect("Failed to read SignedInfo file");
+        .expect("Failed to read SignedInfo file (ends with -SignedInfo)");
     let authenticated_xml_c14n = fs::read_to_string(format!("{}-authenticated", camt53_filename))
-        .expect("Failed to read authenticated file");
+        .expect("Failed to read authenticated file (ends with -Tauthenticated)");
     let signature_value_xml = fs::read_to_string(format!("{}-SignatureValue", camt53_filename))
-        .expect("Failed to read SignatureValue file");
+        .expect("Failed to read SignatureValue file (ends with -SignatureValue)");
     let order_data_xml = fs::read_to_string(format!("{}-OrderData", camt53_filename))
-        .expect("Failed to read OrderData file");
+        .expect("Failed to read OrderData file (ends with -OrderData)");
     let witness_signature_hex = fs::read_to_string(format!("{}-Witness.hex", camt53_filename))
-        .expect("Failed to read Witness.hex signature");
+        .expect("Failed to read Witness.hex signature (ends with -Witness.hex)");
 
     let image_id_hex = get_image_id_hex();
 
@@ -205,7 +206,7 @@ fn main() {
         &order_data_xml,
         &bank_public_key_x002_pem,
         &user_private_key_e002_pem,
-        decrypted_tx_key_bin,
+        &decrypted_tx_key_bin,
         &iban,
         &witness_signature_hex,
         &pub_witness_pem,
@@ -301,7 +302,7 @@ fn proove_camt53(
     order_data_xml: &str,
     bank_public_key_x002_pem: &str,
     user_private_key_e002_pem: &str,
-    decrypted_tx_key_bin: Vec<u8>,
+    decrypted_tx_key_bin: &Vec<u8>,
     iban: &str,
     witness_signature_hex: &str,
     pub_witness_pem: &str,
@@ -431,9 +432,16 @@ struct Cli {
 }
 
 // https://docs.rs/clap/latest/clap/struct.Arg.html
+// test locally with rust:
+// RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt53  --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+// RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test
+// cargo run  -- --help
+// cargo run  -- --verbose prove-camt53 --help
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// proves a camt53 file
+    /// Creates a proof for a camt53 file - show help with host prove-camt53 --help.
+    /// Using provided test data, this is how it is used:
+    /// host prove-camt53  --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
     ProveCamt53 {
         #[arg(
             short,
@@ -465,7 +473,7 @@ enum Commands {
         #[arg(
             short,
             long,
-            help = "PEM for the public key of the verifier.",
+            help = "PEM for the public key of the witness.",
             value_name = "FILE",
             required = true
         )]
@@ -474,7 +482,7 @@ enum Commands {
         #[arg(
             short = 'i',
             long,
-            help = "IBAN of the account as used in camt53 files.",
+            help = "IBAN of the account as used in camt53 files. Account statements not referring to this IBAN will be ignored when generating the proof.",
             required = true
         )]
         clientiban: String,
@@ -487,7 +495,8 @@ enum Commands {
         )]
         script: Option<PathBuf>,
     },
-    /// Uses test data - you may need RISC0_DEV_MODE=true environment variable
+    /// Uses test data - sample call is:
+    /// RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test
     Test,
 }
 
@@ -524,8 +533,8 @@ mod tests {
         );
         let host_info = format!("callinfo: {}, timestamp: {}", "do_main", &timestamp_string);
 
-        let decrypted_tx_key_hex: &str =
-            &fs::read_to_string(TEST_EBICS_FILE.to_string() + "-TransactionKeyDecrypt")
+        let decrypted_tx_key_bin: &Vec<u8> =
+            &fs::read(TEST_EBICS_FILE.to_string() + "-TransactionKeyDecrypt.bin")
                 .expect("Failed to read transaction key file");
 
         let receipt_result = proove_camt53(
@@ -543,7 +552,7 @@ mod tests {
                 .as_str(),
             fs::read_to_string(TEST_BANKKEY).unwrap().as_str(),
             fs::read_to_string(TEST_CLIENTKEY).unwrap().as_str(),
-            &decrypted_tx_key_hex,
+            decrypted_tx_key_bin,
             TEST_IBAN,
             fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
             fs::read_to_string(TEST_EBICS_FILE.to_string() + "-Witness.hex")

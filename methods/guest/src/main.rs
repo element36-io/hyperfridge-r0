@@ -375,7 +375,7 @@ fn get_client_key_hex(pk: &RsaPublicKey) -> String {
 ///    required canonicalization [XML-C14N] of this specification does not
 ///    change URIs.
 fn verify_bank_signature(pub_bank: &RsaPublicKey, request: &Request) {
-    v!(" verify the bank signature");
+    v!("verify bank signature");
     // Decode the signature
     let signature_value_bytes = general_purpose::STANDARD
         .decode(&request.signature_value_b64)
