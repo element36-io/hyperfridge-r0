@@ -98,7 +98,7 @@ fn test_validate_orderdata() {
         ORDER_DATA_XML,
     );
 
-    let witness_signature_bytes= Vec::from_hex(&WITNESS_SIGNATURE_HEX).unwrap();
+    let witness_signature_bytes = Vec::from_hex(&WITNESS_SIGNATURE_HEX).unwrap();
 
     verify_order_data_signature(&bank_public_key, &request, &witness_signature_bytes);
 }

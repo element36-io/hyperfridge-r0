@@ -54,7 +54,7 @@ fn main() {
 
     let pub_bank_pem_filename: String;
     let client_pem_filename: String;
-    let pub_witness_pem_filename:String;
+    let pub_witness_pem_filename: String;
     let iban: String;
     let camt53_filename: String;
 
@@ -64,7 +64,7 @@ fn main() {
             bankkey,
             clientkey,
             witnesskey,
-            
+
             clientiban,
             request,
         }) => {
@@ -94,7 +94,7 @@ fn main() {
             .to_str()
             .unwrap()
             .to_string();
-            
+
             iban = clientiban.clone();
 
             camt53_filename = (*request
@@ -156,7 +156,7 @@ fn main() {
             pub_bank_pem_filename = TEST_BANKKEY.to_string();
             client_pem_filename = TEST_CLIENTKEY.to_string();
             pub_witness_pem_filename = TEST_WITNESSKEY.to_string();
-            
+
             iban = TEST_IBAN.to_string();
             camt53_filename = TEST_EBICS_FILE.to_string();
         }
@@ -165,10 +165,10 @@ fn main() {
         }
     }
 
-    let bank_public_key_x002_pem = fs::read_to_string(&pub_bank_pem_filename)
-        .expect("Failed to read bank_public_key file");
-    let user_private_key_e002_pem = fs::read_to_string(&client_pem_filename)
-        .expect("Failed to read user_private_key file");
+    let bank_public_key_x002_pem =
+        fs::read_to_string(&pub_bank_pem_filename).expect("Failed to read bank_public_key file");
+    let user_private_key_e002_pem =
+        fs::read_to_string(&client_pem_filename).expect("Failed to read user_private_key file");
     let pub_witness_pem = fs::read_to_string(&pub_witness_pem_filename)
         .expect("Failed to read pub_witness_pem_filename file");
 
@@ -181,8 +181,9 @@ fn main() {
     // encrypting with privte key is much faster. So we expect the decrypted transaction
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
-    let decrypted_tx_key_bin: Vec<u8>= fs::read(format!("{}-TransactionKeyDecrypt.bin", camt53_filename))
-        .expect("Failed to read decrypted transaction key file");
+    let decrypted_tx_key_bin: Vec<u8> =
+        fs::read(format!("{}-TransactionKeyDecrypt.bin", camt53_filename))
+            .expect("Failed to read decrypted transaction key file");
     // other pre-processed files, mainly to c14n for XML
     let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
         .expect("Failed to read SignedInfo file");
@@ -302,7 +303,7 @@ fn proove_camt53(
     user_private_key_e002_pem: &str,
     decrypted_tx_key_bin: Vec<u8>,
     iban: &str,
-    witness_signature_hex:&str,
+    witness_signature_hex: &str,
     pub_witness_pem: &str,
     host_info: &str,
 ) -> Result<Receipt, anyhow::Error> {
@@ -401,7 +402,6 @@ const TEST_IBAN: &str = "CH4308307000289537312";
 const TEST_BANKKEY: &str = "../data/pub_bank.pem";
 const TEST_CLIENTKEY: &str = "../data/client.pem";
 const TEST_WITNESSKEY: &str = "../data/pub_witness.pem";
-
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -505,8 +505,8 @@ fn parse_cli() -> Cli {
 mod tests {
     use crate::fs;
     use crate::{
-        get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_WITNESSKEY, TEST_EBICS_FILE, TEST_IBAN,
-        VERBOSE,
+        get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_EBICS_FILE, TEST_IBAN,
+        TEST_WITNESSKEY, VERBOSE,
     };
 
     use chrono::Local;
@@ -545,10 +545,8 @@ mod tests {
             fs::read_to_string(TEST_CLIENTKEY).unwrap().as_str(),
             &decrypted_tx_key_hex,
             TEST_IBAN,
-            fs::read_to_string(TEST_WITNESSKEY)
-                .unwrap()
-                .as_str(),
-                fs::read_to_string(TEST_EBICS_FILE.to_string() + "-Witness.hex")
+            fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
+            fs::read_to_string(TEST_EBICS_FILE.to_string() + "-Witness.hex")
                 .unwrap()
                 .as_str(),
             &host_info,
