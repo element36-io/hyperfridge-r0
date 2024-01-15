@@ -432,7 +432,7 @@ struct Cli {
 }
 
 // https://docs.rs/clap/latest/clap/struct.Arg.html
-// test locally with rust:
+// test locally with cargo:
 // RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt53  --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 // RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test
 // cargo run  -- --help

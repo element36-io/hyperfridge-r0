@@ -15,15 +15,13 @@ RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --release --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true RISC0_DEV_MODE=true cargo test  -- --nocapture
 
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose proveraw -r "../data/test/test.xml" -b "../data/bank_public.pem" -c "../data/client.pem" -i CH4308307000289537312
+RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt53  --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt -r "./test/test.xml" -b "./bank_public.pem" -c "./client.pem" -i CH4308307000289537312
-
- -r "../data/test/test.xml" -b "../data/bank_public.pem" -c "../data/client.pem" -i CH4308307000289537312 --script "../data/checkResponse.sh"
 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test 
 
-date && RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- ../data/test/test.xml ../data/bank_public.pem ../data/client.pem CH4308307000289537312 > "create-receipt-$(date).log" && date
+# create real prove - takes about 2 hours
+date && RUST_BACKTRACE=1  cargo run  -- --verbose prove-camt53  --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312 > "create-receipt-$(date).log" && date
 
 ```
 
