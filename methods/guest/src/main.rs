@@ -682,7 +682,7 @@ fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8],witness_sign
     let sha_hex = hex_encode(sha.as_bytes());
     assert_eq!(
         &sha_hex, &sha_hex_xml,
-        "Digest (<DataDigest ..> does not match digest of data"
+        "Digest does not match digest of data"
     );
 
     // does the following:
