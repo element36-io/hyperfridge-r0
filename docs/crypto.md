@@ -6,36 +6,21 @@ The EBICS Specifaction does not enforce encryption of the payload (bank statemen
 
 Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are dactivated using 'maxoccurs=0':
 
-File 'ebics_orders_H005.xsd':
+Snippet of 'ebics_orders_H005.xsd', the schema-specification:
 
-'''xml
-<element name="SignatureData" minOccurs="0" maxOccurs="0">
-   <annotation>
-      <documentation xml:lang="de">enthält Signaturdaten (EUs).</documentation>
-      <documentation xml:lang="en">contains signature data (ESs).</documentation>
-   </annotation>
-   <complexType>
-      <simpleContent>
-         <extension base="ebics:SignatureDataType">
-            <attributeGroup ref="ebics:AuthenticationMarker"/>
-         </extension>
-      </simpleContent>
-   </complexType>
-</element>
-'''
-
-But the setup is able to work on more generic matter, e.g. also proving Stripe API call
-or other API documents.
+```xml
+<element name="SignatureData" minOccurs="0" maxOccurs="0">...</element>
+```
 
 ## Entities
 
-1. **Client (`C`)**:
+1. **Client ($C$)**:
    - Private Key: $C_{{priv}}$
    - Public Key: $C_{{pub}}$
-2. **Bank (`B`)**:
+2. **Bank ($B$)**:
    - Private Key: $B_{{priv}}$
    - Public Key: $B_{{pub}}$
-3. **Witness (`W`)**:
+3. **Witness ($W$)**:
    - Private Key: $W_{{priv}}$
    - Public Key: $W_{{pub}}$
 4. **Hardware Security Module (HSM)**:
@@ -130,8 +115,6 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
    - **Security**: The signature from the Witness and the zero-knowledge proof mechanism ensure the security and integrity of the transaction without compromising sensitive information (transaction data).
 - **Verifiability**: External parties can verify a bank statements legitimacy without accessing private keys or sensitive transaction details - on-chain or off-chain. 
 
-
-
 ## Security Considerations
 
 - The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$. It is important to set up the HSM in a way that the witness is able to sign, but not decrypt any message.
@@ -140,8 +123,21 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
 - The HSM must be tamper-resistant and capable of securely managing cryptographic keys and operations.
 - Secure communication protocols should be used to prevent unauthorized access and interception.
 
+## Execution time
+
+
+
 ## Outlook and use cases
 
-- iOS / HSM
-- other data
-- TLS block cipher; 
+### Proof transaction inclusion and Instant Payments
+
+As we are able to prove the payload, we can create a proof for transaction inlusion. Means we can prove FIAT payments incoming and outgoing, both on-chain - similar as cross-blockchain bridges work today. Most banks are operating on a daily basis which prevents interactive use-cases or would ask e.g. for optimistic implementation and addition funds to secure the FIAT bridge. But the EU is working on instant payments which would even allow instant interactive and non-interactive applications. This does not only apply to FIAT assets but also to any TradFi assets. For example Maker DAO has invested 400 mUSD in a Blackrock ETF for traditional assets. Hyperfridge would be able to create proof of assets and do balancing of investments (invest and divest) automatically. Note that using Ebics and standard banking functionality comes at no cost or transaction fees.
+
+### Open-API Banking and Payment-API (e.g. Stripe)
+
+The principles prented here can we applied to other Open Banking Standards as well like India's UPI or the PSD2 standard. Integrating payment platforms like Stripe would add fees to payments but is widely used. Payments on Stripe are easy to set up may be processed withig a few minutes which makes interactive use cases possible.
+
+### Witness, HSM and other secure modules
+
+The Witness for hyperfridge needs and HSM to sign data. One might think of Apple Secure Enclave  to enable new use cases where a simple Phone or Laptop can act as a witness.
+
