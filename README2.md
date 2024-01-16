@@ -13,7 +13,7 @@ cd host
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build  --release -- 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --
-RUST_BACKTRACE=1 RISC0_DEV_MODE=true RISC0_DEV_MODE=true cargo test  -- --nocapture
+FRIDGE_VERBOSE=1 RUST_BACKTRACE=1 RISC0_DEV_MODE=true RISC0_DEV_MODE=true cargo test  -- --nocapture
 
 RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose prove-camt53  --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 
@@ -138,12 +138,3 @@ xmllint --c14n ./ebics-request.xml-orig > ./header.xml-orig-canon
 gedit ./header.xml-orig-canon
 
 
-     Running `/home/w/workspace/risc0/target/release/examples/loop`
-|     Cycles |   Duration |        RAM |       Seal |      Speed |
-|        64k |     1:21.7 |    472.4MB |    215.3kB |    802.6hz |
-|       128k |     3:06.2 |    944.8MB |    238.3kB |    704.1hz |
-|       256k |     5:11.6 |     1.89GB |      250kB |    841.3hz |
-|       512k |      10:27 |     3.78GB |    262.2kB |    836.2hz |
-|      1024k |    20:12.6 |     7.56GB |    275.5kB |    864.8hz |
-|      2048k |      40:31 |     7.56GB |      551kB |    862.7hz |
-|      4096k |    1:18:33 |     7.56GB |      1.1MB |    889.9hz |

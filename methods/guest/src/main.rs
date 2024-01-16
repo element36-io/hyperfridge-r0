@@ -125,14 +125,14 @@ pub fn main() {
     // let exp = U256::from_be_hex(&pub_bank_exp);
     // let modu = U256::from_be_hex(&pub_bank_mod);
 
-    let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+    let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key in main");
     v!("pub_bank {} bit", pub_bank.n().bits());
     let client_key =
-        RsaPrivateKey::from_pkcs8_pem(&client_key_pem).expect("Failed to create client_key_pem");
+        RsaPrivateKey::from_pkcs8_pem(&client_key_pem).expect("Failed to create client_key_pem in main");
     v!("client_key {} bit", client_key.n().bits());
 
     let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
-        .expect("Failed to create pub_witness_key");
+        .expect("Failed to create pub_witness_key in main");
 
     let witness_signature_bytes =
         Vec::from_hex(witness_signature_hex.trim().replace([' ', '\n'], ""))

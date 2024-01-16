@@ -6,7 +6,10 @@ edition = "2021"
 [dependencies]
 # from template
 methods = { path = "../methods" }
-risc0-zkvm = { version = "0.19.1" }
+# Define the risc0-zkvm crate with features for testing only
+risc0-zkvm = { version = "0.19.1", features = ["profiler", "prove"] }
+#risc0-zkvm = { version = "0.19.1" }
+
 env_logger = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 num-bigint = "0.4"

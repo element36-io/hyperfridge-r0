@@ -4,7 +4,7 @@
 
 The EBICS Specifaction does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be names as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
 
-Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are dactivated using 'maxoccurs=0':
+Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are dactivated using 'maxOccurs=0' which leads to a faiure of schmema validation if the signature of the payload is added to the Ebics-Response.
 
 Snippet of 'ebics_orders_H005.xsd', the schema-specification:
 
@@ -24,8 +24,9 @@ Snippet of 'ebics_orders_H005.xsd', the schema-specification:
    - Private Key: $W_{{priv}}$
    - Public Key: $W_{{pub}}$
 4. **Hardware Security Module (HSM)**:
-   - Provides signing functions using $C_{{priv}}$, but no decryption.
-   - Request a secure token shared with the witness to be accessed.
+   - Stores $C_{{priv}}$ and offers APIs for ${hsmSign}_{hsmtoken}(message)$ and ${hsmDecrypt({message})}$ for the Witness. 
+   - It does not offer encryption with $C_{priv}$.
+   - Only the Witness holds a secure token to access above functions.
 
 
 ### EBICS Encryption and Decryption Process
@@ -117,15 +118,13 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
 
 ## Security Considerations
 
-- The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$. It is important to set up the HSM in a way that the witness is able to sign, but not decrypt any message.
+- The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$. I
 - The zero-knowledge proof allows the Client to prove knowledge of certain information without revealing the information itself.
 - The use of digital signatures by the Witness ensures the integrity and authenticity of the payload, which might not be necessary if the Ebics Standard implements its planned feature.
 - The HSM must be tamper-resistant and capable of securely managing cryptographic keys and operations.
 - Secure communication protocols should be used to prevent unauthorized access and interception.
 
 ## Execution time
-
-
 
 ## Outlook and use cases
 
@@ -136,6 +135,8 @@ As we are able to prove the payload, we can create a proof for transaction inlus
 ### Open-API Banking and Payment-API (e.g. Stripe)
 
 The principles prented here can we applied to other Open Banking Standards as well like India's UPI or the PSD2 standard. Integrating payment platforms like Stripe would add fees to payments but is widely used. Payments on Stripe are easy to set up may be processed withig a few minutes which makes interactive use cases possible.
+
+The service can be offered by 
 
 ### Witness, HSM and other secure modules
 

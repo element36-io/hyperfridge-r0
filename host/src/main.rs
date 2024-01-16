@@ -284,11 +284,16 @@ fn main() {
 }
 
 fn is_verbose() -> String {
-    unsafe {
-        if VERBOSE {
-            "verbose".to_string()
-        } else {
-            "".to_string()
+    match std::env::var("FRIDGE_VERBOSE") {
+        Ok(value) if value == "1" || value.eq_ignore_ascii_case("true") => "verbose".to_string(),
+        _ => {
+            unsafe {
+                if VERBOSE {
+                    "verbose".to_string()
+                } else {
+                    "".to_string()
+                }
+            }
         }
     }
 }
@@ -306,7 +311,7 @@ fn proove_camt53(
     iban: &str,
     witness_signature_hex: &str,
     pub_witness_pem: &str,
-    host_info: &str,
+    host_info: &str
 ) -> Result<Receipt, anyhow::Error> {
     v!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
     // write image ID to filesystem
@@ -336,6 +341,8 @@ fn proove_camt53(
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
 
+    let mut profiler = risc0_zkvm::Profiler::new("./profile-output", methods::HYPERFRIDGE_ELF).unwrap();
+
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
         .unwrap()
@@ -362,15 +369,20 @@ fn proove_camt53(
         .write(&pub_witness_pem)
         .unwrap()
         .write(&is_verbose())
-        .unwrap()
-        .build()
-        .unwrap();
+        .unwrap()  
+        .trace_callback(profiler.make_trace_callback())
+        .build().unwrap();
 
     // Obtain the default prover.
     let prover = default_prover();
     v!("prove hyperfridge elf ");
     // generate receipt
     let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    profiler.finalize();
+    let report = profiler.encode_to_vec();
+    v!("write profile size {}",report.len());
+    std::fs::write("./profile-output", &report).expect("Unable to write profiling output");
+
     let image_id_hex = get_image_id_hex();
     v!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
@@ -510,6 +522,10 @@ fn parse_cli() -> Cli {
     cli
 }
 
+// For profiling, fun the test as follows - it is not activated in the standard tests. 
+// RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test profid  -- --nocapture
+// pprof -http=127.0.0.1:8089 ./host/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge host/profile-output
+
 #[cfg(test)]
 mod tests {
     use crate::fs;
@@ -554,10 +570,10 @@ mod tests {
             fs::read_to_string(TEST_CLIENTKEY).unwrap().as_str(),
             decrypted_tx_key_bin,
             TEST_IBAN,
-            fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
             fs::read_to_string(TEST_EBICS_FILE.to_string() + "-Witness.hex")
                 .unwrap()
                 .as_str(),
+            fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
             &host_info,
         );
 
