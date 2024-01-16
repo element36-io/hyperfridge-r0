@@ -42,6 +42,11 @@ jobs:
           RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo +stable build --release 
           RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable test 
           RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+      
+      - name: Run tests in guest module
+        run: | 
+          (cd methods/guest && 
+          RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture)
           
       - name: Upload to codecov.io
         uses: codecov/codecov-action@v2

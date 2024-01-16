@@ -14,10 +14,12 @@ fn test_signature_x() {
         RsaPublicKey::from_public_key_pem(&pem::encode(&pem)).expect("Failed to create public key");
 }
 
-const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../../data/bank_public.pem");
+const BANK_PUBLIC_KEY_X002_PEM: &str = include_str!("../../../data/pub_bank.pem");
 const USER_PRIVATE_KEY_E002_PEM: &str = include_str!("../../../data/client.pem");
+const WITNESS_PUBLIC_KEY: &str = include_str!("../../../data/pub_witness.pem");
+
 const TX_KEY_DECRYPTED: &[u8] =
-    include_bytes!("../../../data/test/test.xml-decrypted_tx_key.binary");
+    include_bytes!("../../../data/test/test.xml-TransactionKeyDecrypt.bin");
 
 macro_rules! include_resource {
     ($file:expr) => {
@@ -28,7 +30,7 @@ const SIGNED_INFO_XML_C14N: &str = include_resource!("SignedInfo");
 const AUTHENTICATED_XML_C14N: &str = include_resource!("authenticated");
 const SIGNATURE_VALUE_XML: &str = include_resource!("SignatureValue");
 const ORDER_DATA_XML: &str = include_resource!("OrderData");
-const ORDER_DATA_DIGEST_XML: &str = include_resource!("DataDigest");
+const WITNESS_SIGNATURE_HEX: &str = include_resource!("Witness.hex");
 
 #[test]
 fn test_print_imports() {
@@ -47,7 +49,6 @@ fn test_digest() {
         SIGNED_INFO_XML_C14N,
         SIGNATURE_VALUE_XML,
         ORDER_DATA_XML,
-        ORDER_DATA_DIGEST_XML,
     );
     let authenticated = AUTHENTICATED_XML_C14N.as_bytes();
     println!("  authenticated file length {:?}", &authenticated.len());
@@ -79,48 +80,37 @@ fn test_validate_signature() {
         SIGNED_INFO_XML_C14N,
         SIGNATURE_VALUE_XML,
         ORDER_DATA_XML,
-        ORDER_DATA_DIGEST_XML,
     );
 
     verify_bank_signature(&bank_public_key, &request);
 }
 
 #[test]
-fn test_validate_orderdata() {
-    //-> Result<bool, Box<dyn Error>> {
-    //openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"
-    //-pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pem_file"
-
-    let pem = parse(BANK_PUBLIC_KEY_X002_PEM).expect("Failed to parse bank public key PEM");
-    let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem))
-        .expect("Failed to create bank public key");
-    let request = parse_ebics_response(
-        AUTHENTICATED_XML_C14N,
-        SIGNED_INFO_XML_C14N,
-        SIGNATURE_VALUE_XML,
-        ORDER_DATA_XML,
-        ORDER_DATA_DIGEST_XML,
-    );
-
-    verify_order_data_signature(&bank_public_key, &request);
-}
-
-#[test]
 fn test_decrypt_txkey() {
-    //-> Result<bool, Box<dyn Error>> {
     // openssl pkeyutl -decrypt -in ${txkey_file} -out transaction_key.bin -inkey e002_private_key.pem -pkeyopt rsa_padding_mode:pkcs1
     let request = parse_ebics_response(
         AUTHENTICATED_XML_C14N,
         SIGNED_INFO_XML_C14N,
         SIGNATURE_VALUE_XML,
         ORDER_DATA_XML,
-        ORDER_DATA_DIGEST_XML,
     );
     // Parse the private key from PEM format
     let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
     let transaction_key_bin = decrypt_transaction_key(&request, &private_key, &Vec::new());
     assert_eq!(transaction_key_bin.len(), 16);
-    let files = decrypt_order_data(&request, &transaction_key_bin);
+
+    let pub_witness = RsaPublicKey::from_public_key_pem(WITNESS_PUBLIC_KEY)
+        .expect("Failed to create pub_witness_key");
+    let witness_signature_bytes =
+        Vec::from_hex(WITNESS_SIGNATURE_HEX.trim().replace([' ', '\n'], ""))
+            .expect("Failed to parse hexadecimal string witness_signature_hex");
+
+    let files = decrypt_order_data(
+        &request,
+        &transaction_key_bin,
+        &witness_signature_bytes,
+        &pub_witness,
+    );
 
     for (index, item) in files.iter().enumerate() {
         if index % 2 == 0 {
@@ -154,15 +144,27 @@ fn test_decrypt_txkey_reverse() {
         SIGNED_INFO_XML_C14N,
         SIGNATURE_VALUE_XML,
         ORDER_DATA_XML,
-        ORDER_DATA_DIGEST_XML,
     );
     // Parse the private key from PEM format
     let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
 
     let transaction_key_bin =
         decrypt_transaction_key(&request, &private_key, &TX_KEY_DECRYPTED.to_vec());
+
     assert_eq!(transaction_key_bin.len(), 16);
-    let files = decrypt_order_data(&request, &transaction_key_bin);
+
+    let pub_witness = RsaPublicKey::from_public_key_pem(WITNESS_PUBLIC_KEY)
+        .expect("Failed to create pub_witness_key");
+    let witness_signature_bytes =
+        Vec::from_hex(WITNESS_SIGNATURE_HEX.trim().replace([' ', '\n'], ""))
+            .expect("Failed to parse hexadecimal string witness_signature_hex");
+
+    let files = decrypt_order_data(
+        &request,
+        &transaction_key_bin,
+        &witness_signature_bytes,
+        &pub_witness,
+    );
 
     for (index, item) in files.iter().enumerate() {
         if index % 2 == 0 {
@@ -196,11 +198,21 @@ fn test_parse() {
         SIGNED_INFO_XML_C14N,
         SIGNATURE_VALUE_XML,
         ORDER_DATA_XML,
-        ORDER_DATA_DIGEST_XML,
     );
     let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
+    let pub_witness = RsaPublicKey::from_public_key_pem(WITNESS_PUBLIC_KEY)
+        .expect("Failed to create pub_witness_key");
+    let witness_signature_bytes =
+        Vec::from_hex(WITNESS_SIGNATURE_HEX.trim().replace([' ', '\n'], ""))
+            .expect("Failed to parse hexadecimal string witness_signature_hex");
+
     let transaction_key_bin = decrypt_transaction_key(&request, &private_key, &Vec::new());
-    let files = decrypt_order_data(&request, &transaction_key_bin);
+    let files = decrypt_order_data(
+        &request,
+        &transaction_key_bin,
+        &witness_signature_bytes,
+        &pub_witness,
+    );
 
     for (index, item) in files.iter().enumerate() {
         if index == 1 {

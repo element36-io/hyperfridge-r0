@@ -10,14 +10,16 @@ use risc0_zkvm::{
     sha::{Impl, Sha256},
 };
 use rsa::BigUint;
-use rsa::{pkcs8::DecodePrivateKey, traits::PublicKeyParts, Pkcs1v15Encrypt};
+use rsa::{
+    pkcs8::DecodePrivateKey, pkcs8::DecodePublicKey, traits::PublicKeyParts, Pkcs1v15Encrypt,
+};
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
 
 use base64::{engine::general_purpose, Engine as _};
 use sha2::Sha256 as RsaSha256;
 use xmlparser::{ElementEnd, Token, Tokenizer};
 
-use hex::encode as hex_encode;
+use hex::FromHex;
 
 #[cfg(not(feature = "debug_mode"))]
 risc0_zkvm::guest::entry!(main);
@@ -47,8 +49,6 @@ struct Request {
     signature_value_b64: String,
     signed_info_hashed: Vec<u8>,
     order_data_b64: String,
-    signature_data_b64: String,
-    data_digest_b64: String,
 }
 
 #[allow(dead_code)]
@@ -104,32 +104,39 @@ pub fn main() {
     let authenticated_xml_c14n: String = env::read();
     let signature_value_xml: String = env::read();
     let order_data_xml: String = env::read();
-    let order_data_digest_xml: String = env::read();
-    let public_key_mod: String = env::read();
-    let public_key_exp: String = env::read();
-    let private_key_pem: String = env::read();
+    let pub_bank_mod: String = env::read();
+    let pub_bank_exp: String = env::read();
+    let client_key_pem: String = env::read();
     let decrypted_tx_key_bin: Vec<u8> = env::read();
     let iban: String = env::read();
     let host_info: String = env::read();
+    let witness_signature_hex: String = env::read();
+    let pub_witness_pem: String = env::read();
     let flags: String = env::read();
 
     set_flags(flags);
 
-    let exp: BigUint = BigUint::parse_bytes(public_key_exp.as_bytes(), 10)
+    let exp: BigUint = BigUint::parse_bytes(pub_bank_exp.as_bytes(), 10)
         .expect("error parsing EXP of public bank key");
-    let modu: BigUint = BigUint::parse_bytes(public_key_mod.as_bytes(), 10)
+    let modu: BigUint = BigUint::parse_bytes(pub_bank_mod.as_bytes(), 10)
         .expect("error parsing MODULUS of public bank key");
 
-
     // U256, use crypto_bigint::U256; does not work with RsaPublicKey
-    // let exp = U256::from_be_hex(&public_key_exp);
-    // let modu = U256::from_be_hex(&public_key_mod);
+    // let exp = U256::from_be_hex(&pub_bank_exp);
+    // let modu = U256::from_be_hex(&pub_bank_mod);
 
-    let public_key = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
-    v!("public_key {} bit",public_key.n().bits());
-    let private_key = RsaPrivateKey::from_pkcs8_pem(&private_key_pem)
-        .expect("Failed to create private key form pem");
-    v!("private_key {} bit",private_key.n().bits());
+    let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+    v!("pub_bank {} bit", pub_bank.n().bits());
+    let client_key =
+        RsaPrivateKey::from_pkcs8_pem(&client_key_pem).expect("Failed to create client_key_pem");
+    v!("client_key {} bit", client_key.n().bits());
+
+    let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
+        .expect("Failed to create pub_witness_key");
+
+    let witness_signature_bytes =
+        Vec::from_hex(witness_signature_hex.trim().replace([' ', '\n'], ""))
+            .expect("Failed to parse hexadecimal string witness_signature_hex");
 
     // do the actual work
     let documents = load(
@@ -137,11 +144,12 @@ pub fn main() {
         &signed_info_xml_c14n,
         &signature_value_xml,
         &order_data_xml,
-        &order_data_digest_xml,
-        &public_key,
-        &private_key,
+        &pub_bank,
+        &client_key,
         &decrypted_tx_key_bin,
         &iban,
+        &witness_signature_bytes,
+        &pub_witness,
     );
 
     v!(">>> cycle count {}k", (env::get_cycle_count()) / 1000);
@@ -186,7 +194,6 @@ fn set_flags(flags: String) {
     }
 }
 
-
 /// Calls all the steps necessary for the proof.
 #[allow(clippy::too_many_arguments)]
 fn load(
@@ -194,11 +201,12 @@ fn load(
     signed_info_xml_c14n: &str,
     signature_value_xml: &str,
     order_data_xml: &str,
-    order_data_digest_xml: &str,
-    public_key: &RsaPublicKey,
-    private_key: &RsaPrivateKey,
-    encrypted_tx_key: &Vec<u8>,
+    pub_bank: &RsaPublicKey,
+    client_key: &RsaPrivateKey,
+    decrypted_tx_key: &Vec<u8>,
     iban: &str,
+    witness_signature_bytes: &[u8],
+    pub_witness: &RsaPublicKey,
 ) -> Vec<Document> {
     // star is with 1586k
     v!(
@@ -211,7 +219,6 @@ fn load(
         signed_info_xml_c14n,
         signature_value_xml,
         order_data_xml,
-        order_data_digest_xml,
     );
     v!(
         " >>>>>  Cycle count parse_ebics_response {}k",
@@ -219,21 +226,15 @@ fn load(
     );
     // cycle count 1864k (plus 3k)
 
-    verify_bank_signature(public_key, &request);
+    verify_bank_signature(pub_bank, &request);
     v!(
         " >>>>> Cycle count verify_bank_signature {}k",
         (env::get_cycle_count()) / 1000
     );
-    // cycle count 12635k (plus 10k)
 
-    verify_order_data_signature(public_key, &request);
-    v!(
-        " >>>>> Cycle count verify_order_data_signature {}k",
-        (env::get_cycle_count()) / 1000
-    );
     // cycle count 23336k (plus 10k)
 
-    let transaction_key = decrypt_transaction_key(&request, private_key, encrypted_tx_key);
+    let transaction_key = decrypt_transaction_key(&request, client_key, decrypted_tx_key);
     v!(
         " >>>>> Cycle count decrypt_transaction_key {}k",
         (env::get_cycle_count()) / 1000
@@ -241,7 +242,12 @@ fn load(
     // cycle count 33979k (plus 10k)
 
     // cycle count 35906k (plus 2k)
-    let order_data = decrypt_order_data(&request, &transaction_key);
+    let order_data = decrypt_order_data(
+        &request,
+        &transaction_key,
+        witness_signature_bytes,
+        pub_witness,
+    );
     v!(
         " >>>>> Cycle count decrypt_order_data {}k",
         (env::get_cycle_count()) / 1000
@@ -302,7 +308,7 @@ fn load(
 /// code.
 ///
 #[allow(dead_code)]
-fn get_private_key_hex(pk: &RsaPublicKey) -> String {
+fn get_client_key_hex(pk: &RsaPublicKey) -> String {
     let exponent = pk.e().to_bytes_be(); // Convert exponent to big-endian bytes
     let modulus = pk.n().to_bytes_be(); // Convert modulus to big-endian bytes
 
@@ -365,8 +371,8 @@ fn get_private_key_hex(pk: &RsaPublicKey) -> String {
 ///    URIs) and it is the canonical form that MUST be used.  However, the
 ///    required canonicalization [XML-C14N] of this specification does not
 ///    change URIs.
-fn verify_bank_signature(public_key: &RsaPublicKey, request: &Request) {
-    v!(" verify the bank signature");
+fn verify_bank_signature(pub_bank: &RsaPublicKey, request: &Request) {
+    v!("verify bank signature");
     // Decode the signature
     let signature_value_bytes = general_purpose::STANDARD
         .decode(&request.signature_value_b64)
@@ -387,8 +393,8 @@ fn verify_bank_signature(public_key: &RsaPublicKey, request: &Request) {
     // v!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
 
     // Verify the signature
-    let res = public_key.verify(
-        scheme, // verifying_key.verify(//public_key.verify( scheme ,
+    let res = pub_bank.verify(
+        scheme, // verifying_key.verify(//pub_bank.verify( scheme ,
         &request.signed_info_hashed,
         &signature_value_bytes,
     );
@@ -402,39 +408,6 @@ fn verify_bank_signature(public_key: &RsaPublicKey, request: &Request) {
     };
 }
 
-/// Check Signature of Payload
-fn verify_order_data_signature(public_key: &RsaPublicKey, request: &Request) {
-    v!(" verify the bank signature");
-    // Decode the signature
-
-    let signature_value_bytes = general_purpose::STANDARD
-        .decode(&request.signature_data_b64)
-        .unwrap();
-
-    let signature_data_hashed = general_purpose::STANDARD
-        .decode(&request.data_digest_b64)
-        .unwrap();
-
-    // We checked for Schema A005  which enforces:
-    let scheme = Pkcs1v15Sign::new::<RsaSha256>();
-
-    // Verify the signature
-
-    let res = public_key.verify(
-        scheme, // verifying_key.verify(//public_key.verify( scheme ,
-        &signature_data_hashed,
-        &signature_value_bytes,
-    );
-
-    match res {
-        Ok(_) => v!(" Order Data is verified"),
-        Err(e) => {
-            eprintln!(" ---> error {:?}", e);
-            panic!(" Order Data Signature could not be verified")
-        }
-    };
-}
-
 /// Parse the XML file, return a structure
 /// See  https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf
 /// Chapter 5.6.1.1.2
@@ -444,14 +417,11 @@ fn parse_ebics_response(
     signed_info_xml_c14n: &str,
     signature_value_xml: &str,
     order_data_xml: &str,
-    order_data_digest_xml: &str,
 ) -> Request {
     let mut curr_tag: &str = "";
 
     let mut digest_value_b64: String = String::new();
     let mut signature_value_b64: String = String::new();
-    let mut signature_data_b64: String = String::new();
-    let mut data_digest_b64: String = String::new();
     let mut bank_timestamp: String = String::new();
     let mut transaction_key_b64: String = String::new();
     let mut order_data_b64: String = String::new();
@@ -464,12 +434,8 @@ fn parse_ebics_response(
         .to_vec();
     //let tokens=Tokenizer::from(xml_data); // use from_fragment so deactive xml checks
     let all_tags = format!(
-        "{}{}{}{}{}",
-        authenticated_xml_c14n,
-        signed_info_xml_c14n,
-        signature_value_xml,
-        order_data_xml,
-        order_data_digest_xml
+        "{}{}{}{}",
+        authenticated_xml_c14n, signed_info_xml_c14n, signature_value_xml, order_data_xml,
     );
     let tokens = Tokenizer::from_fragment(&all_tags, 0..all_tags.len());
     //  0..full_text.len()
@@ -520,17 +486,6 @@ fn parse_ebics_response(
             Ok(Token::Text { text }) if curr_tag == "TimestampBankParameter" => {
                 bank_timestamp = text.to_string();
             }
-            Ok(Token::Text { text }) if curr_tag == "SignatureData" => {
-                signature_data_b64 = text.to_string();
-            }
-            Ok(Token::Text { text }) if curr_tag == "DataDigest" => {
-                data_digest_b64 = text.to_string();
-            }
-            Ok(Token::Attribute { local, value, .. }) if (curr_tag == "DataDigest") => {
-                if !(local == "SignatureVersion" && value == "A005") {
-                    panic!(" Only Signatures A005 supported.")
-                };
-            }
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             }
@@ -542,14 +497,36 @@ fn parse_ebics_response(
         }
     }
 
-    assert_ne!(digest_value_b64.len(), 0);
-    assert_ne!(transaction_key_b64.len(), 0);
-    assert_ne!(bank_timestamp.len(), 0);
-    assert_ne!(signature_value_b64.len(), 0);
-    assert_ne!(signed_info_hashed.len(), 0);
-    assert_ne!(order_data_b64.len(), 0);
-    assert_ne!(signature_data_b64.len(), 0);
-    assert_ne!(data_digest_b64.len(), 0);
+    assert_ne!(
+        digest_value_b64.len(),
+        0,
+        "Asserting longer than 0: digest_value_b64"
+    );
+    assert_ne!(
+        transaction_key_b64.len(),
+        0,
+        "Asserting longer than 0: transaction_key_b64"
+    );
+    assert_ne!(
+        bank_timestamp.len(),
+        0,
+        "Asserting longer than 0: bank_timestamp"
+    );
+    assert_ne!(
+        signature_value_b64.len(),
+        0,
+        "Asserting longer than 0: signature_value_b64"
+    );
+    assert_ne!(
+        signed_info_hashed.len(),
+        0,
+        "Asserting longer than 0: signed_info_hashed"
+    );
+    assert_ne!(
+        order_data_b64.len(),
+        0,
+        "Asserting longer than 0: order_data_b64"
+    );
 
     let authenticated_xml_c14n_hashed = *Impl::hash_bytes(authenticated_xml_c14n.as_bytes());
 
@@ -561,8 +538,6 @@ fn parse_ebics_response(
         signature_value_b64,
         signed_info_hashed,
         order_data_b64,
-        signature_data_b64,
-        data_digest_b64,
     }
 }
 
@@ -594,7 +569,7 @@ fn parse_ebics_response(
 
 fn decrypt_transaction_key(
     request: &Request,
-    private_key: &RsaPrivateKey,
+    client_key: &RsaPrivateKey,
     decrypted_tx_key: &Vec<u8>,
 ) -> Vec<u8> {
     // as RSA decrypting is very expensive, be can provide the decrypted tx key externally.
@@ -605,22 +580,8 @@ fn decrypt_transaction_key(
     if !decrypted_tx_key.is_empty() {
         // its still padded
         v!("WARNING: binary transaction key was provided - we use this to decrypt");
-        let pub_key = RsaPublicKey::from(private_key);
-        // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
-        // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
-        // We check if if provided decrypted key was using the decrypted key in the XML as source.
-        let encrypted_recreated =
-            rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
 
-        // most important - check if the recreated, encrypted tx key equalx to the one provided by the XML file
-        assert_eq!(
-            BigUint::from_bytes_be(&transaction_key_bin),
-            encrypted_recreated
-        );
-
-        // lets return the decrypted tx key from the provided one - so we do not have to to the expensive RSA.decrypt.
-        // remove the padding, return the decrypted key
-        // Ensure that the data is long enough and has the correct PKCS#1 v1.5 padding prefix.
+        // Do some check on the provided key - ensure that the data is long enough and has the correct PKCS#1 v1.5 padding prefix.
         assert!(
             decrypted_tx_key.len() >= 3,
             "Invalid data: Too short to contain PKCS#1 v1.5 padding"
@@ -633,6 +594,22 @@ fn decrypt_transaction_key(
             decrypted_tx_key[1] == 0x02,
             "Invalid data: Missing 0x02 following the initial 0x00 in PKCS#1 v1.5 padding"
         );
+
+        // most important - check if the recreated, encrypted tx key equalx to the one provided by the XML file
+        let pub_key = RsaPublicKey::from(client_key);
+        // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
+        // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
+        // We check if if provided decrypted key was using the decrypted key in the XML as source.
+        let encrypted_recreated =
+            rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
+        assert_eq!(
+            BigUint::from_bytes_be(&transaction_key_bin),
+            encrypted_recreated,
+            "the provided decrypted transaction key does not math the one provided by the XML file"
+        );
+
+        // lets return the decrypted tx key from the provided one - so we do not have to to the expensive RSA.decrypt.
+        // remove the padding, return the decrypted key
 
         // look for first 00 which marks the end of the padding - but be aware that the padding always starts with 0002
         match decrypted_tx_key
@@ -652,7 +629,7 @@ fn decrypt_transaction_key(
 
     v!(" start decrypt transaction key with Pkcs1v15 Rsa");
     // Decrypt with PKCS1 padding
-    let decrypted_data = private_key.decrypt(Pkcs1v15Encrypt, &transaction_key_bin);
+    let decrypted_data = client_key.decrypt(Pkcs1v15Encrypt, &transaction_key_bin);
 
     // todo: check error handling (panics)
     match decrypted_data {
@@ -680,27 +657,36 @@ use zip::ZipArchive;
 ///
 /// Result is a vector where each odd index is a filename, even index is the files conent,
 /// both as Vec(u8)
-fn decrypt_order_data(request: &Request, transaction_key_bin: &[u8]) -> Vec<Vec<u8>> {
+fn decrypt_order_data(
+    request: &Request,
+    transaction_key_bin: &[u8],
+    witness_signature_bytes: &[u8],
+    pub_witness: &RsaPublicKey,
+) -> Vec<Vec<u8>> {
     v!(" decrypting payload with transaction key");
 
     let order_data_bin = general_purpose::STANDARD
         .decode(&request.order_data_b64)
         .unwrap();
-    // Todo: walter - check Digest first if it matches the xml
-    // Compute SHA-256 hash
+
     let sha = *Impl::hash_bytes(&order_data_bin);
 
-    // Convert hash to hexadecimal strings
-    let sha_hex = hex_encode(sha.as_bytes());
-    let sha_hex_xml = hex_encode(
-        general_purpose::STANDARD
-            .decode(&request.data_digest_b64)
-            .unwrap(),
-    );
-    assert_eq!(
-        &sha_hex, &sha_hex_xml,
-        "Digest (<DataDigest ..> does not match digest of data"
-    );
+    v!(" verify the verify_order_data_signature by witness");
+    // check witness signature
+    // We checked for Schema A005  which enforces:
+    let scheme = Pkcs1v15Sign::new::<RsaSha256>();
+
+    // Verify the signature
+
+    let res = pub_witness.verify(scheme, sha.as_bytes(), witness_signature_bytes);
+
+    match res {
+        Ok(_) => v!(" Order Data is verified"),
+        Err(e) => {
+            eprintln!(" ---> error {:?}", e);
+            panic!(" Order Data Signature could not be verified")
+        }
+    };
 
     // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
