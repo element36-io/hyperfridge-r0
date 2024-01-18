@@ -24,8 +24,7 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release
 # creates fake proof for test data, so that calling "verifier" without parameters works
 # RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
 
-
-RUN ls -la /data/
+#RUN RUST_BACKTRACE=2 RISC0_DEV_MODE=true ./target/release/host show-image-id
 
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host --verbose prove-camt53  \
         --request=/data/test/test.xml \
@@ -33,10 +32,12 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host --verbose prove-c
         --clientkey /data/client.pem \
         --witnesskey /data/pub_witness.pem --clientiban CH4308307000289537312
 
-RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true  target/release/host --help
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host show-image-id > /host/out/IMAGE_ID.hex
 
-RUN ls data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json
-COPY data data
+#RUN cat /host/out/IMAGE_ID.hex &&  find /data -type f -name "*-Receipt-*.json" 
+#COPY host/out/IMAGE_ID.hex /data/IMAGE_ID.hex
+#RUN ls && ls /data/test/ && ls data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json
+
 
 # Final Stage - 
 FROM debian:bookworm-slim as runtime
@@ -57,9 +58,8 @@ RUN ln -s /app/verifier /usr/local/bin/verifier
 RUN ln -s /app/host /usr/local/bin/host
 RUN ln -s /app/host /usr/local/bin/fridge
 
-# Check if the proof is there
-RUN ls -la /data/test/
-RUN ls /data/test/test.xml-Receipt-$(cat /app/IMAGE_ID.hex)-latest.json
+# Check if the proof and testdata is there
+RUN ls -la /data/test/test.xml-Receipt-$(cat /app/IMAGE_ID.hex)-latest.json 
 
 WORKDIR /app
 

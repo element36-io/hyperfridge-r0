@@ -5,3 +5,5 @@ set -e
 for file in response_template-generated/response_template-generated.xml*; do
     cp "$file" "test/test.xml-${file##*-}"
 done
+
+cp response_template-generated/response_template-generated.xml test/text.xml
