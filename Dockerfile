@@ -3,6 +3,8 @@ FROM rust:1.74-bookworm as build
 RUN cargo install cargo-binstall
 RUN cargo binstall cargo-risczero -y
 RUN cargo risczero install
+# qdpf is for zlib flate
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils 
 
 COPY data data
 COPY host host
@@ -11,17 +13,35 @@ COPY methods methods
 COPY Cargo.toml /
 COPY rust-toolchain.toml /
 
-# create directory holding generated Id of Computation which will be proved. 
+# create directory holding generated Image Id of Computation which will be proved. 
 WORKDIR /host
-RUN mkdir out; touch out/test.touch; rm out/test.touch
+RUN mkdir -p /host/out
 
 WORKDIR /
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release 
-# creates fake proof for test data, so that calling "verifier" without parameters works
-RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
 
-# Final Stage - Alpine Image
+
+# creates fake proof for test data, so that calling "verifier" without parameters works
+# RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test  --release -- --nocapture
+
+
+RUN ls -la /data/
+
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host --verbose prove-camt53  \
+        --request=/data/test/test.xml \
+        --bankkey /data/pub_bank.pem \
+        --clientkey /data/client.pem \
+        --witnesskey /data/pub_witness.pem --clientiban CH4308307000289537312
+
+RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true  target/release/host --help
+
+RUN ls data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json
+
+# Final Stage - 
 FROM debian:bookworm-slim as runtime
+# qdpf is for zlib flate
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl
+
 #FROM alpine:latest as runteim
 # add glibc 
 # RUN apk --no-cache add ca-certificates libgcc gcompat
@@ -32,7 +52,13 @@ COPY --from=build /target/release/verifier /app/verifier
 COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
 COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
 COPY --from=build /data /data
+RUN ln -s /app/verifier /usr/local/bin/verifier
+RUN ln -s /app/host /usr/local/bin/host
+RUN ln -s /app/host /usr/local/bin/fridge
+
+# Check if the proof is there
+RUN ls /data/test/test.xml-Receipt-$(cat /app/IMAGE_ID.hex)-latest.json
 
 WORKDIR /app
 
-CMD ["./verifier"]
+CMD ["./host --help"]

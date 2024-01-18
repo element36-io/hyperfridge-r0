@@ -1,6 +1,10 @@
  # Runtime measurements
 
-Learnings: 
+Conclusions:
+- 
+- It takes hours to produce the STARK on strong laptop hardware, but it can be considered fast-enough, because the banking backend updates its data only once a working day. Cost is around 6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge).
+- 
+
 
 - With faster hardware and more CPUs (no CUDA) execution time is around 60 minutes at best.
 - RSA...
@@ -20,21 +24,20 @@ cpu MHz		: 1984.575
 cache size	: 30720 KB
 cpu cores	: 16
 
-Runtime for genation of Proof: ***145 minutes***. 
 
 ```
-
- RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --nocapture
+RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --nocapture
 
 [2024-01-16T14:29:18Z INFO  executor] total_cycles = 507098
 [2024-01-16T14:29:18Z INFO  executor] session_cycles = 39265237
 [2024-01-16T14:29:18Z INFO  executor] segment_count = 37
 [2024-01-16T14:29:18Z INFO  executor] execution_time = 3.117812573s
-
- RUST_LOG="executor=info" cargo test   -- --nocapture
-
 ```
-37 segments on 24 virtual cores, with 48 cores execution time would likely be cut half to round ***72 minutes***.
+
+Runtime for genation of Proof: 12055.32s - around ***200 minutes***.
+
+Risc0 reports 37 segments which are parallized using [continuation](https://www.risczero.com/news/continuations) on 16 cores (24 virtual cores - see hardware spec above). Using hardware with 48 cores execution time would likely be cut half to ***100 minutes*** if CPUs have same speed.
+
 
 Cycle most expensive calculations:
 
@@ -87,3 +90,6 @@ pprof -http=127.0.0.1:8089 ./host/target/riscv-guest/riscv32im-risc0-zkvm-elf/re
 This generates a cycle overview ([full image](./hyperfridge-cycles.html)).
 ![plot](./cycles.png)
 
+## Benchmarking
+
+https://dev.risczero.com/api/zkvm/benchmarks

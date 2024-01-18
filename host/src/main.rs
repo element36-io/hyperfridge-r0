@@ -118,10 +118,11 @@ fn main() {
                     .to_str()
                     .expect("Failed to convert file stem to string");
 
-                let script_full_path = script_dir.join(script_file_stem);
+                 let _script_full_path = script_dir.join(script_file_stem);
 
                 v!(
-                    "calling {} {} {} {}",
+                    "calling {} xml_file={} pub_bank={} client={} pub_witness{}",
+                    &script_path.to_str().unwrap(),
                     &camt53_filename,
                     &pub_bank_pem_filename,
                     &client_pem_filename,
@@ -130,17 +131,18 @@ fn main() {
 
                 let output = Command::new(script_path)
                     // .current_dir(&script_dir)
-                    .env("dir_name", &script_full_path)
+                   // .env("output_dir_name", &script_full_path)
                     .env("xml_file", &camt53_filename)
-                    .env("pem_file", &pub_bank_pem_filename)
-                    .env("private_pem_file", &client_pem_filename)
+                    .env("pub_bank", &pub_bank_pem_filename)
+                    .env("client", &client_pem_filename)
+                    .env("pub_witness", &pub_witness_pem_filename)
                     .output()
                     .expect("failed to execute script");
 
                 if output.status.success() {
                     v!("Script {:?} executed successfully.", script_path.clone());
                 } else {
-                    eprintln!("Script output ----------------------------------------");
+                    eprintln!("Script output:");
                     eprintln!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
                     eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
                     panic!(
@@ -503,7 +505,7 @@ enum Commands {
             short,
             long,
             help = "Path to Shell Script which does pre-processing - if omitted, we assume pre-processing already happened.",
-            required = false
+            required = false,
         )]
         script: Option<PathBuf>,
     },

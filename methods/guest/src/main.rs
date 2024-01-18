@@ -600,8 +600,17 @@ fn decrypt_transaction_key(
         // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
         // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
         // We check if if provided decrypted key was using the decrypted key in the XML as source.
+        v!(
+            " >>>>>>>>> Cycle count before rsa_encrypt {}k",
+            (env::get_cycle_count()) / 1000
+        );
         let encrypted_recreated =
             rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
+
+        v!(
+            " >>>>>>>>> Cycle count after rsa_encrypt {}k",
+            (env::get_cycle_count()) / 1000
+        );            
         assert_eq!(
             BigUint::from_bytes_be(&transaction_key_bin),
             encrypted_recreated,
@@ -677,9 +686,15 @@ fn decrypt_order_data(
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
 
     // Verify the signature
-
+    v!(
+        " >>>>>>>>> Cycle count before pub_witness.verify( {}k",
+        (env::get_cycle_count()) / 1000
+    );
     let res = pub_witness.verify(scheme, sha.as_bytes(), witness_signature_bytes);
-
+    v!(
+        " >>>>>>>>> Cycle count after pub_witness.verify( {}k",
+        (env::get_cycle_count()) / 1000
+    );
     match res {
         Ok(_) => v!(" Order Data is verified"),
         Err(e) => {
@@ -688,6 +703,11 @@ fn decrypt_order_data(
         }
     };
 
+    v!(
+        " >>>>>>>>> Cycle count before
+        .decrypt_padded_b2b_mut( {}k",
+        (env::get_cycle_count()) / 1000
+    );
     // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
     // Decrypt the AES key using RSA (not shown, replace with your RSA decryption code)
@@ -704,6 +724,13 @@ fn decrypt_order_data(
     let decrypted_data = pt
         .decrypt_padded_b2b_mut::<NoPadding>(&order_data_bin, &mut result_bytes)
         .unwrap();
+
+        v!(
+            " >>>>>>>>> Cycle count after
+            .decrypt_padded_b2b_mut( {}k",
+            (env::get_cycle_count()) / 1000
+        );
+
     let decompressed = decompress_to_vec_zlib(decrypted_data).expect("Failed to decompress!");
     let cursor = Cursor::new(decompressed);
     let mut archive = ZipArchive::new(cursor).expect("Failed to read ZIP archive");
