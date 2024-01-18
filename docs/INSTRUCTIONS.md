@@ -76,8 +76,9 @@ host prove-camt53 --help
 
 # create the proof
 RISC0_DEV_MODE=true host prove-camt53 \
-    --request="../data/myrequest-generated/myrequest-generated.xml" --bankkey ../data/pub_bank.pem \
-    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+    --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
+    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
+    --clientiban CH4308307000289537312
 ```
 
 With the docker image:
@@ -88,8 +89,9 @@ docker run fridge host prove-camt53 --help
 
 # create the proof
 docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
-    --request="../data/myrequest-generated/myrequest-generated.xml" --bankkey ../data/pub_bank.pem \
-    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+    --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem \
+    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
+    --clientiban CH4308307000289537312
 ```
 
 ### Check recipie (STARK proof)
@@ -114,8 +116,8 @@ With docker:
 docker run fridge verifier verify  --help
 
 # we need the image id and the receipt
-imageid=$(docker run fridge cat IMAGE_ID.hex)
-proof=/data/test/test.xml-Reiceipt-test.json
+imageid=$(docker run fridge cat /app/IMAGE_ID.hex)
+proof=/data/test/test.xml-Receipt-test.json
 
 # check the proof
 docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imageid --proof-json=$proof
@@ -162,7 +164,7 @@ xml_file=myrequest.xml ./createTestResponse.sh
 cd ../host
 RISC0_DEV_MODE=true \
 cargo run  -- --verbose prove-camt53  \
-    --request="../data/myrequest-generated/myrequest-generated.xml" --bankkey ../data/pub_bank.pem \
+    --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 
 # You see receipt in output of the command and serialized in a json file: 
@@ -211,64 +213,10 @@ cargo run  -- --verbose verify  \
 
 ```
 
-### Creating the Receipt
+### Notes on provided test data
 
-For proof of computation is crucial to identify the guest-code which produced the receipt with its unique hash.
-With a public repo anyone can re-produce the hash thus we can validate the code which produced the proof. 
-With the receipt (STARK-proof), the hash of the proofing code ("guest-code") and the source of the guest-code, 
-we are able to check non-interactively the output of the receipt - in our case the balance of a 
-specific bank account at a specific time. 
-
-
-```bash
-host --verify -verbose --response=./mytest/mytest.xml 
-# or with docker: 
-TODO: wasa
-```
-
-The receipt is stored in `mytest/mytest.xml-Receipt`. I you want to modify the payload as well, see [further down](#generate-new-test-data).
-
-### Validate the Receipt
-
-We added validator which has no dependencies to hyperfridge - but the `host` program also 
-does validation with parameter `--validate`.
-
-Download the validator from: TODO. Copy the my
-```bash
-TODO
-# or with docker: 
-docker run TODO ./verifier verify ../data/mytest/mytest.xml-Receipt
-```
-
-
-
-### Proofing workflow with provided test data
-
-The test data was taken from the productive systems (Hypo Lenzburg), decrypted and
-encrypted again with generated keys as it can be seen in scripts `data/createTestResponse.sh`
-and 'data/checkResponse'. A productive sample has been added to `data/test/test.xml (prod).zip`,
-the payload of test data remained unchanged from the productive system.
-
-Assumptions:
-
-- Ebics response has been downloaded and stored under 'data/test/test.xml'.
-- Working directory `./data` - change directory into that.
-- All examples use [`RISC0_DEV_MODE=true`][r0-dev-mode] - the parameter can be reomved, but creating the proof will
-take substantial amount of time (about 2 hours depending on your machine).
-- For the examples with docker working directory is `/`.
-
-### Simulate Ebics Response
-
-Copy the test data into a new directory.
-Remmark: In production the file would be provided by an Ebics client.
-
-```bash
-mkdir ./data/mytest
-cp ./data/test/test.xml ./data/mytest.xml
-```
-Now you may create a new receipt as [shown before](#creating-the-receipt).
-
-
+The test data was taken from the productive systems (Hypo Lenzburg), decrypted and encrypted again with generated keys as it can be seen in scripts `data/createTestResponse.sh`
+and `data/checkResponse.sh`. A productive sample has been added to `data/test/test.xml (prod).zip`, the payload of test data remained unchanged from the productive system.
 
 [ebics-java-client2]: [references.json#ebics-java-client]
 [r0-dev-mode]: [references.json#r0-dev-mode]

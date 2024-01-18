@@ -6,16 +6,10 @@ This module provides the logic to check the soundness of data coming from the ba
 
 The proof aims for following properties:
 
-- **Proofing soundness**: We want to prove that the presented data is correct and reliable and has not been tampered with.
-We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able
-to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs,
-because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard)
-defines the key ceremony which has been used for many years.
-- **Privacy**: Financial data - like medical data - is prone to highest data security standards. Bank documents contain names
-and bank details of clients, which should not be leaked. With Zero-Knowledge technology we are able generate proofs that,
-e.g. a client has sent a specific amount, without revealing the data.
-- **Low execution time**: Most banking backends still operate on a daily basis, thus generated proofs is not time critical.
-But banking is [moving rapidly towards instant payments][sepa-instant], means time of finality for transaction will be close to what can be achieved on blockchain today. Then proofing time may become a limiting factor.
+- **Proofing soundness**: We want to prove that the presented data is correct and reliable and has not been tampered with. We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs,
+because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard) defines the key ceremony which has been used for many years.
+- **Privacy**: Financial data - like medical data - is prone to highest data security standards. Bank documents contain names and bank details of clients, which should not be leaked. With Zero-Knowledge technology we are able generate proofs that, e.g. a client has sent a specific amount, without revealing the data.
+- **Low execution time**: Most banking backends still operate on a daily basis, thus generated proofs is not time critical. But banking is [moving rapidly towards instant payments][sepa-instant], means time of finality for transaction will be close to what can be achieved on blockchain today. Then proofing time may become a limiting factor.
 
 How were the goals achieved whith this implementation?
 
@@ -24,8 +18,6 @@ How were the goals achieved whith this implementation?
 - **Low execution time**: Execution time is around 45 minutes to generate a proof. This is sufficient for current scenarios but too much in case of instant payments.
 
 ## Fundamental properties of the banking interface (ISO20022 and Ebics)
-
-[ebics-25-cfonb]:
 
 The basic idea is the following: Whenever the bank (the banking API) is transmitting documents, it sends its data with a signature - using [XML encryption standards](https://www.w3.org/TR/xmlenc-core1/). For example a response document for a daily statement of balance and transactions would contain a section like this:
 
@@ -122,47 +114,29 @@ The prof system consists of (see [for details](https://dev.risczero.com/proof-sy
 
 ### Bank signature validation
 
-XML sigantures:
-<https://datatracker.ietf.org/doc/html/rfc3275#section-3.1.2>
-Signature Generation
-<https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf>
+Validation of signatures follows [XML sigantures Standard](https://datatracker.ietf.org/doc/html/rfc3275#section-3.1.2)
+Signature Generation on Signature generation and standard in Ebics 2.5, see [PDF here](https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf). 
 
-#### Pre-processing
+Here is an excerpt of the standard;  - check out `createTestResponse.sh` and `checkResponse.sh` for details.
 
 5.5.1.2.1 Processing in the initialisation phase
 
-   1. Create SignedInfo element with SignatureMethod,
-      CanonicalizationMethod and Reference(s).
-   2. Canonicalize and then calculate the SignatureValue over SignedInfo
-      based on algorithms specified in SignedInfo.
-      3. Construct the Signature element that includes SignedInfo,
-      Object(s) (if desired, encoding may be different than that used
-      for signing), KeyInfo (if required), and SignatureValue.
+   1. Create SignedInfo element with SignatureMethod,CanonicalizationMethod and Reference(s).
+   2. Canonicalize and then calculate the SignatureValue over SignedInfo based on algorithms specified in SignedInfo.
+   3. Construct the Signature element that includes SignedInfo, Object(s) (if desired, encoding may be different than that used for signing), KeyInfo (if required), and SignatureValue.
 
-   Note, if the Signature includes same-document references, [XML] or
-   [XML-schema] validation of the document might introduce changes that
-   break the signature.  Consequently, applications should be careful to
-   consistently process the document or refrain from using external
-   contributions (e.g., defaults and entities).
+   Note, if the Signature includes same-document references, XML or XML-schema validation of the document might introduce changes that break the signature.  Consequently, applications should be careful to consistently process the document or refrain from using external contributions (e.g., defaults and entities).
 
-#### Signature Validation
+On Signature Validation: 
 
-   1. Obtain the keying information from KeyInfo or from an external
-      source.
-   2. Obtain the canonical form of the SignatureMethod using the
-      CanonicalizationMethod and use the result (and previously obtained
-      KeyInfo) to confirm the SignatureValue over the SignedInfo
-      element.
+   1. Obtain the keying information from KeyInfo or from an external source.
+   2. Obtain the canonical form of the SignatureMethod using the CanonicalizationMethod and use the result (and previously obtained KeyInfo) to confirm the SignatureValue over the SignedInfoelement.
 
-   Note, KeyInfo (or some transformed version thereof) may be signed via
-   a Reference element.  Transformation and validation of this reference
-   (3.2.1) is orthogonal to Signature Validation which uses the KeyInfo
-   as parsed.
 
    Additionally, the SignatureMethod URI may have been altered by the
    canonicalization of SignedInfo (e.g., absolutization of relative
    URIs) and it is the canonical form that MUST be used.  However, the
-   required canonicalization [XML-C14N] of this specification does not
+   required canonicalization (XML-C14N) of this specification does not
    change URIs.
 
 [receipt]: https://dev.risczero.com/api/zkvm/developer-guide/receipts
