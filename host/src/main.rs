@@ -162,6 +162,10 @@ fn main() {
             iban = TEST_IBAN.to_string();
             camt53_filename = TEST_EBICS_FILE.to_string();
         }
+        Some(Commands::ShowImageId) => {
+            println!("{}",get_image_id_hex());
+            std::process::exit(0);
+        }
         None => {
             panic!(" no command given")
         }
@@ -515,6 +519,7 @@ enum Commands {
     /// Uses test data - sample call is:
     /// RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test
     Test,
+    ShowImageId,
 }
 
 #[allow(dead_code)]
