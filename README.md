@@ -1,8 +1,15 @@
 # Hyperfridge zkVM component!
 
-Welcome to the Hyperfridge RISC Zero component! This README
-gives an technical introduction how to use it. As it builds upon 
-Risc-Zero zkVM, make youself familiar with this framework:
+Welcome to the Hyperfridge RISC Zero component! The idea of hyperfridge is to create a bidrectional bridge to the TradFi world for blockchain applications, secured by Zero-Knowledge tech. This first version lets smart contracts and blockchain Dapps "look inside" a bank account for example to react on the arrival of a FIAT payment or allows you send FIAT funds through a bank account to other bank accounts. All in a non-iteractive automated and secure manner, without compromising on privacy. For more information take a look at our [web3 grant application](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md).
+
+This repository consists of three modules - a [host](docs/host.md) and [guest](docs/guest-hyperfridge.md) program and a [verifier](docs/verifier-cli.md).
+
+Check out our [cryptgraphic overview](docs/crypto.md) and [performance benchmarks](docs/benchmarks.md).
+
+
+## Quick Start with Risc-Zero Framework
+
+As it builds upon Risc-Zero zkVM, make youself familiar with this framework, otherwise it will be hard to understand what this crate is doing: 
 
 - The [RISC Zero Developer Docs][dev-docs] is a great place to get started.
 - Example projects are available in the [examples folder][examples] of
@@ -12,25 +19,21 @@ Risc-Zero zkVM, make youself familiar with this framework:
   [`risc0-build`][risc0-build], and [others][crates].
 - [excerpt from Risc0 workshop at ZK HACK III][zkhack-iii].
 
-## Quick Start
 
-First, make sure [rustup] is installed. The
-[`rust-toolchain.toml`][rust-toolchain] file will be used by `cargo` to
-automatically install the correct version.
+## Quick Start with Rust
 
-To build all methods and execute the method within the zkVM, run the following
+
+First, make sure [rustup] is installed. The [`rust-toolchain.toml`][rust-toolchain] file will be used by `cargo` to
+automatically install the correct version. To build all methods and execute the method within the zkVM, run the following
 command:
 
 ```bash
 RISC0_DEV_MODE=1 cargo test
 ```
 
-This will command will use generate a proof for test data. To use it
-with your bank data, you will need to run a component, which
-connects with our banking backend and then prepare the input for
-the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client],
-but any Ebics client will do, as long as you get access to the XML
-files which are exchanged between your client ant the banking server.
+This will command will use generate a proof for test data. To use it with your bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any Ebics client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
+
+Check out [out testing guide](docs/INSTRUCTIONS.md) to run test and play with test data. 
 
 Open documentation by:
 
@@ -48,7 +51,7 @@ Put together, the command to run your project in development mode while getting 
 RUST_LOG="executor=info" RISC0_DEV_MODE=1 cargo run
 ```
 
-### Running proofs remotely on Bonsai
+### Running proofs remotely on Bonsai, a Risc-Zero Service
 
 _Note: The Bonsai proving service is still in early Alpha; an API key is
 required for access. [Click here to request access][bonsai access]._
@@ -87,16 +90,12 @@ project_name
 ```
 
 
-## Questions, Feedback, and Collaborations
-
-We'd love to hear from you on [Discord][discord] or [Twitter][twitter].
 
 [bonsai access]: https://bonsai.xyz/apply
 [cargo-risczero]: https://docs.rs/cargo-risczero
 [crates]: https://github.com/risc0/risc0/blob/main/README.md#rust-binaries
 [dev-docs]: https://dev.risczero.com
 [dev-mode]: https://dev.risczero.com/api/zkvm/dev-mode
-[discord]: https://discord.gg/risczero
 [docs.rs]: https://docs.rs/releases/search?query=risc0
 [examples]: https://github.com/risc0/risc0/tree/main/examples
 [risc0-build]: https://docs.rs/risc0-build
@@ -104,7 +103,6 @@ We'd love to hear from you on [Discord][discord] or [Twitter][twitter].
 [risc0-zkvm]: https://docs.rs/risc0-zkvm
 [rustup]: https://rustup.rs
 [rust-toolchain]: rust-toolchain.toml
-[twitter]: https://twitter.com/risczero
 [zkvm-overview]: https://dev.risczero.com/zkvm
 [zkhack-iii]: https://www.youtube.com/watch?v=Yg_BGqj_6lg&list=PLcPzhUaCxlCgig7ofeARMPwQ8vbuD6hC5&index=5
 [ebics-java-client]: https://bonsai.xyz/apply

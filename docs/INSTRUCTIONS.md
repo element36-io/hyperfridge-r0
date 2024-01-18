@@ -58,7 +58,6 @@ docker run fridge host --help
 We included all test data which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the rountrip are tested in that way.
 
 
-
 ```bash
 host test 
 # or with docker: 
@@ -67,9 +66,9 @@ docker run --env RISC0_DEV_MODE=true  fridge host test
 
 You may create new keys, additional test data and payload which is described [here](testdata.md).
 
-### Create recipie (STARK proof) 
+### Create recipie (STARK proof)
 
-With binaries: 
+With binaries:
 
 ```bash
 # show help
@@ -80,7 +79,9 @@ RISC0_DEV_MODE=true host prove-camt53 \
     --request="../data/myrequest-generated/myrequest-generated.xml" --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 ```
-With the docker image: 
+
+With the docker image:
+
 ```bash
 # show help
 docker run fridge host prove-camt53 --help
