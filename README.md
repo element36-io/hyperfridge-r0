@@ -1,11 +1,16 @@
-# RISC Zero Rust Starter Template
+# Hyperfridge zkVM component!
 
-Welcome to the RISC Zero Rust Starter Template! This template is intended to
-give you a starting point for building a project using the RISC Zero zkVM.
-Throughout the template (including in this README), you'll find comments
-labelled `TODO` in places where you'll need to make changes. To better
-understand the concepts behind this template, check out the [zkVM
-Overview][zkvm-overview].
+Welcome to the Hyperfridge RISC Zero component! This README
+gives an technical introduction how to use it. As it builds upon 
+Risc-Zero zkVM, make youself familiar with this framework:
+
+- The [RISC Zero Developer Docs][dev-docs] is a great place to get started.
+- Example projects are available in the [examples folder][examples] of
+  [`risc0`][risc0-repo] repository.
+- Reference documentation is available at [https://docs.rs][docs.rs], including
+  [`risc0-zkvm`][risc0-zkvm], [`cargo-risczero`][cargo-risczero], [zkvm-overview][zkvm-overview]
+  [`risc0-build`][risc0-build], and [others][crates].
+- [excerpt from Risc0 workshop at ZK HACK III][zkhack-iii].
 
 ## Quick Start
 
@@ -17,11 +22,21 @@ To build all methods and execute the method within the zkVM, run the following
 command:
 
 ```bash
-cargo run
+RISC0_DEV_MODE=1 cargo test
 ```
 
-This is an empty template, and so there is no expected output (until you modify
-the code).
+This will command will use generate a proof for test data. To use it
+with your bank data, you will need to run a component, which
+connects with our banking backend and then prepare the input for
+the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client],
+but any Ebics client will do, as long as you get access to the XML
+files which are exchanged between your client ant the banking server.
+
+Open documentation by:
+
+```bash
+cargo doc --no-deps --open
+```
 
 ### Executing the project locally in development mode
 
@@ -45,20 +60,6 @@ environment variables:
 ```bash
 BONSAI_API_KEY="YOUR_API_KEY" BONSAI_API_URL="BONSAI_URL" cargo run
 ```
-
-## How to create a project based on this template
-
-Search this template for the string `TODO`, and make the necessary changes to
-implement the required feature described by the `TODO` comment. Some of these
-changes will be complex, and so we have a number of instructional resources to
-assist you in learning how to write your own code for the RISC Zero zkVM:
-
-- The [RISC Zero Developer Docs][dev-docs] is a great place to get started.
-- Example projects are available in the [examples folder][examples] of
-  [`risc0`][risc0-repo] repository.
-- Reference documentation is available at [https://docs.rs][docs.rs], including
-  [`risc0-zkvm`][risc0-zkvm], [`cargo-risczero`][cargo-risczero],
-  [`risc0-build`][risc0-build], and [others][crates].
 
 ## Directory Structure
 
@@ -85,10 +86,6 @@ project_name
         └── lib.rs
 ```
 
-## Video Tutorial
-
-For a walk-through of how to build with this template, check out this [excerpt
-from our workshop at ZK HACK III][zkhack-iii].
 
 ## Questions, Feedback, and Collaborations
 
@@ -110,3 +107,4 @@ We'd love to hear from you on [Discord][discord] or [Twitter][twitter].
 [twitter]: https://twitter.com/risczero
 [zkvm-overview]: https://dev.risczero.com/zkvm
 [zkhack-iii]: https://www.youtube.com/watch?v=Yg_BGqj_6lg&list=PLcPzhUaCxlCgig7ofeARMPwQ8vbuD6hC5&index=5
+[ebics-java-client]: https://bonsai.xyz/apply
