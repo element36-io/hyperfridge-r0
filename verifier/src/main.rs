@@ -91,15 +91,22 @@ fn main() {
     let image_id_hex;
 
     match &cli.command {
-        Some(Commands::Verify { imageid_hex, proof_json }) => {
+        Some(Commands::Verify {
+            imageid_hex,
+            proof_json,
+        }) => {
             println!("verify {} {:?}", imageid_hex, proof_json);
             image_id_hex = imageid_hex.clone();
-            proof_json_path = proof_json.clone()
+            proof_json_path = proof_json
+                .clone()
                 .unwrap_or_else(|| panic!("Proof JSON not provided"));
         }
         Some(Commands::Test) => {
             image_id_hex = get_image_id_hex_from_file();
-            proof_json_path = PathBuf::from(format!("../data/test/test.xml-Receipt-{}-latest.json", image_id_hex));
+            proof_json_path = PathBuf::from(format!(
+                "../data/test/test.xml-Receipt-{}-latest.json",
+                image_id_hex
+            ));
         }
         None => {
             panic!("No command given");
