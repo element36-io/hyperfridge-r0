@@ -36,6 +36,7 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host --verbose prove-c
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true  target/release/host --help
 
 RUN ls data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json
+COPY data data
 
 # Final Stage - 
 FROM debian:bookworm-slim as runtime
@@ -57,6 +58,7 @@ RUN ln -s /app/host /usr/local/bin/host
 RUN ln -s /app/host /usr/local/bin/fridge
 
 # Check if the proof is there
+RUN ls -la /data/test/
 RUN ls /data/test/test.xml-Receipt-$(cat /app/IMAGE_ID.hex)-latest.json
 
 WORKDIR /app

@@ -183,9 +183,12 @@ fn main() {
     // encrypting with privte key is much faster. So we expect the decrypted transaction
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
+    let decrypted_tx_key_bin_filename=format!("{}-TransactionKeyDecrypt.bin", camt53_filename);
+    v!("open {}",&decrypted_tx_key_bin_filename);
+
     let decrypted_tx_key_bin: Vec<u8> =
-        fs::read(format!("{}-TransactionKeyDecrypt.bin", camt53_filename))
-            .unwrap_or_else(|_| panic!("Failed to read decrypted transaction key file (ends with -TransactionKeyDecript.bin) {}",camt53_filename));
+        fs::read(&decrypted_tx_key_bin_filename)
+            .unwrap_or_else(|_| panic!("Failed to read decrypted transaction key file  {}",decrypted_tx_key_bin_filename.clone()));
 
     // other pre-processed files, mainly to c14n for XML
     let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
