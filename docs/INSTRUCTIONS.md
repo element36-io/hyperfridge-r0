@@ -81,7 +81,7 @@ RISC0_DEV_MODE=true host prove-camt53 \
     --clientiban CH4308307000289537312
 ```
 
-With the docker image:
+Using docker:
 
 ```bash
 # show help
@@ -134,7 +134,7 @@ We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/bl
 Unit tests for the host program in `host` will create receipt for the test data:
 
 ```bash
-cd ./host
+cd host
 RISC0_DEV_MODE=true cargo test  -- --nocapture
 ```
 
@@ -149,7 +149,7 @@ For running the tests with a new ebics response, lets copy the existing into a n
 
 ```bash
 # simulates the download of ebics file
-cd ./data
+cd data
 mkdir myrequest
 cp response_template.xml myrequest.xml
 cp -r response_template/camt53 myrequest

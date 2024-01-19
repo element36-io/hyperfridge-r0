@@ -235,9 +235,10 @@ fi
 
 # Signing order data is is marked as planned in the standard
 # Until the standard covers this, we add a "witness" who is signing the data instead of the bank. 
-
 # First we need need order data digest in binary format
 orderdata_digest_file="${output_dir_name}/tmp/orderdata_digestcheck_$timestamp.bin"
+openssl dgst -sha256 -binary  $orderdata_bin_file > "$orderdata_digest_file"
+# Witness file needs to be present, generated before this script 
 orderdata_signature_hex_output_file=${output_dir_name}/${xml_file_stem}-Witness.hex
 # check signature we just created based on generated hex files 
 # openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_file -sigfile $orderdata_signature_output_file -pkeyopt digest:sha256

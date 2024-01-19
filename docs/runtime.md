@@ -42,7 +42,7 @@ RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --
 [2024-01-16T14:29:18Z INFO  executor] execution_time = 3.117812573s
 ```
 
-Runtime for genation of Proof: 12055.32s - around ***200 minutes***.
+Runtime for genation of Proof: 12055.32s - around ***200 minutes*** without hardware acceleration.
 
 Notes: 
 - Risc0 reports 37 segments which are parallized using [continuation](https://www.risczero.com/news/continuations) on 16 cores (24 virtual cores - see hardware spec above). Using hardware with 48 cores execution time would likely be cut half to ***100 minutes*** if CPUs have same speed. 
