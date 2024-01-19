@@ -24,7 +24,7 @@ data/test.sh
 data/test2/*
 
 
-data/test/test.xml-Receipt-*
+data/test/test.xml-Receipt-*_*.json
 *.log
 data/test/tmp/*
 cobertura.xml
