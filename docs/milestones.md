@@ -14,4 +14,4 @@
 | 1c. | Validator | Code to validate the receipt. | [Repo](https://github.com/element36-io/hyperfridge-r0/tree/main/verifier)|
 | 1d. | Hyperfridge Crate | The crate to create and validate recipes (ZKPs), wrapping the functionality.  | [Repo](https://github.com/element36-io/hyperfridge-r0/tree/main/host)
 | 2. | Unit Tests | We will add unit tests and test data for creating and validating proofs which includes edge cases like wrong balance claims or faulty signature of the bank. | [Testing Guide](https://github.com/element36-io/hyperfridge-r0/blob/main/docs/INSTRUCTIONS.md)  |
-| 3. | Performance Benchmark | Present a table with performance metrics, so that hyperfride proofing times can be interpolated with data from [risc-zero](https://dev.risczero.com/datasheet.pdf). | [Benchmarks](benchmarks.md) |
+| 3. | Performance Benchmark | Present a table with performance metrics, so that hyperfride proofing times can be interpolated with data from [risc-zero](https://dev.risczero.com/datasheet.pdf). | [Benchmarks](runtime.md) |

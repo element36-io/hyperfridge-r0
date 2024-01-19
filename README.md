@@ -1,15 +1,15 @@
 # Hyperfridge zkVM component!
 
-Welcome to the Hyperfridge RISC Zero component! The idea of hyperfridge is to create a bidrectional bridge to the TradFi world for blockchain applications, secured by Zero-Knowledge tech. This first version lets smart contracts and blockchain Dapps "look inside" a bank account for example to react on the arrival of a FIAT payment or allows you send FIAT funds through a bank account to other bank accounts. All in a non-iteractive automated and secure manner, without compromising on privacy. For more information take a look at our [web3 grant application](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md).
+Welcome to the Hyperfridge RISC Zero component! The idea of hyperfridge is to create a bidirectional bridge to the TradFi world for blockchain applications, secured by Zero-Knowledge tech. This first version lets smart contracts and blockchain Dapps "look inside" a bank account for example to react on the arrival of a FIAT payment or allows you send FIAT funds through a bank account to other bank accounts. All in a non-iteractive automated and secure manner, without compromising on privacy. For more information take a look at our [web3 grant application](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md).
 
-This repository consists of three modules - a [host](docs/host.md) and [guest](docs/guest-hyperfridge.md) program and a [verifier](docs/verifier-cli.md).
+This repository consists of three modules - a [host](docs/host.md) and [guest](docs/guest-hyperfridge.md) program and a verifier tool which shows how to check the proofs.
 
-Check out our [cryptgraphic overview](docs/crypto.md) and [performance benchmarks](docs/benchmarks.md).
+Check out our [cryptographic overview](docs/crypto.md) and [performance benchmarks](docs/runtime.md).
 
 
 ## Quick Start with Risc-Zero Framework
 
-As it builds upon Risc-Zero zkVM, make youself familiar with this framework, otherwise it will be hard to understand what this crate is doing: 
+As it builds upon Risc-Zero zkVM, make yourself familiar with this framework, otherwise it will be hard to understand what this crate is doing: 
 
 - The [RISC Zero Developer Docs][dev-docs] is a great place to get started.
 - Example projects are available in the [examples folder][examples] of
@@ -31,9 +31,9 @@ command:
 RISC0_DEV_MODE=1 cargo test
 ```
 
-This will command will use generate a proof for test data. To use it with your bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any Ebics client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
+To use it with your bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any Ebics client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
 
-Check out [out testing guide](docs/INSTRUCTIONS.md) to run test and play with test data. 
+Check out [out testing guide](docs/INSTRUCTIONS.md) to run test and play with test data.
 
 Open documentation by:
 
@@ -76,7 +76,11 @@ project_name
 ├── host
 │   ├── Cargo.toml
 │   └── src
-│       └── main.rs                        <-- [Host code goes here]
+│       └── main.rs                        <-- [Host code]
+├── verifier
+│   ├── Cargo.toml
+│   └── src
+│       └── main.rs                        <-- [Verifier code]
 └── methods
     ├── Cargo.toml
     ├── build.rs
@@ -84,7 +88,7 @@ project_name
     │   ├── Cargo.toml
     │   └── src
     │       └── bin
-    │           └── method_name.rs         <-- [Guest code goes here]
+    │           └── method_name.rs         <-- [Guest code]
     └── src
         └── lib.rs
 ```

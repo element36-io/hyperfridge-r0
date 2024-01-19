@@ -6,15 +6,15 @@ This module provides the logic to check the soundness of data coming from the ba
 
 The proof aims for following properties:
 
-- **Proofing soundness**: We want to prove that the presented data is correct and reliable and has not been tampered with. We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs,
+- **Proving soundness**: We want to prove that the presented data is correct and reliable and has not been tampered with. We achieve this by checking signatures in the data which are provided by multiple entities. No entity alone should be able to generate (or fake) the proof on its own. So either the bank or the banks client is able to generate fake proofs,
 because you would need the private keys of both parties. The EBICS protocol (Electronic Banking Internet Communication Standard) defines the key ceremony which has been used for many years.
 - **Privacy**: Financial data - like medical data - is prone to highest data security standards. Bank documents contain names and bank details of clients, which should not be leaked. With Zero-Knowledge technology we are able generate proofs that, e.g. a client has sent a specific amount, without revealing the data.
-- **Low execution time**: Most banking backends still operate on a daily basis, thus generated proofs is not time critical. But banking is [moving rapidly towards instant payments][sepa-instant], means time of finality for transaction will be close to what can be achieved on blockchain today. Then proofing time may become a limiting factor.
+- **Low execution time**: Most banking backends still operate on a daily basis, thus generated proofs are not time critical. But banking is [moving rapidly towards instant payments][sepa-instant], meaning time of finality for transactions will be close to what can be achieved on blockchain today. Then proofing time may become a limiting factor.
 
-How were the goals achieved whith this implementation?
+How were the goals achieved with this implementation?
 
-- **Proofing soundness**: Singing payload data is still optional in the Ebics standard, so a bank backend needs to support that explicitly, and we cannot fully rely on the standard. As alternative we introduce the concept of a "data processor" as an additional entitiy next to the bank and the client. The data processor downloads and signs the document (and payload) and acts as third-party witness.
-- **Privacy**: Fully achieved - its trivial so include or not include data in proofs ([receipts][receipt]).
+- **Proving soundness**: Singing payload data is still optional in the Ebics standard, so a bank backend needs to support that explicitly, and we cannot fully rely on the standard. As an alternative we introduce the concept of a "data processor" as an additional entity next to the bank and the client. The data processor downloads and signs the document (and payload) and acts as third-party witness.
+- **Privacy**: Fully achieved - it's trivial so include or not include data in proofs ([receipts][receipt]).
 - **Low execution time**: Execution time is around 45 minutes to generate a proof. This is sufficient for current scenarios but too much in case of instant payments.
 
 ## Fundamental properties of the banking interface (ISO20022 and Ebics)
@@ -70,11 +70,11 @@ A wrapped Z53 document containing the daily statement showing 30191.23 as CHF ba
 
 The hash of the (zipped) Z53 documents needs to be validated with the data given in the ebicsRequest. "X002" refers to RSA signature key with a key length of 2048 bits, "E002" defines RSA algorithm for encryption using  ECB (Electronic Codebook) and PKCS#1 v1.5 padding ([Also see here](https://www.ibm.com/docs/en/b2b-integrator/5.2?topic=eckf-managing-certificates-keys-users)) or take a look at standardization page on [Ebics](https://www.ebics.org/en/home) and [ISO20022](https://www.iso20022.org/) or a better readable [national page](https://www.six-group.com/dam/download/banking-services/standardization/ebics/market-practice-guidelines-ebics3.0-v1.2-en.pdf). Remark: A typical question is "what is the difference between Ebics and ISO20022?" An analogy might be that EBICS is to ISO20022 what HTTP is to HTML; that is, EBICS serves as the communication protocol while ISO20022 defines the message format structure.
 
-We use zero-knowledge proofs (circuits) to check signatures so that we do not have to publish bank statements, because this would reveal identities of transactions in clear-text. This allows us to veryfiy the data and its claim (a certain balance in our case). It is trustless to the extend that we use both secrets of the bank and the account owner to generate the proof (MPC - multi-party-computation).
+We use zero-knowledge proofs (circuits) to check signatures so that we do not have to publish bank statements, because this would reveal identities of transactions in clear-text. This allows us to verify the data and its claim (a certain balance in our case). It is trustless to the extend that we use both secrets of the bank and the account owner to generate the proof (MPC - multi-party-computation).
 
 Now we can shift the trust from the bank account owner to the bank itself. But can we trust the keys of the bank? Here we would rely on the processes and the key ceremonies between a bank and its client and between a bank and its national bank. Hashes of banks are published - just google for *ebics hash*. Note that each bank uses [same keys for the communication with their clients and their respective national bank](https://www.bundesbank.de/resource/blob/868928/0d72f44f05be86cf78de84138a73d837/mL/verfahrensregeln-ebics-2021-data.pdf). Thus we only need to trust the top of the authorities, not individual banks. Thus the trust can be moved further up to the nation authorities who are auditing its nations' banks.
 
-But can we trust a nation or a government? The nations are monitored and measured by an independent international organisation called [FATF](https://www.fatf-gafi.org/en/home.html) who is responsible in setting worldwide standards on anti-money-laundering and evaluates the execution of these standards [regularly](https://www.fatf-gafi.org/en/publications/Mutualevaluations/Assessment-ratings.html) for each nation, which are usually [incorporated into local (e.g. Swiss) financial regulations](https://www.finma.ch/en/finma/international-activities/policy-and-regulation/fatf/). A system like hyperfridge can easily exclude certificates from banks from high risk countries.
+But can we trust a nation or a government? The nations are monitored and measured by an independent international organisation called [FATF](https://www.fatf-gafi.org/en/home.html) who is responsible for setting worldwide standards on anti-money-laundering and evaluates the execution of these standards [regularly](https://www.fatf-gafi.org/en/publications/Mutualevaluations/Assessment-ratings.html) for each nation, which are usually [incorporated into local (e.g. Swiss) financial regulations](https://www.finma.ch/en/finma/international-activities/policy-and-regulation/fatf/). A system like hyperfridge can easily exclude certificates from banks from high risk countries.
 
 To sum up: Even if you are not trusting the banking system or governments; technically hyperfridge is "as good as it can get" for integrating the traditional system on a zero-trust basis. We do not aim to improve the legacy banking systems but use protocols with a wide adoption.
 
@@ -114,7 +114,7 @@ The prof system consists of (see [for details](https://dev.risczero.com/proof-sy
 
 ### Bank signature validation
 
-Validation of signatures follows [XML sigantures Standard](https://datatracker.ietf.org/doc/html/rfc3275#section-3.1.2)
+Validation of signatures follows [XML signatures Standard](https://datatracker.ietf.org/doc/html/rfc3275#section-3.1.2)
 Signature Generation on Signature generation and standard in Ebics 2.5, see [PDF here](https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf). 
 
 Here is an excerpt of the standard;  - check out `createTestResponse.sh` and `checkResponse.sh` for details.

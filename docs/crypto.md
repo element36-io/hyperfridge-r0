@@ -1,10 +1,10 @@
 # Highlevel cryptographic process description
 
-## Intoducing the witness role
+## The witness role
 
-The EBICS Specifaction does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be names as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
+The EBICS Specification does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
 
-Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are dactivated using 'maxOccurs=0' which leads to a faiure of schmema validation if the signature of the payload is added to the Ebics-Response.
+Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the Ebics-Response.
 
 Snippet of 'ebics_orders_H005.xsd', the schema-specification:
 
@@ -102,7 +102,7 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
 
 ### Verification
 
-7. **Verification using Risk-Zero Recipie**: Other parties (like the Bank or external verifiers) can verify the zero-knowledge proof.
+7. **Verification using Risk-Zero Recipe**: Other parties (like the Bank or external verifiers) can verify the zero-knowledge proof.
    - Verify proof with: ${VerifyZKProof_{ImageID}}() \rightarrow Commitment$.
    - Check the public input (IBAN, $B_{pub}$, $W_{pub}$).
 
@@ -130,15 +130,14 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
 
 ### Proof transaction inclusion and Instant Payments
 
-As we are able to prove the payload, we can create a proof for transaction inlusion. Means we can prove FIAT payments incoming and outgoing, both on-chain - similar as cross-blockchain bridges work today. Most banks are operating on a daily basis which prevents interactive use-cases or would ask e.g. for optimistic implementation and addition funds to secure the FIAT bridge. But the EU is working on instant payments which would even allow instant interactive and non-interactive applications. This does not only apply to FIAT assets but also to any TradFi assets. For example Maker DAO has invested 400 mUSD in a Blackrock ETF for traditional assets. Hyperfridge would be able to create proof of assets and do balancing of investments (invest and divest) automatically. Note that using Ebics and standard banking functionality comes at no cost or transaction fees.
+As we are able to prove the payload, we can create a proof for transaction inclusion. Means we can prove FIAT payments incoming and outgoing, both on-chain - similar to how cross-blockchain bridges work today. Most banks are operating on a daily basis which prevents interactive use-cases or would ask e.g. for optimistic implementation and addition funds to secure the FIAT bridge. But the EU is working on instant payments which would even allow instant interactive and non-interactive applications. This does not only apply to FIAT assets but also to any TradFi assets. For example, Maker DAO has invested 400 mUSD in a Blackrock ETF for traditional assets. Hyperfridge would be able to create proof of assets and do balancing of investments (invest and divest) automatically. Note that using Ebics and standard banking functionality comes at no cost or transaction fees.
 
 ### Open-API Banking and Payment-API (e.g. Stripe)
 
-The principles prented here can we applied to other Open Banking Standards as well like India's UPI or the PSD2 standard. Integrating payment platforms like Stripe would add fees to payments but is widely used. Payments on Stripe are easy to set up may be processed withig a few minutes which makes interactive use cases possible.
+The principles presented here can be applied to other Open Banking Standards as well like India's UPI or the PSD2 standard. Integrating payment platforms like Stripe would add fees to payments but is widely used. Payments on Stripe are easy to set up and may be processed withing a few minutes which makes interactive use cases possible.
 
-The service can be offered by 
 
 ### Witness, HSM and other secure modules
 
-The Witness for hyperfridge needs and HSM to sign data. One might think of Apple Secure Enclave  to enable new use cases where a simple Phone or Laptop can act as a witness.
+The Witness for hyperfridge needs an HSM to sign data. One might think of Apple Secure Enclave  to enable new use cases where a simple Phone or Laptop can act as a witness.
 

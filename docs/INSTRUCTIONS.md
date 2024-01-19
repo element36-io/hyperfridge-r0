@@ -6,7 +6,7 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 1. Request and retrieval of banking documents with daily statements (Ebics request and response) through an Ebics banking client, e.g. [ebics-java-client]. The client
 2. Pre-Processing of the Ebics Response, which is an XML document. Pre-processing is necessary to off-load as much as possible from expensive proof-generation and to keep the proof-code flexible. Pre-processing is done with script 'data/checkResponse.sh'
-3. Present data from previous step and the private key of the client to the proover, and generate proof of computation (a STARK) and produce the [Receipt] which contains balance, currency date and accountnumber.
+3. Present data from the previous step and the private key of the client to the prover, and generate proof of computation (a STARK) and produce the [Receipt] which contains balance, currency date and account-number.
 4. A generic risc0 based verifier can check the proof, thus the above account data can be trusted.
 5. On-chain integration (validation) of the proof-system using the Substrate Off-Chain-Worker. 
 
@@ -15,7 +15,7 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 ## Releases and installation
 
-The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e36io/hyperfridge-r0/general). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
+The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e36io/hyperfridge-r0/general). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 
 
 ### Preparations
@@ -32,7 +32,7 @@ perl --version # 5 Version 34
 
 ```
 
-Usiing docker, make sure its installed:
+Using docker, make sure its installed:
 ```bash
 docker --version # output, e.g. Docker version 24.0.7, build afdd53b
 ```
@@ -51,11 +51,11 @@ docker run fridge host --help
 # output should show command line parameters: Usage: host [OPTIONS] [COMMAND] ...
 ```
 
-***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` afer each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
+***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
 
 ### Integration tests with provided test data
 
-We included all test data which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the rountrip are tested in that way.
+We included all test data which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the roundtrip are tested in that way.
 
 
 ```bash
@@ -66,7 +66,7 @@ docker run --env RISC0_DEV_MODE=true  fridge host test
 
 You may create new keys, additional test data and payload which is described [here](testdata.md).
 
-### Create recipie (STARK proof)
+### Create recipe (STARK proof)
 
 With binaries:
 
@@ -94,7 +94,7 @@ docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
     --clientiban CH4308307000289537312
 ```
 
-### Check recipie (STARK proof)
+### Check recipe (STARK proof)
 
 With binaries:
 
@@ -145,7 +145,7 @@ cd methods/guest
 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture 
 ```
 
-For running the tests with a new ebics respone, lets copy the exising into a new file, then we create the proof for it: 
+For running the tests with a new ebics response, lets copy the existing into a new file, then we create the proof for it: 
 
 ```bash
 # simulates the download of ebics file
@@ -172,7 +172,7 @@ cargo run  -- --verbose prove-camt53  \
  cat ../data/myrequest-generated/*.json
 ```
 
-Now lets try to create a fake proof - we will point to a wrong public keys where the verifcation of signatures should fail:
+Now let's try to create a fake proof - we will point to a wrong public keys where the verification of signatures should fail:
 
 ```bash
 # note that we use witness key for bank: --bankkey ../data/pub_witness.pem
@@ -196,7 +196,7 @@ cargo run  -- --verbose prove-camt53  \
 
 ```
 
-Use verifer to check the receipt, move to `verifier` directory:
+Use verifier to check the receipt, move to `verifier` directory:
 
 ```bash
 cd ./verifier
