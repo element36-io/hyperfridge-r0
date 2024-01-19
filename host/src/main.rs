@@ -344,7 +344,6 @@ fn proove_camt53(
     // write image ID to filesystem
     let _ = write_image_id();
 
-    // Todo:wasa
     // Using r0 implementation crypto-bigint does not work with RsaPUblicKey?
     // ==> Research shows not - needs reimplementation of RSA modue which might speed things up.
 

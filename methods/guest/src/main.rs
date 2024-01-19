@@ -152,7 +152,7 @@ pub fn main() {
         &pub_witness,
     );
 
-    v!(">>> cycle count {}k", (env::get_cycle_count()) / 1000);
+    v!(" Cycle count {}k", (env::get_cycle_count()) / 1000);
     //env::log("proof done - log entry"); // writes to journal - we may communicate with host here
 
     let mut commitments = Vec::new();
@@ -210,7 +210,7 @@ fn load(
 ) -> Vec<Document> {
     // star is with 1586k
     v!(
-        " >>>>> Cycle count start {}k",
+        "   Cycle count start {}k",
         (env::get_cycle_count()) / 1000
     );
 
@@ -221,14 +221,14 @@ fn load(
         order_data_xml,
     );
     v!(
-        " >>>>>  Cycle count parse_ebics_response {}k",
+        " >  Cycle count parse_ebics_response {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 1864k (plus 3k)
 
     verify_bank_signature(pub_bank, &request);
     v!(
-        " >>>>> Cycle count verify_bank_signature {}k",
+        "   Cycle count verify_bank_signature {}k",
         (env::get_cycle_count()) / 1000
     );
 
@@ -236,7 +236,7 @@ fn load(
 
     let transaction_key = decrypt_transaction_key(&request, client_key, decrypted_tx_key);
     v!(
-        " >>>>> Cycle count decrypt_transaction_key {}k",
+        "   Cycle count decrypt_transaction_key {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 33979k (plus 10k)
@@ -249,7 +249,7 @@ fn load(
         pub_witness,
     );
     v!(
-        " >>>>> Cycle count decrypt_order_data {}k",
+        "   Cycle count decrypt_order_data {}k",
         (env::get_cycle_count()) / 1000
     );
 
@@ -270,25 +270,25 @@ fn load(
                 documents.push(document);
             } else {
                 v!(
-                    " >>>>>> IBAN {} not found, ignore camt document {}",
+                    " IBAN {} not found, ignore camt document {}",
                     &iban,
                     String::from_utf8_lossy(&order_data[index - 1])
                 );
             }
             v!(
-                " >>>>> Cycle count for camt document {}k",
+                "   Cycle count for camt document {}k",
                 (env::get_cycle_count()) / 1000
             );
         } else {
             v!(
-                " >>>>>> processing camt document {}",
+                " processing camt document {}",
                 String::from_utf8_lossy(&order_data[index])
             );
         }
     }
 
     v!(
-        " >>>>> Cycle count parse_camt53 {}k",
+        "   Cycle count parse_camt53 {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 36330k (plus 1k)
@@ -601,14 +601,14 @@ fn decrypt_transaction_key(
         // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
         // We check if if provided decrypted key was using the decrypted key in the XML as source.
         v!(
-            " >>>>>>>>> Cycle count before rsa_encrypt {}k",
+            "   Cycle count before rsa_encrypt {}k",
             (env::get_cycle_count()) / 1000
         );
         let encrypted_recreated =
             rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
 
         v!(
-            " >>>>>>>>> Cycle count after rsa_encrypt {}k",
+            "   Cycle count after rsa_encrypt {}k",
             (env::get_cycle_count()) / 1000
         );            
         assert_eq!(
@@ -640,7 +640,6 @@ fn decrypt_transaction_key(
     // Decrypt with PKCS1 padding
     let decrypted_data = client_key.decrypt(Pkcs1v15Encrypt, &transaction_key_bin);
 
-    // todo: check error handling (panics)
     match decrypted_data {
         Ok(res) => {
             v!("  transaction key to decrypt payload could be decrypted");
@@ -687,12 +686,12 @@ fn decrypt_order_data(
 
     // Verify the signature
     v!(
-        " >>>>>>>>> Cycle count before pub_witness.verify( {}k",
+        "   Cycle count before pub_witness.verify( {}k",
         (env::get_cycle_count()) / 1000
     );
     let res = pub_witness.verify(scheme, sha.as_bytes(), witness_signature_bytes);
     v!(
-        " >>>>>>>>> Cycle count after pub_witness.verify( {}k",
+        "   Cycle count after pub_witness.verify( {}k",
         (env::get_cycle_count()) / 1000
     );
     match res {
@@ -704,7 +703,7 @@ fn decrypt_order_data(
     };
 
     v!(
-        " >>>>>>>>> Cycle count before
+        "   Cycle count before
         .decrypt_padded_b2b_mut( {}k",
         (env::get_cycle_count()) / 1000
     );
@@ -726,7 +725,7 @@ fn decrypt_order_data(
         .unwrap();
 
         v!(
-            " >>>>>>>>> Cycle count after
+            "   Cycle count after
             .decrypt_padded_b2b_mut( {}k",
             (env::get_cycle_count()) / 1000
         );
