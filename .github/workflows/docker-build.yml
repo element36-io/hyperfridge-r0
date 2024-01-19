@@ -84,7 +84,9 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}      
+        tags: |
+          e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}
+          e36io/hyperfridge-r0:latest      
 
     - name: Create GitHub Release with zipped binaries
       if: github.event_name != 'pull_request'

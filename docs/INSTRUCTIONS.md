@@ -37,11 +37,18 @@ Using docker, make sure its installed:
 docker --version # output, e.g. Docker version 24.0.7, build afdd53b
 ```
 
-Label the container you want to use with a shortcut "fridge" for later usage:
+Label the [hyperfridge container from dockerhub](https://hub.docker.com/r/e36io/hyperfridge-r0/tags) you want to use with a shortcut "fridge" for later usage:
 ```bash
-docker tag e36io/hyperfridge-r0:v0.0.3-6f416022c36c94602d7f6a41c878374b5177207c0a75e65661cc053f5afa9ddf fridge
+docker tag e36io/hyperfridge-r0:latest fridge
 # no output is given by docker
 ```
+
+Or test with docker using your local container build:
+
+```bash
+docker  build . -t fridge
+```
+
 Test your installation by showing the command line help:
 
 ```bash
