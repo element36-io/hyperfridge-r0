@@ -22,6 +22,13 @@ data/tmp/*
 data/hello.txt
 data/test.sh
 data/test2/*
+data/response_template-generated/*
+data/response_template-generated/response_template-generated.xml-authenticated
+data/response_template-generated/response_template-generated.xml-OrderData
+data/response_template-generated/response_template-generated.xml-SignatureValue
+data/response_template-generated/response_template-generated.xml-SignedInfo
+data/response_template-generated/response_template-generated.xml-TransactionKeyDecrypt.bin
+data/response_template-generated/response_template-generated.xml-Witness.hex
 
 
 data/test/test.xml-Receipt-*_*.json
@@ -30,4 +37,3 @@ data/test/tmp/*
 cobertura.xml
 methods/guest/build_rs_cov.profraw
 tmp/
-data/response_template-generated/*
