@@ -61,7 +61,7 @@ To sign messages for the bank it uses :
     $`{Signature}_{w_{priv}} = {Sign}_{W_{priv}}({Payload}_{enc})`$
 
 
-## Zero-Knowledge Proof Process
+## ZK proofing system
 
 ### Process Description
 
@@ -118,13 +118,15 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
 
 ## Security Considerations
 
-- The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$. I
+- The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$. 
 - The zero-knowledge proof allows the Client to prove knowledge of certain information without revealing the information itself.
-- The use of digital signatures by the Witness ensures the integrity and authenticity of the payload, which might not be necessary if the Ebics Standard implements its planned feature.
+- The use of digital signatures by the Witness ensures the integrity and authenticity of the payload, which might not be necessary if the Ebics Standard implements its planned feature and will actually sign its payload.
 - The HSM must be tamper-resistant and capable of securely managing cryptographic keys and operations.
-- Secure communication protocols should be used to prevent unauthorized access and interception.
+
 
 ## Execution time
+
+[See here](runtime.md).
 
 ## Outlook and use cases
 
