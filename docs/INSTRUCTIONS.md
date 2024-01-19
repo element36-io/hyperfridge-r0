@@ -164,7 +164,7 @@ xml_file=myrequest.xml ./createTestResponse.sh
 cd ../host
 RISC0_DEV_MODE=true \
 cargo run  -- --verbose prove-camt53  \
-    --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
+   --request="../data/myrequest-generated/myrequest-generated.xml"  --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 
 # You see receipt in output of the command and serialized in a json file: 
@@ -176,7 +176,7 @@ Now let's try to create a fake proof - we will point to a wrong public keys wher
 
 ```bash
 # note that we use witness key for bank: --bankkey ../data/pub_witness.pem
-cd ../host
+cd host
 RISC0_DEV_MODE=true \
 cargo run  -- --verbose prove-camt53  \
     --request="../data/myrequest-generated/myrequest-generated.xml" --bankkey ../data/pub_witness.pem \
@@ -199,7 +199,7 @@ cargo run  -- --verbose prove-camt53  \
 Use verifier to check the receipt, move to `verifier` directory:
 
 ```bash
-cd ./verifier
+cd verifier
 # we need the image ID which is part of the binary package name and versioning, but
 # here we take it from the host
 imageid=$(cat ../host/out/IMAGE_ID.hex)
@@ -215,8 +215,7 @@ cargo run  -- --verbose verify  \
 
 ### Notes on provided test data
 
-The test data was taken from the productive systems (Hypo Lenzburg), decrypted and encrypted again with generated keys as it can be seen in scripts `data/createTestResponse.sh`
-and `data/checkResponse.sh`. A productive sample has been added to `data/test/test.xml (prod).zip`, the payload of test data remained unchanged from the productive system.
+The test data was taken from the productive systems (Hypo Lenzburg), decrypted and encrypted again with generated keys as it can be seen in scripts `data/createTestResponse.sh` and `data/checkResponse.sh`. A productive sample has been added to `data/test/test.xml (prod).zip`, the payload of test data remained unchanged from the productive system.
 
 [ebics-java-client2]: [references.json#ebics-java-client]
 [r0-dev-mode]: [references.json#r0-dev-mode]

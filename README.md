@@ -1,10 +1,10 @@
 # Hyperfridge zkVM component!
 
-Welcome to the Hyperfridge RISC Zero component! The idea of hyperfridge is to create a bidirectional bridge to the TradFi world for blockchain applications, secured by Zero-Knowledge tech. This first version lets smart contracts and blockchain Dapps "look inside" a bank account for example to react on the arrival of a FIAT payment or allows you send FIAT funds through a bank account to other bank accounts. All in a non-iteractive automated and secure manner, without compromising on privacy. For more information take a look at our [web3 grant application](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md).
+Welcome to the Hyperfridge RISC Zero component! The idea of hyperfridge is to create a bidirectional bridge to the TradFi world for blockchain applications, secured by Zero-Knowledge tech. This project is supported by [Web3 Foundation](https://web3.foundation/) and lets smart contracts and blockchain Dapps "look inside" a bank account, for example to react on the arrival of a FIAT payment and allows to send FIAT funds through a bank account. All automated, secure, and privacy-preserving. For more information take a look at our [web3 grant application](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md). Hyperfridge's vision is to create a ZK-based ledger to provide a trustless interfaces to TradFi so that anyone can "plug-in" their own bank-account into the Web3 world, similar as you can do it today with [Stripe](https://en.wikipedia.org/wiki/Stripe,_Inc.) in the Web2 world.
 
-This repository consists of three modules - a [host](docs/host.md) and [guest](docs/guest-hyperfridge.md) program and a verifier tool which shows how to check the proofs.
+This repository consists of three modules - a [host](docs/host.md) and [guest](docs/guest-hyperfridge.md) program and a verifier tool which shows how to check the proofs. Look [our testing guide](docs/INSTRUCTIONS.md) to get an idea how it is used. 
 
-Check out our [cryptographic overview](docs/crypto.md) and [performance benchmarks](docs/runtime.md).
+Check out our [cryptographic overview](docs/crypto.md), [performance benchmarks](docs/runtime.md), also the [hyperfridge whitepaper](https://github.com/element36-io/ocw-ebics/blob/main/docs/hyperfridge-draft.pdf).
 
 
 ## Quick Start with Risc-Zero Framework
@@ -20,22 +20,21 @@ As it builds upon Risc-Zero zkVM, make yourself familiar with this framework, ot
 - [excerpt from Risc0 workshop at ZK HACK III][zkhack-iii].
 
 
-## Quick Start with Rust
+## Development Environment
 
 
 First, make sure [rustup] is installed. The [`rust-toolchain.toml`][rust-toolchain] file will be used by `cargo` to
-automatically install the correct version. To build all methods and execute the method within the zkVM, run the following
-command:
+automatically install the correct version. To build and execute a quick integration test, use: 
 
 ```bash
 RISC0_DEV_MODE=1 cargo test
 ```
 
-To use it with your bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any Ebics client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
+This will create a STARK based on the provided test data. Check out [our testing guide](docs/INSTRUCTIONS.md) to run test and play with test data. Note that `cargo test` will not invoke tests in `methods/guest` due to the architecture of Risc-Zero framework - see testing guide how to run tests for the poofer.
 
-Check out [out testing guide](docs/INSTRUCTIONS.md) to run test and play with test data.
+To use this crate with your owen bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any Ebics client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
 
-Open documentation by:
+Open documentation in any module by:
 
 ```bash
 cargo doc --no-deps --open
@@ -48,7 +47,13 @@ During development, faster iteration upon code changes can be achieved by levera
 Put together, the command to run your project in development mode while getting execution statistics is:
 
 ```bash
+cd host
+# will show usage
 RUST_LOG="executor=info" RISC0_DEV_MODE=1 cargo run
+# will create a STARK on the test data 
+RUST_LOG="executor=info" RISC0_DEV_MODE=1 cargo run test
+# add --verbose to see what is going on
+RUST_LOG="executor=info" RISC0_DEV_MODE=1 cargo run --verbose test
 ```
 
 ### Running proofs remotely on Bonsai, a Risc-Zero Service
