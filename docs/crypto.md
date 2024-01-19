@@ -43,7 +43,7 @@ All messages between Client and Bank are singed XML documents. The payload is en
 1. **Symmetric Key Encryption**:
     The symmetric key (SymKey) is then encrypted using the Client's public key, $C_{{pub}}$.
     This ensures that only the holder of the corresponding private key can decrypt and use the symmetric key.
-    Encrypted Symmetric Key: ${Encrypt}_{C_{pub}}({SymKey}) \rightarrow {SymKey}_{enc}$
+    Encrypted Symmetric Key: $`{Encrypt}_{C_{pub}}({SymKey}) \rightarrow {SymKey}_{enc}`$
 1. **Create Ebics Respose**:
     After a client sends an EbicsRequest, the Bank ready to sign and send an EbicsResponse which contains : ${ebicsResponse} = {Payload}_{enc} \, \| \, {EncryptedSessionKey} \, \| \, {XMLSignature}$
 
@@ -55,10 +55,10 @@ To sign messages for the bank it uses :
 
 4. **Request and Download EbicsResponse**
     Using the HSM, the witness is able to create the EbicsRequest by signing it with the HSM: 
-    ${hsmSign}_{hsmtoken}(EbicsRquest) \rightarrow {sign}_{C_{priv}}({EbicsRequest})$
+    $`{hsmSign}_{hsmtoken}(EbicsRquest) \rightarrow {sign}_{C_{priv}}({EbicsRequest})`$
 1. **Sign Encrypted Payload**
     Create signature of encrypted payload:  
-    ${Signature}_{w_{priv}} = {Sign}_{W_{priv}}({Payload}_{enc}) $
+    $`{Signature}_{w_{priv}} = {Sign}_{W_{priv}}({Payload}_{enc})`$
 
 
 ## Zero-Knowledge Proof Process
@@ -66,8 +66,8 @@ To sign messages for the bank it uses :
 ### Process Description
 
 The witness uses hyperfridge and the HSM to create a SNARK proof with:
-- ${Payload}_{enc}, {SymKey}_{enc}, {XMLSignature}$
--  ${Signature}_{w_{priv}}$
+- $`{Payload}_{enc}, {SymKey}_{enc}, {XMLSignature}`$
+- $`{Signature}_{w_{priv}}`$
 -  And decrypted transaction key ${SymKey}$ by calling $hsmDecrypt_{hsmtoken}(Symkey_{enc})$
 
 6. **Create STARK Proof**: ${ZKProof}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
