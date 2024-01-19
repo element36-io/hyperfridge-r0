@@ -1,16 +1,5 @@
 # Highlevel cryptographic process description
 
-## The witness role
-
-The EBICS Specification does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
-
-Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the Ebics-Response.
-
-Snippet of 'ebics_orders_H005.xsd', the schema-specification:
-
-```xml
-<element name="SignatureData" minOccurs="0" maxOccurs="0">...</element>
-```
 
 ## Entities
 
@@ -28,6 +17,17 @@ Snippet of 'ebics_orders_H005.xsd', the schema-specification:
    - It does not offer encryption with $C_{priv}$.
    - Only the Witness holds a secure token to access above functions.
 
+### The witness role
+
+The EBICS Specification does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
+
+Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the Ebics-Response.
+
+Snippet of 'ebics_orders_H005.xsd', the schema-specification:
+
+```xml
+<element name="SignatureData" minOccurs="0" maxOccurs="0">...</element>
+```
 
 ### EBICS Encryption and Decryption Process
 
