@@ -11,7 +11,8 @@ use risc0_zkvm::{
 };
 use rsa::BigUint;
 use rsa::{
-    pkcs8::DecodePrivateKey, pkcs8::DecodePublicKey, traits::PublicKeyParts, Pkcs1v15Encrypt,
+    pkcs8::DecodePrivateKey, pkcs8::DecodePublicKey, pkcs8::EncodePublicKey, pkcs8::LineEnding,
+    traits::PublicKeyParts, Pkcs1v15Encrypt,
 };
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
 
@@ -127,8 +128,8 @@ pub fn main() {
 
     let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key in main");
     v!("pub_bank {} bit", pub_bank.n().bits());
-    let client_key =
-        RsaPrivateKey::from_pkcs8_pem(&client_key_pem).expect("Failed to create client_key_pem in main");
+    let client_key = RsaPrivateKey::from_pkcs8_pem(&client_key_pem)
+        .expect("Failed to create client_key_pem in main");
     v!("client_key {} bit", client_key.n().bits());
 
     let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
@@ -176,10 +177,19 @@ pub fn main() {
         commitments.push(commitment);
     }
 
+    let pub_bank_pem = EncodePublicKey::to_public_key_pem(&pub_bank, LineEnding::LF)
+        .expect("error encoding pub_bank into pem");
+    let pub_client_pem =
+        EncodePublicKey::to_public_key_pem(&RsaPublicKey::from(&client_key), LineEnding::LF)
+            .expect("error encoding client into pem");
+
     let final_commitment = format!(
-        "{{\"hostinfo\":\"{}\",\"iban\":\"{}\",\"stmts\":[{}]}}",
+        "{{\"hostinfo\":\"{}\",\"iban\":\"{}\",\"pub_bank_pem\":\"{}\",\"pub_witness_pem\":\"{}\",\"pub_client_pem\":\"{}\",\"stmts\":[{}]}}",
         &host_info,
         &iban,
+        &pub_bank_pem.replace("\n", "\\n").replace("\r", "\\r"),
+        &pub_witness_pem.replace("\n", "\\n").replace("\r", "\\r"),
+        &pub_client_pem.replace("\n", "\\n").replace("\r", "\\r"),
         &commitments.join(",")
     );
     v!("Commitment for receipt: {}", &final_commitment);
@@ -209,10 +219,7 @@ fn load(
     pub_witness: &RsaPublicKey,
 ) -> Vec<Document> {
     // star is with 1586k
-    v!(
-        "   Cycle count start {}k",
-        (env::get_cycle_count()) / 1000
-    );
+    v!("   Cycle count start {}k", (env::get_cycle_count()) / 1000);
 
     let request = parse_ebics_response(
         authenticated_xml_c14n,
@@ -610,7 +617,7 @@ fn decrypt_transaction_key(
         v!(
             "   Cycle count after rsa_encrypt {}k",
             (env::get_cycle_count()) / 1000
-        );            
+        );
         assert_eq!(
             BigUint::from_bytes_be(&transaction_key_bin),
             encrypted_recreated,
@@ -724,11 +731,11 @@ fn decrypt_order_data(
         .decrypt_padded_b2b_mut::<NoPadding>(&order_data_bin, &mut result_bytes)
         .unwrap();
 
-        v!(
-            "   Cycle count after
+    v!(
+        "   Cycle count after
             .decrypt_padded_b2b_mut( {}k",
-            (env::get_cycle_count()) / 1000
-        );
+        (env::get_cycle_count()) / 1000
+    );
 
     let decompressed = decompress_to_vec_zlib(decrypted_data).expect("Failed to decompress!");
     let cursor = Cursor::new(decompressed);

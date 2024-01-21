@@ -30,6 +30,9 @@ macro_rules! v {
 struct Commitment {
     hostinfo: String,
     iban: String,
+    pub_bank_pem: String,
+    pub_witness_pem: String,
+    pub_client_pem: String,
     stmts: Vec<Stmt>,
 }
 
