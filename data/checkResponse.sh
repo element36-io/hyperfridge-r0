@@ -16,59 +16,91 @@ echo ---------------------------------------------
 
 set -e
 
+echo "work dir of script $(pwd)"
+
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default."
     xml_file="response_template.xml"
 fi
 xml_file_stem=$(basename "$xml_file")
 
-if [ -z "${dir_name}" ]; then
-    echo "xml_dir variable is not set. Set to default."
-    dir_name="${xml_file%.xml}"
+if [ ! -f "${xml_file}" ]; then
+    echo "can not find ebics response file $xml_file"
+    exit 7
 fi
 
-mkdir -p "$dir_name"
-mkdir -p "${dir_name}/tmp" 
+if [ -z "${output_dir_name}" ]; then
+    echo "xml_dir variable is not set. Set to default."
+    output_dir_name="${xml_file%.xml}"
+fi
+
+mkdir -p "$output_dir_name"
+mkdir -p "${output_dir_name}/tmp" 
 
 
-check_generate_keys() {
+check_private() {
+    local keyvar="$1_pem"
+    local keyfile="$1.pem"
+
+    # keyfile file was specified by environment var
+    if [ -n "$2" ]; then
+        keyfile="$2"
+      
+        if [ ! -f "${keyfile}" ]; then
+            echo "private  keyfile not found: $1, $2"
+            exit 3
+        fi
+    else 
+        echo checking file ${keyfile} exist for $1
+        if [ ! -f "${keyfile}" ]; then
+            echo "default private keyfile not found: $1 $1"
+        fi
+    fi  
+
+    echo "setting private keyfie of $1 to ${keyfile}"
+    declare -g "$1_pem"="${keyfile}"
+}
+
+check_pub() {
     local keyvar="$1_pem"
     local keyfile="$1.pem"
     local pub_keyfile="pub_$keyfile"
 
-    if [ ! -z "${keyvar}" ]; then
-        if [ ! -f "${keyfile}" ]; then
-            openssl genpkey -algorithm RSA -out "${keyfile}" -pass pass: -pkeyopt rsa_keygen_bits:2048
-            echo "New private key file (no password) generated ${keyfile}"
+    # Check if the second argument is present and not empty
+    if [ -n "$2" ]; then
+        pub_keyfile="$2"
+
+        if [ ! -f "${pub_keyfile}" ]; then
+            echo "public keyfile not found: $1 $2"
+            exit 4
         fi
-    fi
+    # no argument for file given, default is generate if not found
+    else 
+        if [ ! -f "${pub_keyfile}" ]; then
+            echo "default public keyfile not found: $1 $1"
+        fi
+    fi  
 
-    if [ ! -f "${pub_keyfile}" ]; then
-        # Extract public cert from ${keyfile}
-        openssl rsa -in "${keyfile}" -pubout -out "${pub_keyfile}"
-        echo "New public key file generated ${pub_keyfile}"
-    fi
-
-    declare -g "$1_pem"="${keyfile}"
+    echo "setting pub keyfie of $1 to ${pub_keyfile}"
     declare -g "pub_$1_pem"="${pub_keyfile}"
 }
 
-check_generate_keys "client"
-check_generate_keys "bank"
-check_generate_keys "witness"
+check_private "client" $client
+check_pub "client" $pub_bank
+check_pub "bank" $pub_bank
+check_pub "witness" $pub_witness
 
-
-decrypted_file="$dir_name/tmp/${xml_file_stem}_payload_camt53_decrypted.zip"
+decrypted_file="$output_dir_name/tmp/${xml_file_stem}_payload_camt53_decrypted.zip"
 
 openssl rsa -in $client_pem -check -noout
-#openssl rsa -pubin -in $pub_bank_pem -text -noout > ${dir_name}/tmp/${pub_bank_pem}.txt
+#openssl rsa -pubin -in $pub_bank_pem -text -noout > ${output_dir_name}/tmp/${pub_bank_pem}.txt
 
 # Generate timestamp
 timestamp=$(date +%Y%m%d%H%M%S)
 
 # Assign parameters to variables
-header_file=$dir_name/${xml_file_stem}-authenticated
-signedinfo_file=$dir_name/${xml_file_stem}-c14n-signedinfo
+header_file=$output_dir_name/${xml_file_stem}-authenticated
+signedinfo_file=$output_dir_name/${xml_file_stem}-c14n-signedinfo
 
 echo xml_file: $xml_file public key bank: $pub_bank_pem  private key client: $client_pem 
 
@@ -77,7 +109,7 @@ echo xml_file: $xml_file public key bank: $pub_bank_pem  private key client: $cl
 # which is in the case of ebics <header authenticate="true">
 # digest is base64 string in DigestValue. 
 expected_digest=$(awk '/<ds:DigestValue>/,/<\/ds:DigestValue>/' "$xml_file" | sed 's/.*<ds:DigestValue>//' | sed 's/<\/ds:DigestValue>.*$//' | tr -d '\n')
-echo "$expected_digest" > $dir_name/tmp/$xml_file_stem-DigestInfo-value
+echo "$expected_digest" > $output_dir_name/tmp/$xml_file_stem-DigestInfo-value
 # Base64 --> binary --> hex
 expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c256)
 
@@ -121,17 +153,17 @@ fi
 export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
 # need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
 export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
-perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "$dir_name/${xml_file_stem}-SignedInfo"
-signedinfo_digest_file="${dir_name}/tmp/signedinfo_digest_$timestamp.bin"
-openssl dgst -sha256 -binary  "$dir_name/${xml_file_stem}-SignedInfo" > "$signedinfo_digest_file"
+perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "$output_dir_name/${xml_file_stem}-SignedInfo"
+signedinfo_digest_file="${output_dir_name}/tmp/signedinfo_digest_$timestamp.bin"
+openssl dgst -sha256 -binary  "$output_dir_name/${xml_file_stem}-SignedInfo" > "$signedinfo_digest_file"
 echo "created digest for SignedInfo from XML, now checking Signature"
 
-perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $dir_name/$xml_file_stem-SignatureValue
+perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
 # Create file names with timestamp
-awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' | tr -d '\n' > "$dir_name/tmp/${xml_file_stem}-SignatureValue-value"
+awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' | tr -d '\n' > "$output_dir_name/tmp/${xml_file_stem}-SignatureValue-value"
 #echo signature value from xml as base64: $signature_base64
-signature_file="${dir_name}/tmp/signature_$timestamp.bin"
-cat $dir_name/tmp/${xml_file_stem}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
+signature_file="${output_dir_name}/tmp/signature_$timestamp.bin"
+cat $output_dir_name/tmp/${xml_file_stem}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
 
 echo "check signature with public key from bank $pub_bank_pem"
 # needs X002 from bank
@@ -146,15 +178,15 @@ echo "hash of signature bin file:" $(openssl dgst -r -sha256 "$signature_file")
 
 # decript and unzip base64 data
 # Base64 decoding, Decrypting, Decompressing, Verifying the signature
-awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "$dir_name/tmp/${xml_file_stem}-TransactionKey"
-awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "$dir_name/tmp/${xml_file_stem}-OrderData-value"
-perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "$dir_name/${xml_file_stem}-OrderData"
+awk '/<TransactionKey>/,/<\/TransactionKey>/' $xml_file | sed 's/.*<TransactionKey>//' | sed 's/<\/TransactionKey>.*$//' | tr -d '\n' > "$output_dir_name/tmp/${xml_file_stem}-TransactionKey"
+awk '/<OrderData>/,/<\/OrderData>/' $xml_file | sed 's/.*<OrderData>//' | sed 's/<\/OrderData>.*$//' | tr -d '\n' > "$output_dir_name/tmp/${xml_file_stem}-OrderData-value"
+perl -ne 'print $1 if /(<OrderData.*<\/OrderData>)/' $xml_file > "$output_dir_name/${xml_file_stem}-OrderData"
 
 # the transaction key is ecrypted with the clients public key - so first we have to decrypt the 
 # tx key before we can use it for decrypting the payload. 
-encrypted_txkey_file_bin="${dir_name}/tmp/${timestamp}_encrypted_transaction_key.bin"
-cat "$dir_name/tmp/${xml_file_stem}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
-decrypted_txkey_file_bin="${dir_name}/tmp/${timestamp}_transaction_key.bin"
+encrypted_txkey_file_bin="${output_dir_name}/tmp/${timestamp}_encrypted_transaction_key.bin"
+cat "$output_dir_name/tmp/${xml_file_stem}-TransactionKey" | base64 --decode > ${encrypted_txkey_file_bin}
+decrypted_txkey_file_bin="${output_dir_name}/tmp/${timestamp}_transaction_key.bin"
 
 # PKCS#1 page 265, process for asymmetrical encryption of the transaction key
 [ $(stat --format=%s "$encrypted_txkey_file_bin") -eq 256 ] || { echo "Wrong filesize of encrypted tx key"; exit 1; }
@@ -163,7 +195,7 @@ openssl pkeyutl -decrypt -in "${encrypted_txkey_file_bin}" -out "${decrypted_txk
 openssl pkeyutl -decrypt --in "${encrypted_txkey_file_bin}" -out "${decrypted_txkey_file_bin}-raw" -inkey $client_pem -pkeyopt rsa_padding_mode:none
 # echo "size tx key (should be 16) $(stat -c %s "$decrypted_txkey_file_bin") "
 [ $(stat --format=%s "$decrypted_txkey_file_bin") -eq 16 ] || { echo "Wrong filesize of decrypted tx key"; exit 1; }
-cp  "${decrypted_txkey_file_bin}-raw" "$dir_name/${xml_file_stem}-TransactionKeyDecrypt.bin"
+cp  "${decrypted_txkey_file_bin}-raw" "$output_dir_name/${xml_file_stem}-TransactionKeyDecrypt.bin"
 
 # AES-128 bit key in hex
 transaction_key_hex=$(xxd -p -c256 $decrypted_txkey_file_bin  | tr -d '\n')
@@ -185,8 +217,8 @@ fi
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # but openssl does not handle ISO10126Padding, so use -nopad and do the padding manually
 
-orderdata_bin_file="${dir_name}/tmp/${timestamp}_orderdata_decoded.bin"
-cat  "$dir_name/tmp/${xml_file_stem}-OrderData-value" | tr -d '\n' | base64 --decode > $orderdata_bin_file 
+orderdata_bin_file="${output_dir_name}/tmp/${timestamp}_orderdata_decoded.bin"
+cat  "$output_dir_name/tmp/${xml_file_stem}-OrderData-value" | tr -d '\n' | base64 --decode > $orderdata_bin_file 
 
 openssl enc -d -aes-128-cbc -nopad -in $orderdata_bin_file -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
 # openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -pass file:transaction_key.bin -iv 00000000000000000000000000000000
@@ -200,29 +232,22 @@ if [ ! -f "$decrypted_file" ]; then
     exit 1
 fi
 
-# Sign OrderData  = EMSA-PKCS1-v1_5 with SHA-256 
+
 # Signing order data is is marked as planned in the standard
 # Until the standard covers this, we add a "witness" who is signing the data instead of the bank. 
-
 # First we need need order data digest in binary format
-orderdata_digest_file="${dir_name}/tmp/orderdata_digescheck_$timestamp.bin"
-# we need the digest as a digest file; digest again with -binary 
-openssl dgst -sha256 -binary -r $orderdata_bin_file > "$orderdata_digest_file"
-orderdata_signature_file="${dir_name}/tmp/orderdata_signature_$timestamp.bin"
-
-# digest of binary order data (from base64)
-orderdata_signature_output_file="${dir_name}/tmp/orderdata_signature_$timestamp.bin"
-# Now do the signing with witness key, then convert the result to hex and store it in Witness.hex as hex
-openssl pkeyutl -sign -inkey "$witness_pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
-orderdata_signature_hex_output_file=${dir_name}/${xml_file_stem}-Witness.hex
-xxd -p "$orderdata_signature_output_file" > "$orderdata_signature_hex_output_file"
+orderdata_digest_file="${output_dir_name}/tmp/orderdata_digestcheck_$timestamp.bin"
+openssl dgst -sha256 -binary  $orderdata_bin_file > "$orderdata_digest_file"
+# Witness file needs to be present, generated before this script 
+orderdata_signature_hex_output_file=${output_dir_name}/${xml_file_stem}-Witness.hex
 # check signature we just created based on generated hex files 
 # openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_file -sigfile $orderdata_signature_output_file -pkeyopt digest:sha256
 openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_file -sigfile <(xxd -r -p "$orderdata_signature_hex_output_file") -pkeyopt digest:sha256
 
 # the result is a compressed binary using standard RFC 1951 which is just (de)compressing a stream
-payload_file="${dir_name}/tmp/${xml_file_stem}_payload_camt53.zip"
+payload_file="${output_dir_name}/tmp/${xml_file_stem}_payload_camt53.zip"
 zlib-flate -uncompress  < $decrypted_file > $payload_file
-echo "size $(stat -c %s "$dir_name/$xml_file_stem.zip") hash of zip file:" $(openssl dgst -sha256 -r "$payload_file")
+echo "..."
+echo "size $(stat -c %s "$payload_file") hash of zip file:" $(openssl dgst -sha256 -r "$payload_file")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
-unzip -o $payload_file -d  $dir_name/tmp/camt53/
+unzip -o $payload_file -d  $output_dir_name/tmp/camt53/

@@ -74,73 +74,30 @@ See further below for more information on generating the input files.
 Upon successful execution, the program prints a receipt in JSON format stored under 'data/test.xml-Receipt'
 'data/<ebics_response_xml>-Receipt'.
 
-### Use as docker image
+### How to use
 
-Find the docker image which contains host, guest and verifier [here][hf-dockerhub].
-Images are tagged with risc0 image ID, same tags are used in the [hyperfridge github repo][hf-github].
-
-Call the image with test data:
-
-```bash
-docker run e36io/hyperfridge-r0:0.0.0-5dc027519ae151903285c5b964d51643193131426f131c16cff31a8e7bd56c05
-```
-
-With own data:
-
-```bash
-TODO wasa test& finish
-docker run e36io/hyperfridge-r0:v0.2.0-beta.1-5dc027519ae151903285c5b964d51643193131426f131c16cff31a8e7bd56c05 /data/test/test.xml-Receipt
-
-docker run -v /home/w/workspace/hyperfridge-r0/data:/mydata e36io/hyperfridge-r0:5dc027519ae151903285c5b964d51643193131426f131c16cff31a8e7bd56c05 /data2/test/test.xml
-```
-
-### Use with binary release (ZIP)
-
-[Download][hf-github] and install binaries - especially the proofing libary because of the "hyperfridge" is RISC-V.
-
-RISC-V is an open standard instruction set architecture (ISA) based on established reduced instruction set computer (RISC) principles.
-Many companies are offering or have announced RISC-V hardware; open source operating systems with RISC-V support are available,
-and the instruction set is supported in several popular software toolchains like Linux.
-
+Find the docker image which contains host, guest and verifier [here][hf-dockerhub]. Images are tagged with risc0 image ID, same tags are used in the [hyperfridge github repo][hf-github]. Check out [Testing Guide](INSTRUCTIONS.md) how to use hyperfridge with docker and command line.
 
 ### Verify programmatically
 
 Here is an example how to verify in rust:
 
 ```rust
-#[allow(unused_imports)]
-use methods::{HYPERFRIDGE_ELF, HYPERFRIDGE_ID};
-
-use risc0_zkvm::Receipt;
-#[allow(unused_imports)]
-use risc0_zkvm::{default_prover, ExecutorEnv};
-use std::fs;
-use std::env;
-
-const DEFAULT_PROOF_JSON: &str = "../data/test/test.xml-Receipt";
-
-
-fn main() {
-    println!("Start Verify");
-    // Get the first argument from command line, if available
-    let args: Vec<String> = env::args().collect();
-    let binding = DEFAULT_PROOF_JSON.to_string();
-    let proof_json_path = args.get(1).unwrap_or(&binding);
 
     let receipt_json: Vec<u8> = fs::read(proof_json_path)
         .unwrap_or_else(|_| panic!("Failed to read file at {}", proof_json_path));
 
     let receipt: Receipt = serde_json::from_slice(&receipt_json)
         .expect("Failed to parse proof JSON");
+
+    receipt
+        .verify(image_id_array) // image-id, hex converted to byte
+        .unwrap_or_else(|_| panic!("verify failed with image id: {}", &image_id_hex));
+
     let result_string = String::from_utf8(receipt.journal.bytes)
         .expect("Failed to convert bytes to string");
-    print!("Commitments in receipt: {}", result_string);
-}
+
 ```
-
-TODO:wasa/dastan- show TOML as well; how to import? Do we need a library?
-
-## Prepare Input Files
 
 ### Standards involved
 

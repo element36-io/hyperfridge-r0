@@ -30,6 +30,9 @@ macro_rules! v {
 struct Commitment {
     hostinfo: String,
     iban: String,
+    pub_bank_pem: String,
+    pub_witness_pem: String,
+    pub_client_pem: String,
     stmts: Vec<Stmt>,
 }
 
@@ -118,10 +121,11 @@ fn main() {
                     .to_str()
                     .expect("Failed to convert file stem to string");
 
-                let script_full_path = script_dir.join(script_file_stem);
+                let _script_full_path = script_dir.join(script_file_stem);
 
                 v!(
-                    "calling {} {} {} {}",
+                    "calling {} xml_file={} pub_bank={} client={} pub_witness{}",
+                    &script_path.to_str().unwrap(),
                     &camt53_filename,
                     &pub_bank_pem_filename,
                     &client_pem_filename,
@@ -130,17 +134,18 @@ fn main() {
 
                 let output = Command::new(script_path)
                     // .current_dir(&script_dir)
-                    .env("dir_name", &script_full_path)
+                    // .env("output_dir_name", &script_full_path)
                     .env("xml_file", &camt53_filename)
-                    .env("pem_file", &pub_bank_pem_filename)
-                    .env("private_pem_file", &client_pem_filename)
+                    .env("pub_bank", &pub_bank_pem_filename)
+                    .env("client", &client_pem_filename)
+                    .env("pub_witness", &pub_witness_pem_filename)
                     .output()
                     .expect("failed to execute script");
 
                 if output.status.success() {
                     v!("Script {:?} executed successfully.", script_path.clone());
                 } else {
-                    eprintln!("Script output ----------------------------------------");
+                    eprintln!("Script output:");
                     eprintln!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
                     eprintln!("stderr:\n{}", String::from_utf8_lossy(&output.stderr));
                     panic!(
@@ -159,6 +164,10 @@ fn main() {
 
             iban = TEST_IBAN.to_string();
             camt53_filename = TEST_EBICS_FILE.to_string();
+        }
+        Some(Commands::ShowImageId) => {
+            println!("{}", get_image_id_hex());
+            std::process::exit(0);
         }
         None => {
             panic!(" no command given")
@@ -181,9 +190,16 @@ fn main() {
     // encrypting with privte key is much faster. So we expect the decrypted transaction
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
+    let decrypted_tx_key_bin_filename = format!("{}-TransactionKeyDecrypt.bin", camt53_filename);
+    v!("open {}", &decrypted_tx_key_bin_filename);
+
     let decrypted_tx_key_bin: Vec<u8> =
-        fs::read(format!("{}-TransactionKeyDecrypt.bin", camt53_filename))
-            .unwrap_or_else(|_| panic!("Failed to read decrypted transaction key file (ends with -TransactionKeyDecript.bin) {}",camt53_filename));
+        fs::read(&decrypted_tx_key_bin_filename).unwrap_or_else(|_| {
+            panic!(
+                "Failed to read decrypted transaction key file  {}",
+                decrypted_tx_key_bin_filename.clone()
+            )
+        });
 
     // other pre-processed files, mainly to c14n for XML
     let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
@@ -259,7 +275,7 @@ fn main() {
                 }
             }
 
-            // write result file
+            // write result file - two files, one with timestamp one with "-latest".
             let now = Local::now();
             let timestamp_string = format!("{}T{}", now.format("%Y-%m-%d"), now.format("%H:%M:%S"));
             // write the result in a file with runtime info
@@ -272,7 +288,23 @@ fn main() {
                 .unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
 
             file.write_all(receipt_json_string.as_bytes())
-                .unwrap_or_else(|_| panic!("Unable to write data in file {}", &file_name));
+                .unwrap_or_else(|_| panic!("Unable to write data in file {} (main)", &file_name));
+
+            v!(" wrote receipt to {}", &file_name);
+
+            // filename with -latest.json
+            let file_name = format!(
+                "{}-Receipt-{}-latest.json",
+                &camt53_filename,
+                get_image_id_hex()
+            );
+            let mut file = File::create(&file_name)
+                .unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
+
+            file.write_all(receipt_json_string.as_bytes())
+                .unwrap_or_else(|_| {
+                    panic!("Unable to write data in latest file {} (main)", &file_name)
+                });
 
             v!(" wrote receipt to {}", &file_name);
         }
@@ -284,12 +316,15 @@ fn main() {
 }
 
 fn is_verbose() -> String {
-    unsafe {
-        if VERBOSE {
-            "verbose".to_string()
-        } else {
-            "".to_string()
-        }
+    match std::env::var("FRIDGE_VERBOSE") {
+        Ok(value) if value == "1" || value.eq_ignore_ascii_case("true") => "verbose".to_string(),
+        _ => unsafe {
+            if VERBOSE {
+                "verbose".to_string()
+            } else {
+                "".to_string()
+            }
+        },
     }
 }
 
@@ -312,7 +347,6 @@ fn proove_camt53(
     // write image ID to filesystem
     let _ = write_image_id();
 
-    // Todo:wasa
     // Using r0 implementation crypto-bigint does not work with RsaPUblicKey?
     // ==> Research shows not - needs reimplementation of RSA modue which might speed things up.
 
@@ -335,6 +369,9 @@ fn proove_camt53(
         .expect("Failed to create bank public key");
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
+
+    let mut profiler =
+        risc0_zkvm::Profiler::new("./profile-output", methods::HYPERFRIDGE_ELF).unwrap();
 
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
@@ -363,6 +400,7 @@ fn proove_camt53(
         .unwrap()
         .write(&is_verbose())
         .unwrap()
+        .trace_callback(profiler.make_trace_callback())
         .build()
         .unwrap();
 
@@ -371,6 +409,11 @@ fn proove_camt53(
     v!("prove hyperfridge elf ");
     // generate receipt
     let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    profiler.finalize();
+    let report = profiler.encode_to_vec();
+    v!("write profile size {}", report.len());
+    std::fs::write("./profile-output", &report).expect("Unable to write profiling output");
+
     let image_id_hex = get_image_id_hex();
     v!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
@@ -498,6 +541,7 @@ enum Commands {
     /// Uses test data - sample call is:
     /// RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo run  -- --verbose test
     Test,
+    ShowImageId,
 }
 
 #[allow(dead_code)]
@@ -509,6 +553,10 @@ fn parse_cli() -> Cli {
     }
     cli
 }
+
+// For profiling, fun the test as follows - it is not activated in the standard tests.
+// RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test profid  -- --nocapture
+// pprof -http=127.0.0.1:8089 ./host/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge host/profile-output
 
 #[cfg(test)]
 mod tests {
@@ -554,10 +602,10 @@ mod tests {
             fs::read_to_string(TEST_CLIENTKEY).unwrap().as_str(),
             decrypted_tx_key_bin,
             TEST_IBAN,
-            fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
             fs::read_to_string(TEST_EBICS_FILE.to_string() + "-Witness.hex")
                 .unwrap()
                 .as_str(),
+            fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
             &host_info,
         );
 

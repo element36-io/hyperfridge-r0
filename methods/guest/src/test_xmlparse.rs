@@ -100,10 +100,10 @@ fn test_decrypt_txkey() {
     assert_eq!(transaction_key_bin.len(), 16);
 
     let pub_witness = RsaPublicKey::from_public_key_pem(WITNESS_PUBLIC_KEY)
-        .expect("Failed to create pub_witness_key");
+        .expect("Failed to create pub_witness_key int est_decrypt_txkey");
     let witness_signature_bytes =
         Vec::from_hex(WITNESS_SIGNATURE_HEX.trim().replace([' ', '\n'], ""))
-            .expect("Failed to parse hexadecimal string witness_signature_hex");
+            .expect("Failed to parse hexadecimal string witness_signature_hex test_decrypt_txkey");
 
     let files = decrypt_order_data(
         &request,
@@ -154,7 +154,7 @@ fn test_decrypt_txkey_reverse() {
     assert_eq!(transaction_key_bin.len(), 16);
 
     let pub_witness = RsaPublicKey::from_public_key_pem(WITNESS_PUBLIC_KEY)
-        .expect("Failed to create pub_witness_key");
+        .expect("Failed to create pub_witness_key test_decrypt_txkey_reverse");
     let witness_signature_bytes =
         Vec::from_hex(WITNESS_SIGNATURE_HEX.trim().replace([' ', '\n'], ""))
             .expect("Failed to parse hexadecimal string witness_signature_hex");
@@ -201,7 +201,7 @@ fn test_parse() {
     );
     let private_key = RsaPrivateKey::from_pkcs8_pem(USER_PRIVATE_KEY_E002_PEM).unwrap();
     let pub_witness = RsaPublicKey::from_public_key_pem(WITNESS_PUBLIC_KEY)
-        .expect("Failed to create pub_witness_key");
+        .expect("Failed to create pub_witness_key test_parse");
     let witness_signature_bytes =
         Vec::from_hex(WITNESS_SIGNATURE_HEX.trim().replace([' ', '\n'], ""))
             .expect("Failed to parse hexadecimal string witness_signature_hex");

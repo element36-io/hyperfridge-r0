@@ -11,7 +11,8 @@ use risc0_zkvm::{
 };
 use rsa::BigUint;
 use rsa::{
-    pkcs8::DecodePrivateKey, pkcs8::DecodePublicKey, traits::PublicKeyParts, Pkcs1v15Encrypt,
+    pkcs8::DecodePrivateKey, pkcs8::DecodePublicKey, pkcs8::EncodePublicKey, pkcs8::LineEnding,
+    traits::PublicKeyParts, Pkcs1v15Encrypt,
 };
 use rsa::{Pkcs1v15Sign, RsaPrivateKey, RsaPublicKey};
 
@@ -125,14 +126,14 @@ pub fn main() {
     // let exp = U256::from_be_hex(&pub_bank_exp);
     // let modu = U256::from_be_hex(&pub_bank_mod);
 
-    let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key");
+    let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key in main");
     v!("pub_bank {} bit", pub_bank.n().bits());
-    let client_key =
-        RsaPrivateKey::from_pkcs8_pem(&client_key_pem).expect("Failed to create client_key_pem");
+    let client_key = RsaPrivateKey::from_pkcs8_pem(&client_key_pem)
+        .expect("Failed to create client_key_pem in main");
     v!("client_key {} bit", client_key.n().bits());
 
     let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
-        .expect("Failed to create pub_witness_key");
+        .expect("Failed to create pub_witness_key in main");
 
     let witness_signature_bytes =
         Vec::from_hex(witness_signature_hex.trim().replace([' ', '\n'], ""))
@@ -152,7 +153,7 @@ pub fn main() {
         &pub_witness,
     );
 
-    v!(">>> cycle count {}k", (env::get_cycle_count()) / 1000);
+    v!(" Cycle count {}k", (env::get_cycle_count()) / 1000);
     //env::log("proof done - log entry"); // writes to journal - we may communicate with host here
 
     let mut commitments = Vec::new();
@@ -176,10 +177,19 @@ pub fn main() {
         commitments.push(commitment);
     }
 
+    let pub_bank_pem = EncodePublicKey::to_public_key_pem(&pub_bank, LineEnding::LF)
+        .expect("error encoding pub_bank into pem");
+    let pub_client_pem =
+        EncodePublicKey::to_public_key_pem(&RsaPublicKey::from(&client_key), LineEnding::LF)
+            .expect("error encoding client into pem");
+
     let final_commitment = format!(
-        "{{\"hostinfo\":\"{}\",\"iban\":\"{}\",\"stmts\":[{}]}}",
+        "{{\"hostinfo\":\"{}\",\"iban\":\"{}\",\"pub_bank_pem\":\"{}\",\"pub_witness_pem\":\"{}\",\"pub_client_pem\":\"{}\",\"stmts\":[{}]}}",
         &host_info,
         &iban,
+        &pub_bank_pem.replace("\n", "\\n").replace("\r", "\\r"),
+        &pub_witness_pem.replace("\n", "\\n").replace("\r", "\\r"),
+        &pub_client_pem.replace("\n", "\\n").replace("\r", "\\r"),
         &commitments.join(",")
     );
     v!("Commitment for receipt: {}", &final_commitment);
@@ -209,10 +219,7 @@ fn load(
     pub_witness: &RsaPublicKey,
 ) -> Vec<Document> {
     // star is with 1586k
-    v!(
-        " >>>>> Cycle count start {}k",
-        (env::get_cycle_count()) / 1000
-    );
+    v!("   Cycle count start {}k", (env::get_cycle_count()) / 1000);
 
     let request = parse_ebics_response(
         authenticated_xml_c14n,
@@ -221,14 +228,14 @@ fn load(
         order_data_xml,
     );
     v!(
-        " >>>>>  Cycle count parse_ebics_response {}k",
+        " >  Cycle count parse_ebics_response {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 1864k (plus 3k)
 
     verify_bank_signature(pub_bank, &request);
     v!(
-        " >>>>> Cycle count verify_bank_signature {}k",
+        "   Cycle count verify_bank_signature {}k",
         (env::get_cycle_count()) / 1000
     );
 
@@ -236,7 +243,7 @@ fn load(
 
     let transaction_key = decrypt_transaction_key(&request, client_key, decrypted_tx_key);
     v!(
-        " >>>>> Cycle count decrypt_transaction_key {}k",
+        "   Cycle count decrypt_transaction_key {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 33979k (plus 10k)
@@ -249,7 +256,7 @@ fn load(
         pub_witness,
     );
     v!(
-        " >>>>> Cycle count decrypt_order_data {}k",
+        "   Cycle count decrypt_order_data {}k",
         (env::get_cycle_count()) / 1000
     );
 
@@ -270,25 +277,25 @@ fn load(
                 documents.push(document);
             } else {
                 v!(
-                    " >>>>>> IBAN {} not found, ignore camt document {}",
+                    " IBAN {} not found, ignore camt document {}",
                     &iban,
                     String::from_utf8_lossy(&order_data[index - 1])
                 );
             }
             v!(
-                " >>>>> Cycle count for camt document {}k",
+                "   Cycle count for camt document {}k",
                 (env::get_cycle_count()) / 1000
             );
         } else {
             v!(
-                " >>>>>> processing camt document {}",
+                " processing camt document {}",
                 String::from_utf8_lossy(&order_data[index])
             );
         }
     }
 
     v!(
-        " >>>>> Cycle count parse_camt53 {}k",
+        "   Cycle count parse_camt53 {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 36330k (plus 1k)
@@ -600,8 +607,17 @@ fn decrypt_transaction_key(
         // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
         // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
         // We check if if provided decrypted key was using the decrypted key in the XML as source.
+        v!(
+            "   Cycle count before rsa_encrypt {}k",
+            (env::get_cycle_count()) / 1000
+        );
         let encrypted_recreated =
             rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
+
+        v!(
+            "   Cycle count after rsa_encrypt {}k",
+            (env::get_cycle_count()) / 1000
+        );
         assert_eq!(
             BigUint::from_bytes_be(&transaction_key_bin),
             encrypted_recreated,
@@ -631,7 +647,6 @@ fn decrypt_transaction_key(
     // Decrypt with PKCS1 padding
     let decrypted_data = client_key.decrypt(Pkcs1v15Encrypt, &transaction_key_bin);
 
-    // todo: check error handling (panics)
     match decrypted_data {
         Ok(res) => {
             v!("  transaction key to decrypt payload could be decrypted");
@@ -677,9 +692,15 @@ fn decrypt_order_data(
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
 
     // Verify the signature
-
+    v!(
+        "   Cycle count before pub_witness.verify( {}k",
+        (env::get_cycle_count()) / 1000
+    );
     let res = pub_witness.verify(scheme, sha.as_bytes(), witness_signature_bytes);
-
+    v!(
+        "   Cycle count after pub_witness.verify( {}k",
+        (env::get_cycle_count()) / 1000
+    );
     match res {
         Ok(_) => v!(" Order Data is verified"),
         Err(e) => {
@@ -688,6 +709,11 @@ fn decrypt_order_data(
         }
     };
 
+    v!(
+        "   Cycle count before
+        .decrypt_padded_b2b_mut( {}k",
+        (env::get_cycle_count()) / 1000
+    );
     // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
     // Decrypt the AES key using RSA (not shown, replace with your RSA decryption code)
@@ -704,6 +730,13 @@ fn decrypt_order_data(
     let decrypted_data = pt
         .decrypt_padded_b2b_mut::<NoPadding>(&order_data_bin, &mut result_bytes)
         .unwrap();
+
+    v!(
+        "   Cycle count after
+            .decrypt_padded_b2b_mut( {}k",
+        (env::get_cycle_count()) / 1000
+    );
+
     let decompressed = decompress_to_vec_zlib(decrypted_data).expect("Failed to decompress!");
     let cursor = Cursor::new(decompressed);
     let mut archive = ZipArchive::new(cursor).expect("Failed to read ZIP archive");
