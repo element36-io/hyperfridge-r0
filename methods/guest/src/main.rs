@@ -86,7 +86,43 @@ struct Stmt {
     fr_dt_tm: String,
     to_dt_tm: String,
     balances: Vec<Balance>,
+    ntries: Vec<Ntry>,
 }
+
+#[derive(Debug, Deserialize)]
+struct Ntry {
+    cdtDbtInd: String, // cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
+    sts: String,
+    ccy: String, // currency
+    amt: String,
+    txDtls: Vec<TxDtls>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TxDtls {
+    AmtCcy: String,
+    AmtValue: String,
+    CdtDbtInd: String,
+    DbtrNm: String,
+    //Debitor
+    DbtrStrtNm: String,
+    DbtrBldgNb: String,
+    DbtrPstCd: String,
+    DbtrTwnNm: String,
+    DbtrCtry: Option<String>,
+    DbtrAcctIBAN: String,
+    //Creditor
+    CdtrStrtNm: String,
+    CdtrBldgNb: String,
+    CdtrPstCd: String,
+    CdtrTwnNm: String,
+    CdtrCtry: Option<String>,
+    CdtrAcctIBAN: String,
+    //
+    RmtInfUstrd: Option<String>,
+    AddtlTxInf: Option<String>,
+}
+
 /// Balance structure of a Camt53 XML respose
 /// code or proprietory - OPBD = opening balance,CLBD is closing balance
 /// cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
@@ -432,6 +468,10 @@ fn parse_ebics_response(
     let mut bank_timestamp: String = String::new();
     let mut transaction_key_b64: String = String::new();
     let mut order_data_b64: String = String::new();
+    let mut curr_ntry:Option<Ntry> = Option::None;
+    let mut curr_tx_details:Option<TxDtls> = Option::None;
+    
+
 
     // digest over all tags with authenticated=true; later check it with digest_value_b64
     let calculated_digest_b64 = general_purpose::STANDARD
@@ -448,6 +488,7 @@ fn parse_ebics_response(
     //  0..full_text.len()
 
     for token in tokens {
+        
         match token {
             Ok(Token::ElementStart { local, .. }) => {
                 //v!("   open tag  as_str {:?}", local.as_str());
@@ -496,6 +537,11 @@ fn parse_ebics_response(
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             }
+            Ok(Token::Text { text }) if curr_tag == "Ntry" => {
+                curr_ntry=Ntry::new();
+                v!(" new Ntry");
+            }
+            
             Ok(_) => {}
             Err(e) => {
                 eprintln!("Error parsing XML: {:?}", e);
