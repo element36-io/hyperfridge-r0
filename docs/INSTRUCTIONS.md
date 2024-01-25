@@ -12,31 +12,21 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 **Important note**: [Milestone 1](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md#milestone-1---risk-zero-zkp-implementation-based-on-static-test-data) only covers work around generating and validating the STARK with the Risk-Zero framework - so "1." is not included yet - this will be done in milestone 2. Starting with milestone 3 integration with substrate gets implemented.
 
+***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
+
+
+{:toc}
 
 ## Releases and installation
 
 The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e36io/hyperfridge-r0/general). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 
+## Test with Docker
 
-### Preparations
+### Preparations for using Docker
 
-If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI.
-
-```bash
-ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
-opennssl version # output, e.g. OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)
-xxd --version # xxd 2021-10-22 by Juergen Weigert et al.
-zlib-flate --version # zlib-flate from qpdf version 10.6.3
-xmllint --version # xmllint: using libxml version 20913
-perl --version # 5 Version 34
-
-
-***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
-
-#### Use with docker
-
-```
 Using docker, make sure its installed:
+
 ```bash
 docker --version # output, e.g. Docker version 24.0.7, build afdd53b
 ```
@@ -51,19 +41,10 @@ docker tag  e36io/hyperfridge-r0:latest fridge
 Or test with docker using your local container build:
 
 ```bash
+# optional, don't do this for first tests unless you know what you are doing
 docker  build . -t fridge
 ```
 
-#### Use with command line
-
-Download binary realease from this repo, unzip the realese. Test your installation by showing the command line help:
-
-```bash
-host --help
-# or with docker
-docker run fridge host --help
-# output should show command line parameters: Usage: host [OPTIONS] [COMMAND] ...
-```
 
 ### Integration tests with provided test data
 
@@ -72,34 +53,23 @@ We included all test data which is necessary to run a quick shake-down test to g
 
 ```bash
 # The test generates a proof and validates it
-RISC0_DEV_MODE=true host test 
-# or with docker: 
 docker run --env RISC0_DEV_MODE=true  fridge host test
 ```
 
 You may create new keys, additional test data and payload which is described [here](testdata.md).
 
-### Create dev receipt (STARK proof)
+### Create a receipt (STARK proof)
 
-With binaries:
-
-```bash
-# show help
-host prove-camt53 --help
-
-# create the proof
-RISC0_DEV_MODE=true ./host prove-camt53 \
-    --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
-    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
-    --clientiban CH4308307000289537312
-```
-
-Using docker:
+Show help output: 
 
 ```bash
 # show help
 docker run fridge host prove-camt53 --help
+```
 
+Create the proof as JSON file, which can be deserialized and verified in Rust:
+
+```bash
 # create the proof
 docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
     --request=../data/test/test.xml --bankkey ../data/pub_bank.pem \
@@ -110,29 +80,16 @@ docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
 
 ### Check Receipt (STARK proof)
 
-With binaries:
-
-```bash
-# show help
-./verifier verify  --help
-
-# we need the image id and the receipt
-imageid=$(cat IMAGE_ID.hex)
-proof=../data/test/test.xml-Receipt-$imageid-latest.json
-      ../data/test/test.xml-Receipt-6bb958072180ccc56d839bb0931c58552dc2ae4d30e44937a09d3489e839edfb-latest.json 
-
-./verifier verify --imageid-hex=$imageid --proof-json=$proof
-
-# also host program can verify: 
-
-```
-
-With docker:
+Show help: 
 
 ```bash
 # show help
 docker run fridge verifier verify  --help
+```
 
+Verify a receipt (json-file) and show its contents (public commitments):
+
+```bash
 # we need the image id and the receipt
 imageid=$(docker run fridge cat /app/IMAGE_ID.hex)
 proof=/data/test/test.xml-Receipt-test.json
@@ -141,11 +98,77 @@ proof=/data/test/test.xml-Receipt-test.json
 docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imageid --proof-json=$proof
 ```
 
+## Test with downloaded Binaries and command line
 
-## Tests in rust environment
+### Preparations for command line and scripts
+
+If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI.
+
+```bash
+ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
+opennssl version # output, e.g. OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)
+xxd --version # xxd 2021-10-22 by Juergen Weigert et al.
+zlib-flate --version # zlib-flate from qpdf version 10.6.3
+xmllint --version # xmllint: using libxml version 20913
+perl --version # 5 Version 34
+```
+
+Download binary realease from this repo, unzip the realese. Test your installation by showing the command line help:
+
+```bash
+./host --help
+# output should show command line parameters: Usage: host [OPTIONS] [COMMAND] ...
+```
+
+We included all test data in `data` directory which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the roundtrip are tested in that way.
+
+```bash
+# The test generates a proof and validates it
+RISC0_DEV_MODE=true ./host test 
+```
+
+You may create new keys, additional test data and payload which is described [here](testdata.md).
+
+### Create dev receipt (STARK proof)
+
+In the app directory: 
+
+```bash
+# show help
+./host prove-camt53 --help
+```
+
+```bash
+# create the proof
+RISC0_DEV_MODE=true ./host prove-camt53 \
+    --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
+    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
+    --clientiban CH4308307000289537312
+```
+
+### Check Receipt (STARK proof)
+
+In the app directory of the binary distribution:
+
+```bash
+# show help
+./verifier verify  --help
+```
+
+Verify the proof: 
+
+```bash
+# we need the image id and the receipt
+imageid=$(cat IMAGE_ID.hex)
+proof=../data/test/test.xml-Receipt-$imageid-latest.json
+      ../data/test/test.xml-Receipt-6bb958072180ccc56d839bb0931c58552dc2ae4d30e44937a09d3489e839edfb-latest.json 
+
+./verifier verify --imageid-hex=$imageid --proof-json=$proof
+```
+
+## Tests in Rust environment
 
 We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install).
-
 
 ### Unit tests
 
