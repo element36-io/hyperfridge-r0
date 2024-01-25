@@ -60,7 +60,6 @@ jobs:
       
       - name: Run clippy
         run: |
-          RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build 
           RISC0_SKIP_BUILD=true cargo clippy --all-targets
 
       - name: Check Build

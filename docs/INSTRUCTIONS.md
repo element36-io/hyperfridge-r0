@@ -244,7 +244,7 @@ cargo run  -- --verbose prove-camt53  \
 
 ```
 
-### Create real receipt with CUDA (hardware acceleration)
+### Create real receipt with CUDA hardware acceleration
 
 Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`.
 ```bash

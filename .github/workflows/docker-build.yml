@@ -2,7 +2,7 @@ name: Docker Build
 
 on:
   push:
-    branches: [ main, ms1review ]
+    branches: [ main ]
 
   pull_request:
     branches: [ main ]
