@@ -30,8 +30,12 @@ zlib-flate --version # zlib-flate from qpdf version 10.6.3
 xmllint --version # xmllint: using libxml version 20913
 perl --version # 5 Version 34
 
-```
 
+***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
+
+#### Use with docker
+
+```
 Using docker, make sure its installed:
 ```bash
 docker --version # output, e.g. Docker version 24.0.7, build afdd53b
@@ -39,7 +43,8 @@ docker --version # output, e.g. Docker version 24.0.7, build afdd53b
 
 Label the [hyperfridge container from dockerhub](https://hub.docker.com/r/e36io/hyperfridge-r0/tags) you want to use with a shortcut "fridge" for later usage:
 ```bash
-docker tag e36io/hyperfridge-r0:latest fridge
+docker pull e36io/hyperfridge-r0:latest
+docker tag  e36io/hyperfridge-r0:latest fridge
 # no output is given by docker
 ```
 
@@ -49,7 +54,9 @@ Or test with docker using your local container build:
 docker  build . -t fridge
 ```
 
-Test your installation by showing the command line help:
+#### Use with command line
+
+Download binary realease from this repo, unzip the realese. Test your installation by showing the command line help:
 
 ```bash
 host --help
@@ -58,15 +65,14 @@ docker run fridge host --help
 # output should show command line parameters: Usage: host [OPTIONS] [COMMAND] ...
 ```
 
-***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
-
 ### Integration tests with provided test data
 
 We included all test data which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the roundtrip are tested in that way.
 
 
 ```bash
-host test 
+# The test generates a proof and validates it
+RISC0_DEV_MODE=true host test 
 # or with docker: 
 docker run --env RISC0_DEV_MODE=true  fridge host test
 ```
@@ -82,7 +88,7 @@ With binaries:
 host prove-camt53 --help
 
 # create the proof
-RISC0_DEV_MODE=true host prove-camt53 \
+RISC0_DEV_MODE=true ./host prove-camt53 \
     --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
     --clientiban CH4308307000289537312
@@ -96,7 +102,7 @@ docker run fridge host prove-camt53 --help
 
 # create the proof
 docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
-    --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem \
+    --request=../data/test/test.xml --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
     --clientiban CH4308307000289537312
 ```
@@ -108,13 +114,17 @@ With binaries:
 
 ```bash
 # show help
-verifier verify  --help
+./verifier verify  --help
 
 # we need the image id and the receipt
 imageid=$(cat IMAGE_ID.hex)
-proof=../data/test/test.xml-Reiceipt-test.json
+proof=../data/test/test.xml-Receipt-$imageid-latest.json
+      ../data/test/test.xml-Receipt-6bb958072180ccc56d839bb0931c58552dc2ae4d30e44937a09d3489e839edfb-latest.json 
 
-verifier verify --imageid-hex=$imageid --proof-json=$proof
+./verifier verify --imageid-hex=$imageid --proof-json=$proof
+
+# also host program can verify: 
+
 ```
 
 With docker:
