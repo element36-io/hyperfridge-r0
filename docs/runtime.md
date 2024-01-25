@@ -7,9 +7,9 @@ Conclusions:
 - Cost is estimated around 0.5 USD per proof with hardware acceleration. Upper bound (no hardware acceleration) is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUDA)
 - RSA framework is biggest bottleneck. It might be interesting to apply the [Big-Integer Patch](https://github.com/risc0/RustCrypto-crypto-bigint/tree/risczero) of Risc0 to the RSA crate, but this was not investigated further.
 
-### Reference Hardware (gaming Laptop)
+### Reference Hardware
 
-Hardware: Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070 (cudo NOT activitaed, too little memory on GPU available)
+Hardware: Gaming Laptop, Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070:
 
 vendor_id	: GenuineIntel
 cpu family	: 6
@@ -19,7 +19,7 @@ cpu MHz		: 1984.575
 cache size	: 30720 KB
 cpu cores	: 16
 
-Comparising with Risk Zero benchmarks [here](https://dev.risczero.com/datasheet.pdf): 
+Comparising with Risk Zero benchmarks [here](https://dev.risczero.com/datasheet.pdf):
 
 |     Cycles |   Duration |        RAM |       Seal |      Speed |
 |     ---- |   ---- |        ---- |       ---- |      ---- |
@@ -30,6 +30,16 @@ Comparising with Risk Zero benchmarks [here](https://dev.risczero.com/datasheet.
 |      1024k |     3:10.3 |     7.56GB |    275.5kB |     5.5khz |
 |      2048k |     6:21.2 |     7.56GB |      551kB |     5.5khz |
 |      4096k |    12:41.5 |     7.56GB |      1.1MB |     5.5khz |
+
+
+With CUDA enabled we see roughly 10-20x speedup until memory runs out:
+
+|     Cycles |   Duration |        RAM |       Seal |      Speed |
+|     ---- |   ---- |        ---- |       ---- |      ---- |
+|        64k |    794.7ms |    472.4MB |    215.3kB |    82.5khz |
+|       128k |      1.36s |    944.8MB |    238.3kB |    96.3khz |
+|       256k |       2.8s |     1.89GB |      250kB |    93.7khz |
+
 
 
 Running a roundtrip of proof generation of validation gives following numbers on the reference hardware: 

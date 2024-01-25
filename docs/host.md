@@ -15,7 +15,7 @@ importantly to other systems or ledgers with Smart Contracts. As a result, you c
 use Smart Contracts to "wrap" functionality around TradFi accounts, similar like you can
 do it today with blockchain wallets and cryptocurrencies.
 
-## Verifier
+## Create a STARK proof with host program
 
 ### Usage of host program
 
@@ -30,25 +30,9 @@ To run the host program, you need to provide the following arguments in order:
 1. **EBICS Response XML**: The EBICS response in XML format.
 2. **Bank Public Key (PEM Format)**: The public key of the bank in PEM format.
 3. **User Private Key (PEM Format)**: The private key of the user in PEM format.
+4. **Witness Private Key (PEM Format)**: The public key of the witness in PEM format.
 
-
-The arguments should be provided in the exact order as mentioned above.
-
-#### Example command
-
-Without data from the banking backend and valid keys, the program would not be able to
-do something meaningful. So included test data to see how it works:  
-
-```bash
-host ../data/test/test.xml ../data/bank_public.pem ../data/client.pem
-```
-
-- **`../data/test/test.xml`**- '<ebics_response_xml>': The document provided by the backend of the bank which contains the payload
-(bank statements), transaction keys to decrypt the payload and other data singed by the bank.
-- **`../data/bank_public.pem`**: The public key of the bank. Due to signing needs, we also need the
-private key of the bank to test data.
-- **`../data/client.pem`**: The private key of the client which is needed to decrypt the transaction
-key of 'text.xml'.
+See [Testing Guide](INSTRUCTIONS.md) for exmples how to use the command line. 
 
 #### Files required
 
@@ -67,12 +51,10 @@ Replace `<ebics_response_xml>` with the path and base name of your EBICS respons
 if your EBICS response XML file is `../data/test/test.xml`, the decrypted transaction key should be
 named `../data/test/test-decrypted_tx_key.binary`.
 
-See further below for more information on generating the input files.
 
-### Output
+### Output of the Receipt
 
-Upon successful execution, the program prints a receipt in JSON format stored under 'data/test.xml-Receipt'
-'data/<ebics_response_xml>-Receipt'.
+Upon successful execution, the program prints a receipt in JSON format stored under `data/test.xml-Receipt/` where test.xml is replaced by the filename of your EbicsResponse XML document.
 
 ### How to use
 
