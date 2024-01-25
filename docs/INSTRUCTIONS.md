@@ -73,7 +73,7 @@ docker run --env RISC0_DEV_MODE=true  fridge host test
 
 You may create new keys, additional test data and payload which is described [here](testdata.md).
 
-### Create recipe (STARK proof)
+### Create dev receipt (STARK proof)
 
 With binaries:
 
@@ -100,6 +100,7 @@ docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
     --clientiban CH4308307000289537312
 ```
+
 
 ### Check recipe (STARK proof)
 
@@ -201,6 +202,17 @@ cargo run  -- --verbose prove-camt53  \
 # verify the verify_order_data_signature by witness
 # ---> error Verification
 
+```
+
+### Create real receipt with CUDA (hardware acceleration)
+
+Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`.
+```bash
+cd ../host
+RISC0_DEV_MODE=false \
+cargo run -f cuda -- --verbose prove-camt53  \
+   --request="../data/myrequest-generated/myrequest-generated.xml"  --bankkey ../data/pub_bank.pem \
+    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
 ```
 
 Use verifier to check the receipt, move to `verifier` directory:
