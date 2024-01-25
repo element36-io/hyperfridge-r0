@@ -32,7 +32,7 @@ RISC0_DEV_MODE=1 cargo test
 
 This will create a STARK based on the provided test data. Check out [our testing guide](docs/INSTRUCTIONS.md) to run test and play with test data. Note that `cargo test` will not invoke tests in `methods/guest` due to the architecture of Risc-Zero framework - see testing guide how to run tests for the poofer.
 
-To use this crate with your owen bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any Ebics client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
+To use this crate with your owen bank data, you will need to run a component, which connects with our banking backend and then prepare the input for the Hyperfridge zkVM component. You can use the [ebics-java-client][ebics-java-client], but any EBICS client will do, as long as you get access to the XML files which are exchanged between your client and the banking server.
 
 Open documentation in any module by:
 

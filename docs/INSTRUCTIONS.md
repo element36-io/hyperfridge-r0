@@ -4,8 +4,8 @@ This document describes in-depth our rust-modules and the zero-knowledge proof, 
 
 For better understanding, lets look at roundtrip of the proofing system:
 
-1. Request and retrieval of banking documents with daily statements (Ebics request and response) through an Ebics banking client, e.g. [ebics-java-client]. The client
-2. Pre-Processing of the Ebics Response, which is an XML document. Pre-processing is necessary to off-load as much as possible from expensive proof-generation and to keep the proof-code flexible. Pre-processing is done with script 'data/checkResponse.sh'
+1. Request and retrieval of banking documents with daily statements (EBICS request and response) through an EBICS banking client, e.g. [ebics-java-client]. The client
+2. Pre-Processing of the EBICS Response, which is an XML document. Pre-processing is necessary to off-load as much as possible from expensive proof-generation and to keep the proof-code flexible. Pre-processing is done with script 'data/checkResponse.sh'
 3. Present data from the previous step and the private key of the client to the prover, and generate proof of computation (a STARK) and produce the [Receipt] which contains balance, currency date and account-number.
 4. A generic risc0 based verifier can check the proof, thus the above account data can be trusted.
 5. On-chain integration (validation) of the proof-system using the Substrate Off-Chain-Worker. 
@@ -20,7 +20,7 @@ The binary distribution can be downloaded from [github](https://github.com/eleme
 
 ### Preparations
 
-If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the Ebics Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI.
+If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI.
 
 ```bash
 ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
@@ -102,7 +102,7 @@ docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
 ```
 
 
-### Check recipe (STARK proof)
+### Check Receipt (STARK proof)
 
 With binaries:
 

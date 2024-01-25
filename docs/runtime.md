@@ -2,13 +2,14 @@
 
 Conclusions:
 - 
-- It takes hours without hardware acceleration to produce the STARK on strong laptop hardware, but it can be considered fast-enough, because the banking backend updates its data only once a working day. Cost is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUCA)
-- With hardware acceleration (CUCA) we *estimate* around 10-20 minutes. We could not test hardware accelartion due to compile errors with Risc-Zero framework and CUDA drivers.
+- It takes hours without hardware acceleration to produce the STARK on strong laptop hardware, but it can be considered. Still we this would be  fast-enough, because the banking backend updates its data only once a working day. 
+- With hardware acceleration (CUCA) we have execution times for a proof around **10-20 minutes**. We could not test hardware accelartion due to compile errors with Risc-Zero framework and CUDA drivers.
+- Cost is estimated around 0.5 USD per proof with hardware acceleration. Upper bound (no hardware acceleration) is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUDA)
 - RSA framework is biggest bottleneck. It might be interesting to apply the [Big-Integer Patch](https://github.com/risc0/RustCrypto-crypto-bigint/tree/risczero) of Risc0 to the RSA crate, but this was not investigated further.
 
 ### Reference Hardware (gaming Laptop)
 
-Hardware: Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070 (cudo NOT activitaed)
+Hardware: Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070 (cudo NOT activitaed, too little memory on GPU available)
 
 vendor_id	: GenuineIntel
 cpu family	: 6
@@ -43,11 +44,6 @@ RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --
 ```
 
 Runtime for genation of Proof: 12055.32s - around ***200 minutes*** without hardware acceleration.
-
-Notes: 
-- Risc0 reports 37 segments which are parallized using [continuation](https://www.risczero.com/news/continuations) on 16 cores (24 virtual cores - see hardware spec above). Using hardware with 48 cores execution time would likely be cut half to ***100 minutes*** if CPUs have same speed. 
-- Hardware acceleration (CUDA) not tested. 
-
 
 Cycle most expensive calculations:
 
