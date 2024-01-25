@@ -17,11 +17,9 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 {:toc}
 
-## Releases and installation
-
-The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e36io/hyperfridge-r0/general). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
-
 ## Test with Docker
+
+Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e36io/hyperfridge-r0/general). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 
 ### Preparations for using Docker
 
@@ -98,7 +96,9 @@ proof=/data/test/test.xml-Receipt-test.json
 docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imageid --proof-json=$proof
 ```
 
-## Test with downloaded Binaries and command line
+## Test with binary Release and command line
+
+The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 
 ### Preparations for command line and scripts
 
@@ -118,6 +118,13 @@ Download binary realease from this repo, unzip the realese. Test your installati
 ```bash
 ./host --help
 # output should show command line parameters: Usage: host [OPTIONS] [COMMAND] ...
+```
+
+Get Image-ID of the linked guest code:
+
+```bash
+./host show-image-id
+# output, e.g.: a54af3e5a903cc5d80f900f12785a337c1872098c2aacf0b7de28d7b8d6c3fe6
 ```
 
 We included all test data in `data` directory which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the roundtrip are tested in that way.
