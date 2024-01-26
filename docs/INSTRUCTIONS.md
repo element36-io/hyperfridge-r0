@@ -5,12 +5,12 @@ This document describes in-depth our rust-modules and the zero-knowledge proof, 
 For better understanding, lets look at roundtrip of the proofing system:
 
 1. Request and retrieval of banking documents with daily statements (EBICS request and response) through an EBICS banking client, e.g. [ebics-java-client]. The client
-2. Pre-Processing of the EBICS Response, which is an XML document. Pre-processing is necessary to off-load as much as possible from expensive proof-generation and to keep the proof-code flexible. Pre-processing is done with script 'data/checkResponse.sh'
+2. Pre-Processing of the EBICS Response, which is an XML document. Pre-processing is necessary to off-load as much as possible from expensive proof-generation and to get a small footprint of the proof-code. Pre-processing is done with script 'data/checkResponse.sh'
 3. Present data from the previous step and the private key of the client to the prover, and generate proof of computation (a STARK) and produce the [Receipt] which contains balance, currency date and account-number.
 4. A generic risc0 based verifier can check the proof, thus the above account data can be trusted.
-5. On-chain integration (validation) of the proof-system using the Substrate Off-Chain-Worker. 
+5. On-chain integration (validation) of the proof-system using the Substrate Off-Chain-Worker.
 
-**Important note**: [Milestone 1](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md#milestone-1---risk-zero-zkp-implementation-based-on-static-test-data) only covers work around generating and validating the STARK with the Risk-Zero framework - so "1." is not included yet - this will be done in milestone 2. Starting with milestone 3 integration with substrate gets implemented.
+**Important note**: [Milestone 1](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md#milestone-1---risk-zero-zkp-implementation-based-on-static-test-data) only covers step 2. and 3., generating and validating the STARK with the Risk-Zero framework - other steps will be done in later milestones. Starting with milestone 3 integration with substrate gets implemented.
 
 ***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
 

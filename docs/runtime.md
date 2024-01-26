@@ -1,16 +1,14 @@
- # Runtime measurements
+ # Performance measurements
 
 Conclusions:
-- 
-- It takes hours without hardware acceleration to produce the STARK on strong laptop hardware, but it can be considered. Still we this would be  fast-enough, because the banking backend updates its data only once a working day. 
-- With hardware acceleration (CUCA) we have execution times for a proof around **10-20 minutes**. We could not test hardware accelartion due to compile errors with Risc-Zero framework and CUDA drivers.
+
+- With hardware acceleration (CUCA) we have execution times for a proof around **10-20 minutes**. We could not test hardware acceleration due to lack of memory, but testing with other examples shows dramatic speed-up. 
 - Cost is estimated around 0.5 USD per proof with hardware acceleration. Upper bound (no hardware acceleration) is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUDA)
 - RSA framework is biggest bottleneck. It might be interesting to apply the [Big-Integer Patch](https://github.com/risc0/RustCrypto-crypto-bigint/tree/risczero) of Risc0 to the RSA crate, but this was not investigated further.
 
 ### Reference Hardware
 
-Hardware: Gaming Laptop, Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070:
-
+Hardware: Gaming Laptop, Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070 (8GB)
 vendor_id	: GenuineIntel
 cpu family	: 6
 model		: 183
@@ -42,7 +40,7 @@ With CUDA enabled we see roughly 10-20x speedup until memory runs out:
 
 
 
-Running a roundtrip of proof generation of validation gives following numbers on the reference hardware: 
+Running a roundtrip of proof generation of validation gives following numbers on the reference hardware (no CUDA):
 
 ```
 RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --nocapture

@@ -19,7 +19,7 @@
 
 ### The witness role
 
-The EBICS Specification does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
+The EBICS Specification does not enforce encryption of the payload (bank statements). Therefore the client is able to change for example balances and still create a valid proof the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
 
 EBICS standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the EBICS-Response.
 
@@ -31,7 +31,7 @@ Snippet of 'ebics_orders_H005.xsd', which is part of the EBICS the schema-specif
 
 ### EBICS Encryption and Decryption Process
 
-All messages between Client and Bank are singed XML documents. The payload is encrypted with a symetric key, whihc is shared with the client by encrypting it with the clients public key.
+All messages between Client and Bank are singed XML documents. The payload is encrypted with a symetric key, which is encrypting it with the Client's public key.
 
 ### Process Description when downloading payload data
 
