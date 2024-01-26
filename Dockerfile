@@ -14,8 +14,8 @@ COPY Cargo.toml /
 COPY rust-toolchain.toml /
 
 # create directory holding generated Image Id of Computation which will be proved. 
-WORKDIR /host
 RUN mkdir -p /host/out
+RUN rm -R /data/test/*.json
 
 WORKDIR /
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release 

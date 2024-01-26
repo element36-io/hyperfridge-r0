@@ -14,9 +14,6 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 ***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
 
-
-{:toc}
-
 ## Test with Docker
 
 Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e36io/hyperfridge-r0/general). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
@@ -30,6 +27,7 @@ docker --version # output, e.g. Docker version 24.0.7, build afdd53b
 ```
 
 Label the [hyperfridge container from dockerhub](https://hub.docker.com/r/e36io/hyperfridge-r0/tags) you want to use with a shortcut "fridge" for later usage:
+
 ```bash
 docker pull e36io/hyperfridge-r0:latest
 docker tag  e36io/hyperfridge-r0:latest fridge
@@ -43,11 +41,9 @@ Or test with docker using your local container build:
 docker  build . -t fridge
 ```
 
-
 ### Integration tests with provided test data
 
 We included all test data which is necessary to run a quick shake-down test to generate and validate a proof in one go. This creates a proof based on test data, prints the JSON-receipt which is the STARK-proof and contains public and committed data. Steps "3." and "4." of the roundtrip are tested in that way.
-
 
 ```bash
 # The test generates a proof and validates it
@@ -78,7 +74,7 @@ docker run --env RISC0_DEV_MODE=true  fridge host prove-camt53 \
 
 ### Check Receipt (STARK proof)
 
-Show help: 
+Show help:
 
 ```bash
 # show help
@@ -138,7 +134,7 @@ You may create new keys, additional test data and payload which is described [he
 
 ### Create dev receipt (STARK proof)
 
-In the app directory: 
+In the app directory:
 
 ```bash
 # show help
@@ -148,7 +144,7 @@ In the app directory:
 ```bash
 # create the proof
 RISC0_DEV_MODE=true ./host prove-camt53 \
-    --request="../data/test.xml" --bankkey ../data/pub_bank.pem \
+    --request ../data/test/test.xml --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem \
     --clientiban CH4308307000289537312
 ```
@@ -162,15 +158,14 @@ In the app directory of the binary distribution:
 ./verifier verify  --help
 ```
 
-Verify the proof: 
+Verify the proof:
 
 ```bash
 # we need the image id and the receipt
 imageid=$(cat IMAGE_ID.hex)
 proof=../data/test/test.xml-Receipt-$imageid-latest.json
-      ../data/test/test.xml-Receipt-6bb958072180ccc56d839bb0931c58552dc2ae4d30e44937a09d3489e839edfb-latest.json 
-
-./verifier verify --imageid-hex=$imageid --proof-json=$proof
+echo verify with $imageid
+RISC0_DEV_MODE=true  ./verifier verify --imageid-hex=$imageid --proof-json=$proof
 ```
 
 ## Tests in Rust environment
@@ -214,13 +209,17 @@ RISC0_DEV_MODE=true \
 cargo run  -- --verbose prove-camt53  \
    --request="../data/myrequest-generated/myrequest-generated.xml"  --bankkey ../data/pub_bank.pem \
     --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+```
 
+Lets check the output:
+
+```bash
 # You see receipt in output of the command and serialized in a json file: 
  ls -la ../data/myrequest-generated/*.json
  cat ../data/myrequest-generated/*.json
 ```
 
-Now let's try to create a fake proof - we will point to a wrong public keys where the verification of signatures should fail:
+Now let's try to create a fake proof - we will use wrong public keys where the verification of signatures should fail:
 
 ```bash
 # note that we use witness key for bank: --bankkey ../data/pub_witness.pem
@@ -232,7 +231,11 @@ cargo run  -- --verbose prove-camt53  \
 # panics, output: 
 # verify bank signature
 # ---> error Verification
+```
 
+Wrong witness:
+
+```bash
 # note that we use bank key for witness: --witnesskey ../data/pub_bank.pem 
 RISC0_DEV_MODE=true \
 cargo run  -- --verbose prove-camt53  \
@@ -247,6 +250,7 @@ cargo run  -- --verbose prove-camt53  \
 ### Create real receipt with CUDA hardware acceleration
 
 Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`.
+
 ```bash
 cd ../host
 RISC0_DEV_MODE=false \
@@ -269,12 +273,8 @@ proof=$(find ../data/myrequest-generated/ -type f -name "*.json" | head -n 1)
 RISC0_DEV_MODE=true \
 cargo run  -- --verbose verify  \
     --imageid-hex=$imageid --proof-json=$proof
-
 ```
 
 ### Notes on provided test data
 
 The test data was taken from the productive systems (Hypo Lenzburg), decrypted and encrypted again with generated keys as it can be seen in scripts `data/createTestResponse.sh` and `data/checkResponse.sh`. A productive sample has been added to `data/test/test.xml (prod).zip`, the payload of test data remained unchanged from the productive system.
-
-[ebics-java-client2]: [references.json#ebics-java-client]
-[r0-dev-mode]: [references.json#r0-dev-mode]
