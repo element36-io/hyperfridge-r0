@@ -19,7 +19,7 @@
 
 ### The witness role
 
-The EBICS Specification does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
+The EBICS Specification does not enforce encryption of the payload (bank statements). Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
 
 Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the Ebics-Response.
 
@@ -106,10 +106,8 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
    - Verify proof with: ${VerifyZKProof_{ImageID}}() \rightarrow Commitment$.
    - Check the public input (IBAN, $B_{pub}$, $W_{pub}$).
 
-
 (8.) **On-Chain verification with Groth16 SNARK**:
    - Risk-Zero privides a STARK to SNARK wrapper to support [on-chain verfication](https://www.risczero.com/news/on-chain-verification).
-
 
 ## Key Benefits
    - **Privacy**: The Client's private key remain confidential throughout the process. No party has access to any of the others private keys. The witness is not able to see the payload. 
@@ -142,4 +140,3 @@ The principles presented here can be applied to other Open Banking Standards as 
 ### Witness, HSM and other secure modules
 
 The Witness for hyperfridge needs an HSM to sign data. One might think of Apple Secure Enclave  to enable new use cases where a simple Phone or Laptop can act as a witness.
-

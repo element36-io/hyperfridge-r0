@@ -15,7 +15,8 @@ use std::process::Command;
 
 static mut VERBOSE: bool = false; // print verbose
 
-macro_rules! v {
+/// Print the message if `VERBOSE` mode
+macro_rules! print_verbose {
     ($($arg:tt)*) => {
         unsafe {
             if VERBOSE {
@@ -36,6 +37,7 @@ struct Commitment {
     stmts: Vec<Stmt>,
 }
 
+/// Struct for the statement data in the commitment
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct Stmt {
@@ -123,7 +125,7 @@ fn main() {
 
                 let _script_full_path = script_dir.join(script_file_stem);
 
-                v!(
+                print_verbose!(
                     "calling {} xml_file={} pub_bank={} client={} pub_witness{}",
                     &script_path.to_str().unwrap(),
                     &camt53_filename,
@@ -143,7 +145,7 @@ fn main() {
                     .expect("failed to execute script");
 
                 if output.status.success() {
-                    v!("Script {:?} executed successfully.", script_path.clone());
+                    print_verbose!("Script {:?} executed successfully.", script_path.clone());
                 } else {
                     eprintln!("Script output:");
                     eprintln!("stdout:\n{}", String::from_utf8_lossy(&output.stdout));
@@ -157,7 +159,7 @@ fn main() {
             }
         }
         Some(Commands::Test) => {
-            v!("Proofing with test data.");
+            print_verbose!("Proofing with test data.");
             pub_bank_pem_filename = TEST_BANKKEY.to_string();
             client_pem_filename = TEST_CLIENTKEY.to_string();
             pub_witness_pem_filename = TEST_WITNESSKEY.to_string();
@@ -191,7 +193,7 @@ fn main() {
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
     let decrypted_tx_key_bin_filename = format!("{}-TransactionKeyDecrypt.bin", camt53_filename);
-    v!("open {}", &decrypted_tx_key_bin_filename);
+    print_verbose!("open {}", &decrypted_tx_key_bin_filename);
 
     let decrypted_tx_key_bin: Vec<u8> =
         fs::read(&decrypted_tx_key_bin_filename).unwrap_or_else(|_| {
@@ -235,7 +237,7 @@ fn main() {
             let receipt = receipt_result.unwrap();
             let receipt_json_string =
                 serde_json::to_string(&receipt).expect("Failed to serialize receipt in main");
-            v!("Receipt result: {:?}", &receipt_json_string);
+            print_verbose!("Receipt result: {:?}", &receipt_json_string);
 
             // let commitment_string = std::str::from_utf8(receipt.journal.bytes.clone())
             //          .expect("Failed to convert bytes to string from journal in main");
@@ -251,7 +253,7 @@ fn main() {
                     .expect("Failed to convert bytes to string from journal in main")
             };
 
-            v!("Receipt with public commitment: {} ", &(commitment_string));
+            print_verbose!("Receipt with public commitment: {} ", &(commitment_string));
 
             let commitment: Result<Commitment, serde_json::Error> =
                 serde_json::from_str(&commitment_string);
@@ -271,7 +273,7 @@ fn main() {
                 }
                 Err(e) => {
                     receipt_file_id = "commit_json_error".to_owned();
-                    v!("Receipt successful generated, but deserializing JSON for commitment failed. Error: {}., Json: {}.", e,commitment_string)
+                    print_verbose!("Receipt successful generated, but deserializing JSON for commitment failed. Error: {}., Json: {}.", e,commitment_string)
                 }
             }
 
@@ -290,7 +292,7 @@ fn main() {
             file.write_all(receipt_json_string.as_bytes())
                 .unwrap_or_else(|_| panic!("Unable to write data in file {} (main)", &file_name));
 
-            v!(" wrote receipt to {}", &file_name);
+            print_verbose!(" wrote receipt to {}", &file_name);
 
             // filename with -latest.json
             let file_name = format!(
@@ -306,10 +308,10 @@ fn main() {
                     panic!("Unable to write data in latest file {} (main)", &file_name)
                 });
 
-            v!(" wrote receipt to {}", &file_name);
+            print_verbose!(" wrote receipt to {}", &file_name);
         }
         Err(e) => {
-            v!("Receipt error in proove_camt53 {:?}", e);
+            print_verbose!("Receipt error in proove_camt53 {:?}", e);
             panic!("Creating the proof failed {}", e)
         }
     }
@@ -343,7 +345,7 @@ fn proove_camt53(
     pub_witness_pem: &str,
     host_info: &str,
 ) -> Result<Receipt, anyhow::Error> {
-    v!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
+    print_verbose!("start: {}", Local::now().format("%Y-%m-%d %H:%M:%S"));
     // write image ID to filesystem
     let _ = write_image_id();
 
@@ -362,7 +364,7 @@ fn proove_camt53(
     // .write(&modu_hex).unwrap()
 
     // https://docs.rs/risc0-zkvm/latest/risc0_zkvm/struct.ExecutorEnvBuilder.html
-    v!("Starting guest code, load environment");
+    print_verbose!("Starting guest code, load environment");
     env_logger::init();
     let pem = parse(bank_public_key_x002_pem).expect("Failed to parse bank public key PEM");
     let bank_public_key = RsaPublicKey::from_public_key_pem(&pem::encode(&pem))
@@ -406,16 +408,16 @@ fn proove_camt53(
 
     // Obtain the default prover.
     let prover = default_prover();
-    v!("prove hyperfridge elf ");
+    print_verbose!("prove hyperfridge elf ");
     // generate receipt
     let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
     profiler.finalize();
     let report = profiler.encode_to_vec();
-    v!("write profile size {}", report.len());
+    print_verbose!("write profile size {}", report.len());
     std::fs::write("./profile-output", &report).expect("Unable to write profiling output");
 
     let image_id_hex = get_image_id_hex();
-    v!(
+    print_verbose!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
         image_id_hex,
         HYPERFRIDGE_ELF.len() / 1000
@@ -611,16 +613,16 @@ mod tests {
 
         match &receipt_result {
             Ok(_val) => {
-                // v!("Receipt result: {}", val);_
+                // print_verbose!("Receipt result: {}", val);_
                 let receipt = receipt_result.unwrap();
                 receipt
                     .verify(HYPERFRIDGE_ID)
                     .expect("Verification of receipt failed in test");
                 let receipt_json =
                     serde_json::to_string(&receipt).expect("Failed to serialize receipt");
-                v!("Receipt result: {:?}", &receipt_json);
+                print_verbose!("Receipt result: {:?}", &receipt_json);
                 let journal = receipt.journal;
-                v!(
+                print_verbose!(
                     "Receipt result (commitment) {}: ",
                     &(journal.decode::<String>().unwrap())
                 );
