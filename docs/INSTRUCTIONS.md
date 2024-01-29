@@ -2,6 +2,8 @@
 
 This document describes in-depth our rust-modules and the zero-knowledge proof, and how to run various tests.
 
+
+
 For better understanding, lets look at roundtrip of the proofing system:
 
 1. Request and retrieval of banking documents with daily statements (EBICS request and response) through an EBICS banking client, e.g. [ebics-java-client]. The client
@@ -13,6 +15,9 @@ For better understanding, lets look at roundtrip of the proofing system:
 **Important note**: [Milestone 1](https://github.com/w3f/Grants-Program/blob/master/applications/hyperfridge.md#milestone-1---risk-zero-zkp-implementation-based-on-static-test-data) only covers step 2. and 3., generating and validating the STARK with the Risk-Zero framework - other steps will be done in later milestones. Starting with milestone 3 integration with substrate gets implemented.
 
 ***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
+
+[![codecov](https://codecov.io/gh/element36-io/hyperfridge-r0/graph/badge.svg?token=JNQZL1G2OM)](https://codecov.io/gh/element36-io/hyperfridge-r0) 
+Remark on code coverage: Module `methods/guest` can not be shown because the Risc-Zero framework compiles to Risc V instruction set.
 
 ## Test with Docker
 

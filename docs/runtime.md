@@ -2,7 +2,7 @@
 
 Conclusions:
 
-- With hardware acceleration (CUCA) we have execution times for a proof around **10-20 minutes**. We could not test hardware acceleration due to lack of memory, but testing with other examples shows dramatic speed-up. 
+- With hardware acceleration (CUDA) we have execution times for a proof around **10-20 minutes**. We could not test hardware acceleration due to lack of memory, but testing with other examples shows dramatic speed-up. 
 - Cost is estimated around 0.5 USD per proof with hardware acceleration. Upper bound (no hardware acceleration) is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUDA)
 - RSA framework is biggest bottleneck. It might be interesting to apply the [Big-Integer Patch](https://github.com/risc0/RustCrypto-crypto-bigint/tree/risczero) of Risc0 to the RSA crate, but this was not investigated further.
 
