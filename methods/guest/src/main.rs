@@ -22,6 +22,12 @@ use xmlparser::{ElementEnd, Token, Tokenizer};
 
 use hex::FromHex;
 
+use aes::cipher::{block_padding::NoPadding, BlockDecryptMut, KeyIvInit};
+type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
+// `no-std` is not a priority for now, so this can stay
+use std::io::{Cursor, Read};
+use zip::ZipArchive;
+
 #[cfg(not(feature = "debug_mode"))]
 risc0_zkvm::guest::entry!(main);
 
@@ -30,7 +36,7 @@ mod test_xmlparse;
 
 static mut VERBOSE: bool = false; // print verbose or not
 
-macro_rules! v {
+macro_rules! print_verbose {
     ($($arg:tt)*) => {
         unsafe {
             if VERBOSE {
@@ -69,6 +75,7 @@ struct Document {
     grp_hdr: GrpHdr, // creatin time
     stmts: Vec<Stmt>,
 }
+
 /// GrpHdr structure of a Camt53 XML respose
 #[derive(Debug, Default, Clone)]
 struct GrpHdr {
@@ -77,6 +84,7 @@ struct GrpHdr {
     pg_nb: i8,
     last_pg_ind: bool,
 }
+
 /// Stmt structure of a Camt53 XML respose
 #[derive(Debug, Default, Clone)]
 struct Stmt {
@@ -87,6 +95,7 @@ struct Stmt {
     to_dt_tm: String,
     balances: Vec<Balance>,
 }
+
 /// Balance structure of a Camt53 XML respose
 /// code or proprietory - OPBD = opening balance,CLBD is closing balance
 /// cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
@@ -99,7 +108,6 @@ struct Balance {
     cdt_dbt_ind: String, // cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
 }
 
-//#[cfg(not(tarpaulin))]
 pub fn main() {
     let signed_info_xml_c14n: String = env::read();
     let authenticated_xml_c14n: String = env::read();
@@ -127,10 +135,10 @@ pub fn main() {
     // let modu = U256::from_be_hex(&pub_bank_mod);
 
     let pub_bank = RsaPublicKey::new(modu, exp).expect("Failed to create public key in main");
-    v!("pub_bank {} bit", pub_bank.n().bits());
+    print_verbose!("pub_bank {} bit", pub_bank.n().bits());
     let client_key = RsaPrivateKey::from_pkcs8_pem(&client_key_pem)
         .expect("Failed to create client_key_pem in main");
-    v!("client_key {} bit", client_key.n().bits());
+    print_verbose!("client_key {} bit", client_key.n().bits());
 
     let pub_witness = RsaPublicKey::from_public_key_pem(&pub_witness_pem)
         .expect("Failed to create pub_witness_key in main");
@@ -153,16 +161,14 @@ pub fn main() {
         &pub_witness,
     );
 
-    v!(" Cycle count {}k", (env::get_cycle_count()) / 1000);
-    //env::log("proof done - log entry"); // writes to journal - we may communicate with host here
+    print_verbose!(" Cycle count {}k", (env::get_cycle_count()) / 1000);
 
     let mut commitments = Vec::new();
     // public committed data, that is what we want to prove
     for document in documents {
         // stmts[0] is ok, because only one - we filtered IBAN already
-        assert_eq!(
-            document.stmts.len(),
-            1,
+        assert!(
+            document.stmts.len() == 1,
             "only one IBAN should only give one Stmt xml entry",
         );
         let commitment = format!(
@@ -192,7 +198,7 @@ pub fn main() {
         &pub_client_pem.replace("\n", "\\n").replace("\r", "\\r"),
         &commitments.join(",")
     );
-    v!("Commitment for receipt: {}", &final_commitment);
+    print_verbose!("Commitment for receipt: {}", &final_commitment);
     env::commit(&final_commitment);
 }
 
@@ -219,7 +225,7 @@ fn load(
     pub_witness: &RsaPublicKey,
 ) -> Vec<Document> {
     // star is with 1586k
-    v!("   Cycle count start {}k", (env::get_cycle_count()) / 1000);
+    print_verbose!("   Cycle count start {}k", (env::get_cycle_count()) / 1000);
 
     let request = parse_ebics_response(
         authenticated_xml_c14n,
@@ -227,14 +233,14 @@ fn load(
         signature_value_xml,
         order_data_xml,
     );
-    v!(
+    print_verbose!(
         " >  Cycle count parse_ebics_response {}k",
         (env::get_cycle_count()) / 1000
     );
     // cycle count 1864k (plus 3k)
 
     verify_bank_signature(pub_bank, &request);
-    v!(
+    print_verbose!(
         "   Cycle count verify_bank_signature {}k",
         (env::get_cycle_count()) / 1000
     );
@@ -242,7 +248,7 @@ fn load(
     // cycle count 23336k (plus 10k)
 
     let transaction_key = decrypt_transaction_key(&request, client_key, decrypted_tx_key);
-    v!(
+    print_verbose!(
         "   Cycle count decrypt_transaction_key {}k",
         (env::get_cycle_count()) / 1000
     );
@@ -255,7 +261,7 @@ fn load(
         witness_signature_bytes,
         pub_witness,
     );
-    v!(
+    print_verbose!(
         "   Cycle count decrypt_order_data {}k",
         (env::get_cycle_count()) / 1000
     );
@@ -276,25 +282,25 @@ fn load(
             if !document.stmts.is_empty() {
                 documents.push(document);
             } else {
-                v!(
+                print_verbose!(
                     " IBAN {} not found, ignore camt document {}",
                     &iban,
                     String::from_utf8_lossy(&order_data[index - 1])
                 );
             }
-            v!(
+            print_verbose!(
                 "   Cycle count for camt document {}k",
                 (env::get_cycle_count()) / 1000
             );
         } else {
-            v!(
+            print_verbose!(
                 " processing camt document {}",
                 String::from_utf8_lossy(&order_data[index])
             );
         }
     }
 
-    v!(
+    print_verbose!(
         "   Cycle count parse_camt53 {}k",
         (env::get_cycle_count()) / 1000
     );
@@ -379,7 +385,7 @@ fn get_client_key_hex(pk: &RsaPublicKey) -> String {
 ///    required canonicalization [XML-C14N] of this specification does not
 ///    change URIs.
 fn verify_bank_signature(pub_bank: &RsaPublicKey, request: &Request) {
-    v!("verify bank signature");
+    print_verbose!("verify bank signature");
     // Decode the signature
     let signature_value_bytes = general_purpose::STANDARD
         .decode(&request.signature_value_b64)
@@ -395,9 +401,9 @@ fn verify_bank_signature(pub_bank: &RsaPublicKey, request: &Request) {
     //    prefix.
 
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
-    // v!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
-    // v!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed));
-    // v!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
+    // print_verbose!("{} {}",request.signed_info_hashed.len(),signature_value_bytes.len());
+    // print_verbose!("hash digest {} ", &*Impl::hash_bytes(&request.signed_info_hashed));
+    // print_verbose!("hash signature {} ", &*Impl::hash_bytes(&signature_value_bytes));
 
     // Verify the signature
     let res = pub_bank.verify(
@@ -405,9 +411,9 @@ fn verify_bank_signature(pub_bank: &RsaPublicKey, request: &Request) {
         &request.signed_info_hashed,
         &signature_value_bytes,
     );
-    // v!(" res ---->  {:?}",&res);
+    // print_verbose!(" res ---->  {:?}",&res);
     match res {
-        Ok(_) => v!("  bank Signature is verified"),
+        Ok(_) => print_verbose!("  bank Signature is verified"),
         Err(e) => {
             eprintln!(" ---> error {:?}", e);
             panic!("  bank Signature could not be verified")
@@ -450,12 +456,12 @@ fn parse_ebics_response(
     for token in tokens {
         match token {
             Ok(Token::ElementStart { local, .. }) => {
-                //v!("   open tag  as_str {:?}", local.as_str());
+                //print_verbose!("   open tag  as_str {:?}", local.as_str());
                 curr_tag = local.as_str();
             }
             Ok(Token::ElementEnd { end, .. }) => {
                 if let ElementEnd::Close(.., _local) = end {
-                    // v!("   close tag  as_str {:?}", _local.as_str());
+                    // print_verbose!("   close tag  as_str {:?}", _local.as_str());
                     // handling Close variant
                     curr_tag = "";
                 }
@@ -504,34 +510,28 @@ fn parse_ebics_response(
         }
     }
 
-    assert_ne!(
-        digest_value_b64.len(),
-        0,
+    assert!(
+        digest_value_b64.len() != 0,
         "Asserting longer than 0: digest_value_b64"
     );
-    assert_ne!(
-        transaction_key_b64.len(),
-        0,
+    assert!(
+        transaction_key_b64.len() != 0,
         "Asserting longer than 0: transaction_key_b64"
     );
-    assert_ne!(
-        bank_timestamp.len(),
-        0,
+    assert!(
+        bank_timestamp.len() != 0,
         "Asserting longer than 0: bank_timestamp"
     );
-    assert_ne!(
-        signature_value_b64.len(),
-        0,
+    assert!(
+        signature_value_b64.len() != 0,
         "Asserting longer than 0: signature_value_b64"
     );
-    assert_ne!(
-        signed_info_hashed.len(),
-        0,
+    assert!(
+        signed_info_hashed.len() != 0,
         "Asserting longer than 0: signed_info_hashed"
     );
-    assert_ne!(
-        order_data_b64.len(),
-        0,
+    assert!(
+        order_data_b64.len() != 0,
         "Asserting longer than 0: order_data_b64"
     );
 
@@ -586,7 +586,7 @@ fn decrypt_transaction_key(
 
     if !decrypted_tx_key.is_empty() {
         // its still padded
-        v!("WARNING: binary transaction key was provided - we use this to decrypt");
+        print_verbose!("WARNING: binary transaction key was provided - we use this to decrypt");
 
         // Do some check on the provided key - ensure that the data is long enough and has the correct PKCS#1 v1.5 padding prefix.
         assert!(
@@ -607,14 +607,14 @@ fn decrypt_transaction_key(
         // https://docs.rs/rsa/latest/rsa/hazmat/fn.rsa_encrypt.html
         // Raw RSA encryption and "hazmat" is considered "OK", because do do not use the encryption.
         // We check if if provided decrypted key was using the decrypted key in the XML as source.
-        v!(
+        print_verbose!(
             "   Cycle count before rsa_encrypt {}k",
             (env::get_cycle_count()) / 1000
         );
         let encrypted_recreated =
             rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
 
-        v!(
+        print_verbose!(
             "   Cycle count after rsa_encrypt {}k",
             (env::get_cycle_count()) / 1000
         );
@@ -643,13 +643,13 @@ fn decrypt_transaction_key(
 
     // remove pemm feature, initialize with numbers - less code, more efficent?
 
-    v!(" start decrypt transaction key with Pkcs1v15 Rsa");
+    print_verbose!(" start decrypt transaction key with Pkcs1v15 Rsa");
     // Decrypt with PKCS1 padding
     let decrypted_data = client_key.decrypt(Pkcs1v15Encrypt, &transaction_key_bin);
 
     match decrypted_data {
         Ok(res) => {
-            v!("  transaction key to decrypt payload could be decrypted");
+            print_verbose!("  transaction key to decrypt payload could be decrypted");
             res
         }
         Err(e) => {
@@ -658,12 +658,6 @@ fn decrypt_transaction_key(
         }
     }
 }
-
-use aes::cipher::{block_padding::NoPadding, BlockDecryptMut, KeyIvInit};
-type Aes128CbcDec = cbc::Decryptor<aes::Aes128>;
-// Dastan - can we get rid of this?
-use std::io::{Cursor, Read};
-use zip::ZipArchive;
 
 /// using the decrypted transaction key, lets decrypt the payload.  
 /// The payload is considered a stream which is compressed with the deflate alogrithm.
@@ -678,7 +672,7 @@ fn decrypt_order_data(
     witness_signature_bytes: &[u8],
     pub_witness: &RsaPublicKey,
 ) -> Vec<Vec<u8>> {
-    v!(" decrypting payload with transaction key");
+    print_verbose!(" decrypting payload with transaction key");
 
     let order_data_bin = general_purpose::STANDARD
         .decode(&request.order_data_b64)
@@ -686,30 +680,30 @@ fn decrypt_order_data(
 
     let sha = *Impl::hash_bytes(&order_data_bin);
 
-    v!(" verify the verify_order_data_signature by witness");
+    print_verbose!(" verify the verify_order_data_signature by witness");
     // check witness signature
     // We checked for Schema A005  which enforces:
     let scheme = Pkcs1v15Sign::new::<RsaSha256>();
 
     // Verify the signature
-    v!(
+    print_verbose!(
         "   Cycle count before pub_witness.verify( {}k",
         (env::get_cycle_count()) / 1000
     );
     let res = pub_witness.verify(scheme, sha.as_bytes(), witness_signature_bytes);
-    v!(
+    print_verbose!(
         "   Cycle count after pub_witness.verify( {}k",
         (env::get_cycle_count()) / 1000
     );
     match res {
-        Ok(_) => v!(" Order Data is verified"),
+        Ok(_) => print_verbose!(" Order Data is verified"),
         Err(e) => {
             eprintln!(" ---> error {:?}", e);
             panic!(" Order Data Signature could not be verified")
         }
     };
 
-    v!(
+    print_verbose!(
         "   Cycle count before
         .decrypt_padded_b2b_mut( {}k",
         (env::get_cycle_count()) / 1000
@@ -731,7 +725,7 @@ fn decrypt_order_data(
         .decrypt_padded_b2b_mut::<NoPadding>(&order_data_bin, &mut result_bytes)
         .unwrap();
 
-    v!(
+    print_verbose!(
         "   Cycle count after
             .decrypt_padded_b2b_mut( {}k",
         (env::get_cycle_count()) / 1000
@@ -766,7 +760,7 @@ fn decrypt_order_data(
 /// as base64 in the Ebics Response XML.
 /// It get information from ISO20022 camt53 which hold bank data.
 fn parse_camt53(camt53_file: &str) -> Document {
-    v!(" parsing payload to extract data to commit");
+    print_verbose!(" parsing payload to extract data to commit");
     let mut tag_stack: Vec<String> = Vec::new();
     let mut current_balance = Balance::default();
     let mut grp_header = GrpHdr::default();
@@ -781,12 +775,12 @@ fn parse_camt53(camt53_file: &str) -> Document {
             Ok(Token::ElementStart { local, .. }) => {
                 current_tag = local.to_string();
                 tag_stack.push(local.to_string());
-                // v!("   open tag  as_str {:?} ", local.as_str());
+                // print_verbose!("   open tag  as_str {:?} ", local.as_str());
             }
             Ok(Token::ElementEnd { end, .. }) => {
                 if let ElementEnd::Close(.., local) = end {
                     if let Some(_tag) = tag_stack.pop() {
-                        // v!("End Tag: {}", _tag);
+                        // print_verbose!("End Tag: {}", _tag);
                     };
                     if local == "Bal" {
                         current_stmt.balances.push(current_balance);
@@ -799,7 +793,7 @@ fn parse_camt53(camt53_file: &str) -> Document {
             }
             Ok(Token::Text { text }) => {
                 if let Some(_current_tag) = tag_stack.last() {
-                    //v!("Text for {}: {}", _current_tag, text);
+                    //print_verbose!("Text for {}: {}", _current_tag, text);
                 };
 
                 //<GrpHdr><MsgId>35e75effeaa74f579f97c8121bfa68ad</MsgId><CreDtTm>2023-11-29T22:54:31.6579278+01:00</CreDtTm><MsgPgntn><PgNb>1</PgNb><LastPgInd>true</LastPgInd></MsgPgntn></GrpHdr>

@@ -13,11 +13,11 @@ because you would need the private keys of both parties. The EBICS protocol (Ele
 
 How were the goals achieved with this implementation?
 
-- **Proving soundness**: Singing payload data is still optional in the Ebics standard, so a bank backend needs to support that explicitly, and we cannot fully rely on the standard. As an alternative we introduce the concept of a "data processor" as an additional entity next to the bank and the client. The data processor downloads and signs the document (and payload) and acts as third-party witness.
+- **Proving soundness**: Singing payload data is still optional in the EBICS standard, so a bank backend needs to support that explicitly, and we cannot fully rely on the standard. As an alternative we introduce the concept of a "data processor" as an additional entity next to the bank and the client. The data processor downloads and signs the document (and payload) and acts as third-party witness.
 - **Privacy**: Fully achieved - it's trivial so include or not include data in proofs ([receipts][receipt]).
 - **Low execution time**: Execution time is around 45 minutes to generate a proof. This is sufficient for current scenarios but too much in case of instant payments.
 
-## Fundamental properties of the banking interface (ISO20022 and Ebics)
+## Fundamental properties of the banking interface (ISO20022 and EBICS)
 
 The basic idea is the following: Whenever the bank (the banking API) is transmitting documents, it sends its data with a signature - using [XML encryption standards](https://www.w3.org/TR/xmlenc-core1/). For example a response document for a daily statement of balance and transactions would contain a section like this:
 
