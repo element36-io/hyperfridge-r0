@@ -61,7 +61,7 @@ To sign messages for the bank it uses :
     $`{Signature}_{w_{priv}} = {Sign}_{W_{priv}}({Payload}_{enc})`$
 
 
-## ZK proofing system
+## ZK proofing system for daily statement
 
 ### Process Description
 
@@ -70,7 +70,7 @@ The witness uses hyperfridge and the HSM to create a SNARK proof with:
 - $`{Signature}_{w_{priv}}`$
 -  And decrypted transaction key ${SymKey}$ by calling $hsmDecrypt_{hsmtoken}(Symkey_{enc})$
 
-6. **Create STARK Proof**: ${ZKProof}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
+6. **Create STARK Proof &alpha;**: ${ZKProof}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
     - Private Inputs:
         - Extracted form from ${EbicsRequest}$:  
             - ${Payload}_{enc}$: Encrypted payload, decrypt payload with ${SymKey}$ to extract the commitments.
@@ -102,13 +102,48 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
 
 ### Verification
 
-7. **Verification using Risk-Zero Recipe**: Other parties (like the Bank or external verifiers) can verify the zero-knowledge proof.
+7. **Verification using Risk-Zero Receipt**: Other parties (like the Bank or external verifiers) can verify the zero-knowledge proof.
    - Verify proof with: ${VerifyZKProof_{ImageID}}() \rightarrow Commitment$.
    - Check the public input (IBAN, $B_{pub}$, $W_{pub}$).
 
 
 (8.) **On-Chain verification with Groth16 SNARK**:
    - Risk-Zero privides a STARK to SNARK wrapper to support [on-chain verfication](https://www.risczero.com/news/on-chain-verification).
+
+
+## Transaction membership
+
+For example Alice wire-transfers to Bob and amount x. As soon as the amount is booked on Bobs bank account and Bob generates a proof with hyperfridge (automatically), Alice is able to prove that the money arrived on Bobs account.
+
+We want to prove that a transaction (defined as $Statement$) is part of $Payload$ with has following properties:
+
+- A $Payload$ has a least one transaction $Statement$.
+- A transaction is either a credit or debit - means it add or reduces a balance of a bank account.
+- A $Payload$ is implemented as an [ISO20022 camt.053 (Cash management) XML message](https://www.iso20022.org/message/mdr/22714/download).
+- For later use we simplify the $Payload$ the message as:
+    - $Payload = {GroupHeader} \, \| \ ({Statement})^*$, where
+    -  ${GroupHeader}={StatementSequenceNumber}  \, \| \ Account \, \| \ Currency$
+    -  ${Statemnet}= StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo $
+
+### Process Description for proofing transaction membership
+
+1. **Generate secret $r$**: When Client $C$ generates a random number $r$ and adds the number wire transfer as "additional information" which will go into the field $StmtAddionalTxInfo$.
+
+2. We modify the ***STARK Proof*** of step 6 above. For each $Statement$ in $Payload$, we add to the public commitment: $hash( StmtAccount \, \| \,  StmtAmount \, \| \,  StmtAddionalTxInfo)$
+
+3. **Create STARK Proof &beta;**: ${ZKProof}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
+    - Private Inputs: $ StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo $
+    - Public Inputs:STARK proof &alpha; from above.
+    - Commitment: $StmtAmount$
+
+
+For the computation of STARK proof &beta;:
+
+a. **validate Receipt &alpha;**
+
+b. **Calculate hash**:  Calculate $hash(StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo) and check if the hash is member of the journal of receipt &alpha;.
+
+4. Only the client $C$ knows $r$ and is able to generate a proof for transaction inclusion and present it for example to Smart Contracts.
 
 
 ## Key Benefits
