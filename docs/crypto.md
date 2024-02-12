@@ -86,15 +86,15 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
    a. **Validate $SymKey$**: The Bank has generated $SymKey$ to encrypt the $Payload$ (clients data)
     - Verify $XMLSignature$ which contains $Symkey_{enc}$.
     - Decrypt $Symkey_{enc}$ with $C_{priv}$ which proves the document was sent to the specific client.
-    
+
      b. **Validate integrity of $Payload$**:
     - Validate ${Signature}_{w_{priv}}$ of $Payload$ so the client is not able to tamper the $Payload$ to present a fake balance.
-    
+
    c. **Create commitment from decrypted $Payload$**:
     - Decrypt $Payload$ with $Symkey$.
     - Extract the data from payload and create the commitment. 
     - Add public input to the commitment.
-    
+
    d. **A seal for the proofing algorithm - the $ImageID$**
     - The seal (exact version and code) is identified by an $ImageID$. 
     - See [Risk-Zero Proof System](https://dev.risczero.com/proof-system/).
@@ -105,19 +105,17 @@ The STARK presents a proof of computation. The computation is sealed (using Risk
    - Verify proof with: ${VerifyProof\alpha_{ImageID}}() \rightarrow Commitment$.
    - Check the public input (IBAN, $B_{pub}$, $W_{pub}$).
 
-
-(8.) **On-Chain verification with Groth16 SNARK**:
+8. **On-Chain verification with Groth16 SNARK**:
    - Risk-Zero privides a STARK to SNARK wrapper to support [on-chain verfication](https://www.risczero.com/news/on-chain-verification).
 
 
 ## $Proof \beta$: transaction membership
 
-For example Alice wire-transfers to Bob and amount X and wants to generate a proof of this transaction without revealing the bank account number or the name of Alice. As soon as the amount is booked on Bobs bank account and Bob generates a proof with hyperfridge (automatically), Alice is able to generate a proof that the money arrived on Bobs account.
+For example Alice wire-transfers and amount X to Bob and wants to generate a proof of this transaction without revealing the bank account number or the name of Alice. As soon as the amount is booked on Bobs bank account and Bob generates a $Proof \alpha$ with hyperfridge (automatically), Alice is able to generate $Proof \beta$ that the money arrived on Bobs account.
 
-We want to prove that a transaction (defined as $Statement$) is part of $Payload$ with has following properties:
+We want to prove that a transaction (defined as $Statement$) is part of $Payload$, which has following properties:
 
-- A $Payload$ has a least one transaction $Statement$.
-- A transaction is either a credit or debit - means it add or reduces a balance of a bank account.
+- A $Payload$ has a least one transaction $Statement$. A transaction is either a credit or debit - means it adds or reduces a balance of a bank account.
 - A $Payload$ is implemented as an [ISO20022 camt.053 (Cash management) XML message](https://www.iso20022.org/message/mdr/22714/download).
 - For later use we simplify the $Payload$ the message as:
     - $Payload = {GroupHeader} \, \| \ ({Statement})^*$, where
@@ -126,38 +124,37 @@ We want to prove that a transaction (defined as $Statement$) is part of $Payload
 
 ### Process Description for proofing transaction membership
 
-1. **Generate secret $r$**: When Client $C$ generates a random number $r$ and adds the number wire transfer as "additional information" which will go into the field $StmtAddionalTxInfo$.
+1. **Generate secret $r$**: Client $C$ generates a random number $r$ and adds the number wire transfer as "additional information" which will be reflected by the field camt53 field $StmtAddionalTxInfo$ of $Payload$.
 
-2. We modify the ***STARK Proof &alpha; *** of step 6 above. For each $Statement$ in $Payload$, we add to the public commitment: $hash( StmtAccount \, \| \,  StmtAmount \, \| \,  StmtAddionalTxInfo)$
+2. We modify the ***STARK Proof &alpha;*** of step 6 above. For each $Statement$ in $Payload$, we add to the public commitment: $hash( StmtAccount \, \| \,  StmtAmount \, \| \,  StmtAddionalTxInfo)$
 
 3. **Create STARK Proof &beta;**: ${Proof\beta}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
     - Private Inputs: $ StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo $
-    - Public Inputs:STARK Proof &alpha; from above.
+    - Public Inputs: STARK $Proof \alpha$ verified using [composition](https://www.risczero.com/news/proof-composition).
     - Commitment: $StmtAmount$
 For the computation of STARK Proof &beta;:
 
-   a. **validate Receipt &alpha;**
+   a. **validate Receipt for $Proof \alpha$**.
 
-   b. **Calculate hash**:  Calculate $hash(StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo)$ and check if the hash is member of the journal of receipt &alpha;.
+   b. **Check hash for transaction payload**:  Calculate $hash(StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo)$ and check if the hash is member of the journal of receipt &alpha;.
 
-4. Create ***$Proof\beta$***:
+   c. Optionally **check client $C$ signature** on the transaction payload.
+
+4. Create ***STARK $Proof\beta$***:
    a. Only the client $C$ knows $r$ and is able to generate a proof for transaction inclusion and present it for example to a smart contract without revealing IBAN (account) or private information.
    b. Alternatively the Client $C$ signs $hash( StmtAccount \, \| \,  StmtAmount \, \| \,  StmtAddionalTxInfo )$ (including randomness factor) - then only $C$ is able to generate $Proof\beta$.
 
-(5.) **On-Chain verification with Groth16 SNARK**:
+5. **On-Chain verification with Groth16 SNARK**:
 Use [on-chain verfication](https://www.risczero.com/news/on-chain-verification).
 
 
 ## Key Benefits
 
-Alice can proof that she sent FIAT amount X to Bobs bank account, without revealing identity or financial data - for example to proof a payment which can be consumed by smart contracts. No swapping FIAT to some other tokens is necessary, smart contracts can directly consume event from a FIAT ledger. Bob may also use $Proof\alpha$ as a proof-of-reserve. Note that ISO20022 supports varias assets classes, not only FIAT currencies.
+Alice can proof that she sent FIAT amount X to Bobs bank account, without revealing identity or financial data - for example to proof a payment which can be consumed by smart contracts. No swapping FIAT to some other tokens is necessary, smart contracts can directly consume events from a FIAT ledger. Bob may also use $Proof\alpha$ as a proof-of-reserve. Note that ISO20022 supports varias assets classes, not only FIAT currencies.
 
-
-   - **Privacy**: The Client's private key remain confidential throughout the process, so do other private keys. A
-   - **Security**: The signature from the Witness and the zero-knowledge proof mechanism ensure the security and integrity of the transaction without compromising sensitive information (transaction data).
+- **Privacy**: The Client's private key remain confidential throughout the process, so do other private keys. A
+- **Security**: The signature from the Witness and the zero-knowledge proof mechanism ensure the security and integrity of the transaction without compromising sensitive information (transaction data).
 - **Verifiability**: External parties can verify a bank statements legitimacy without accessing private keys or sensitive transaction details - on-chain or off-chain.
-
-
 
 ## Security Considerations
 
@@ -169,7 +166,7 @@ Alice can proof that she sent FIAT amount X to Bobs bank account, without reveal
 
 ## Execution time
 
-[See here](runtime.md).
+STARK proofs can be computed in a couple of minutes [see here for details](runtime.md).
 
 ## Outlook and use cases
 
@@ -185,4 +182,3 @@ The principles presented here can be applied to other Open Banking Standards as 
 ### Witness, HSM and other secure modules
 
 The Witness for hyperfridge needs an HSM to sign data. One might think of Apple Secure Enclave  to enable new use cases where a simple Phone or Laptop can act as a witness.
-
