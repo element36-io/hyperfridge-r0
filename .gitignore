@@ -37,3 +37,6 @@ data/test/tmp/*
 cobertura.xml
 methods/guest/build_rs_cov.profraw
 tmp/
+data/work
+data/trace
+data/profile-output

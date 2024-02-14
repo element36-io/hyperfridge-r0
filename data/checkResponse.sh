@@ -16,6 +16,11 @@ echo ---------------------------------------------
 
 set -e
 
+if [ "${work_dir}" ]; then
+    echo "work_dir variable is set"
+    cd "${work_dir}"
+fi
+
 echo "work dir of script $(pwd)"
 
 if [ -z "${xml_file}" ]; then
@@ -41,6 +46,7 @@ mkdir -p "${output_dir_name}/tmp"
 check_private() {
     local keyvar="$1_pem"
     local keyfile="$1.pem"
+    local exit_on_missing="$3"
 
     # keyfile file was specified by environment var
     if [ -n "$2" ]; then
@@ -48,7 +54,9 @@ check_private() {
       
         if [ ! -f "${keyfile}" ]; then
             echo "private  keyfile not found: $1, $2"
-            exit 3
+            if [ -n "$exit_on_missing" ]; then 
+                exit 3
+            fi
         fi
     else 
         echo checking file ${keyfile} exist for $1
@@ -58,7 +66,7 @@ check_private() {
     fi  
 
     echo "setting private keyfie of $1 to ${keyfile}"
-    declare -g "$1_pem"="${keyfile}"
+    declare -g "$1_pem"="${keyfile}" # e.g. witness_pem or client_pem
 }
 
 check_pub() {
@@ -89,6 +97,7 @@ check_private "client" $client
 check_pub "client" $pub_bank
 check_pub "bank" $pub_bank
 check_pub "witness" $pub_witness
+check_private "witness" "$witness" "false"
 
 decrypted_file="$output_dir_name/tmp/${xml_file_stem}_payload_camt53_decrypted.zip"
 
@@ -238,8 +247,20 @@ fi
 # First we need need order data digest in binary format
 orderdata_digest_file="${output_dir_name}/tmp/orderdata_digestcheck_$timestamp.bin"
 openssl dgst -sha256 -binary  $orderdata_bin_file > "$orderdata_digest_file"
-# Witness file needs to be present, generated before this script 
 orderdata_signature_hex_output_file=${output_dir_name}/${xml_file_stem}-Witness.hex
+
+# Witness file needs to be present, generated before this script by hyperfridge or here
+# if the witness-private key is present; sign the payload. 
+ls -la $witness_pem
+if [ -f "$witness_pem" ]; then
+    echo "generating witness signature"
+    orderdata_signature_output_file="${output_dir_name}/tmp/orderdata_signature_$timestamp.bin"
+    openssl pkeyutl -sign -inkey "$witness_pem" -in "$orderdata_digest_file" -out "$orderdata_signature_output_file" -pkeyopt rsa_padding_mode:pkcs1 -pkeyopt digest:sha256
+    xxd -p "$orderdata_signature_output_file" > "$orderdata_signature_hex_output_file"
+else   
+    echo "not generating witness signature, private key not set or found"
+fi
+
 # check signature we just created based on generated hex files 
 # openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_file -sigfile $orderdata_signature_output_file -pkeyopt digest:sha256
 openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_file -sigfile <(xxd -r -p "$orderdata_signature_hex_output_file") -pkeyopt digest:sha256
@@ -247,7 +268,6 @@ openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_f
 # the result is a compressed binary using standard RFC 1951 which is just (de)compressing a stream
 payload_file="${output_dir_name}/tmp/${xml_file_stem}_payload_camt53.zip"
 zlib-flate -uncompress  < $decrypted_file > $payload_file
-echo "..."
 echo "size $(stat -c %s "$payload_file") hash of zip file:" $(openssl dgst -sha256 -r "$payload_file")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
 unzip -o $payload_file -d  $output_dir_name/tmp/camt53/
