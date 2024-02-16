@@ -40,3 +40,6 @@ tmp/
 data/work
 data/trace
 data/profile-output
+data.sik
+data/data
+data/test

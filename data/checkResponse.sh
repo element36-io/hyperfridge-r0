@@ -14,7 +14,6 @@ echo ---------------------------------------------
 # [legacy_sect]
 # activate = 1
 
-set -e
 
 if [ "${work_dir}" ]; then
     echo "work_dir variable is set"
@@ -36,7 +35,7 @@ fi
 
 if [ -z "${output_dir_name}" ]; then
     echo "xml_dir variable is not set. Set to default."
-    output_dir_name="${xml_file%.xml}"
+    output_dir_name="./${xml_file%.xml}"
 fi
 
 mkdir -p "$output_dir_name"
@@ -93,8 +92,8 @@ check_pub() {
     declare -g "pub_$1_pem"="${pub_keyfile}"
 }
 
+check_pub "client" $pub_client
 check_private "client" $client
-check_pub "client" $pub_bank
 check_pub "bank" $pub_bank
 check_pub "witness" $pub_witness
 check_private "witness" "$witness" "false"
@@ -121,7 +120,6 @@ expected_digest=$(awk '/<ds:DigestValue>/,/<\/ds:DigestValue>/' "$xml_file" | se
 echo "$expected_digest" > $output_dir_name/tmp/$xml_file_stem-DigestInfo-value
 # Base64 --> binary --> hex
 expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c256)
-
 # According to standard, we need to inherit all upper namespaces form the sourrounding xml document if we c14n a snippet
 # Beware that also the sorting is an issue, as well as the blanks between the tags (!) - therefore
 # take the real document get transmitted by the backend - there is no other way knowing which blanks they might use inbetween 
@@ -129,11 +127,31 @@ expected_digest_hex=$(echo $expected_digest | openssl enc -d -a -A | xxd -p -c25
 # We hardcode the add_namespaces here because this script is a tool for analyzing how the XML need to be processed. 
 #
 
-add_namespaces=" xmlns=\"http://www.ebics.org/H003\"" 
+#add_namespaces=" xmlns=\"http://www.ebics.org/H003\"" 
+# Extract namespace from xml file
+namespace=$(grep -o 'xmlns="http://www.ebics.org/H00[34]"' "$xml_file" | sed 's/xmlns="//' | sed 's/"//')
+if [[ -z "$namespace" ]]; then
+    namespace=$(grep -o 'xmlns="urn:org:ebics:H00[34]"' "$xml_file" | sed 's/xmlns="//' | sed 's/"//')
+fi
+alg_namespace=$namespace;
+
+# Set add_namespaces variable based on extracted namespace
+if [[ -n "$namespace" ]]; then
+    add_namespaces=" xmlns=\"$namespace\""
+    if [[ $namespace == *"H004"* ]]; then
+        add_namespaces="$add_namespaces xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
+    fi
+else   
+    echo failed to extract namespace
+    exit 34
+fi
+
 perl -ne 'print $1 if /(<header.*<\/header>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<header +<header${add_namespaces} +" > "$header_file"
 perl -ne 'print $1 if /(<DataEncryptionInfo.*<\/DataEncryptionInfo>)/' "$xml_file"| xmllint -exc-c14n - | sed "s+<DataEncryptionInfo +<DataEncryptionInfo${add_namespaces} +" >> "$header_file"
 perl -ne 'print $1 if /(<ReturnCode auth.*<\/ReturnCode>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<ReturnCode +<ReturnCode${add_namespaces} +" >> "$header_file"
-perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
+if perl -ne 'exit(0) if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/; exit(1)' "$xml_file"; then
+    perl -ne 'print $1 if /(<TimestampBankParameter.*<\/TimestampBankParameter>)/' "$xml_file" | xmllint -exc-c14n - | sed "s+<TimestampBankParameter +<TimestampBankParameter${add_namespaces} +" >> "$header_file"
+fi
 
 echo "size of authenticate file:" $(stat --format="%s" "$header_file")
 
@@ -148,39 +166,47 @@ if  [ "$expected_digest_hex" == "$calculated_digest_hex" ]; then
     echo "digest is matching!" 
 else 
     echo "digest is not matching - look for authenticate=true attribues which indicate the Tags which are digested." 
-    echo calculated digest headertag hex: $calculated_digest_hex
+    echo calculated digest headertag hex: $calculated_digest_hex for $header_file
     echo expected digest headertag hex: $expected_digest_hex
+    echo command: "openssl dgst -sha256 -r $header_file | cut -d ' ' -f 1"
     exit -1;
 fi
 
-# Signature according to Ebics A004 standard. 
+# Signature according to Ebics A004 and A006 standard. 
 # Now do similar process with SignedInfo as we did with header tag, which same namespace hack. Beware the correct sorting/ordering.
 # The hash of Signed. As SingedInfo contains the DigestValue from above
 # also above hash is confirmed. The XML signature standard foresees that you can 
 # add more than one hash to SignInfo and Sign more hashes in one go. In our case we have just digest to sign. 
 
-export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
-# need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
-export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
+if [[ $alg_namespace == *"H004"* ]]; then
+    export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
+    # need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
+    export add_namespaces2=" xmlns=\"urn:org:ebics:H004\""
+else
+    export add_namespaces=" xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\""
+    # need to be 2 steps, because xmllint would remove this unneeded one but the standard sais all top-level need to be included 
+    export add_namespaces2=" xmlns=\"http://www.ebics.org/H003\""
+fi
 perl -ne 'print $1 if /(<ds:SignedInfo.*<\/ds:SignedInfo>)/' "$xml_file" | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces}+" | xmllint -exc-c14n - | sed "s+<ds:SignedInfo+<ds:SignedInfo${add_namespaces2}+" > "$output_dir_name/${xml_file_stem}-SignedInfo"
 signedinfo_digest_file="${output_dir_name}/tmp/signedinfo_digest_$timestamp.bin"
 openssl dgst -sha256 -binary  "$output_dir_name/${xml_file_stem}-SignedInfo" > "$signedinfo_digest_file"
+[ $(stat --format=%s "$signedinfo_digest_file") -eq 32 ] || { echo "Wrong filesize of signedinfo_digest_file "; exit 1; }
 echo "created digest for SignedInfo from XML, now checking Signature"
 
-perl -ne 'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
-# Create file names with timestamp
-awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' | tr -d '\n' > "$output_dir_name/tmp/${xml_file_stem}-SignatureValue-value"
-#echo signature value from xml as base64: $signature_base64
-signature_file="${output_dir_name}/tmp/signature_$timestamp.bin"
-cat $output_dir_name/tmp/${xml_file_stem}-SignatureValue-value   | openssl enc -d -a -A -out $signature_file
+# old version with HBL: perl -ne  'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
+perl -0777 -ne 'print $1 if /<ds:SignatureValue[^>]*>(.*?)<\/ds:SignatureValue>/s'  "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
+[ $(stat -c %s "$output_dir_name/$xml_file_stem-SignatureValue") -eq 0 ] && echo "Error: The SignatureValue file is empty" && exit 19
 
-echo "check signature with public key from bank $pub_bank_pem"
-# needs X002 from bank
-openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file" -pkeyopt rsa_padding_mode:pk1 -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pub_bank_pem"
-openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"  -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pub_bank_pem"
-echo "check typical key sizes for integritiy - size of digest and signature bin files:" $(stat --format="%s" "$signedinfo_digest_file") $(stat --format="%s" "$signature_file")
-[ $(stat --format=%s "$signedinfo_digest_file") -eq 32 ] || { echo "Wrong filesize of signedinfo_digest_file "; exit 1; }
+# Create file names with timestamp
+awk '/<ds:SignatureValue>/,/<\/ds:SignatureValue>/' $xml_file | sed 's/.*<ds:SignatureValue>//' | sed 's/<\/ds:SignatureValue>.*$//' |  sed 's/&#13;//g' | tr -d '\n' > "$output_dir_name/tmp/${xml_file_stem}-SignatureValue-value"
+signature_file="${output_dir_name}/tmp/signature_$timestamp.bin"
+base64 -d -i "$output_dir_name/tmp/${xml_file_stem}-SignatureValue-value" > "$signature_file"
 [ $(stat --format=%s "$signature_file") -eq 256 ] || { echo "Wrong filesize of signature_file "; exit 1; }
+
+# spec: https://www.w3.org/TR/xmldsig-core/#sec-CoreValidation
+echo "check signature with public key from bank $pub_bank_pem"
+echo "command: openssl  pkeyutl  -verify -in  $signedinfo_digest_file -sigfile  $signature_file -pkeyopt digest:sha256 -pubin -keyform PEM -inkey $pub_bank_pem"
+openssl pkeyutl  -verify -in "$signedinfo_digest_file" -sigfile "$signature_file"  -pkeyopt digest:sha256 -pubin -keyform PEM -inkey "$pub_bank_pem"
 
 echo "hash of digest bin file:" $(openssl dgst -sha256 -r "$signedinfo_digest_file")
 echo "hash of signature bin file:" $(openssl dgst -r -sha256 "$signature_file")
@@ -251,7 +277,6 @@ orderdata_signature_hex_output_file=${output_dir_name}/${xml_file_stem}-Witness.
 
 # Witness file needs to be present, generated before this script by hyperfridge or here
 # if the witness-private key is present; sign the payload. 
-ls -la $witness_pem
 if [ -f "$witness_pem" ]; then
     echo "generating witness signature"
     orderdata_signature_output_file="${output_dir_name}/tmp/orderdata_signature_$timestamp.bin"

@@ -1,4 +1,4 @@
-FROM rust:1.74-bookworm as build
+FROM rust:1.75-bookworm as build
 
 RUN cargo install cargo-binstall
 RUN cargo binstall cargo-risczero -y
@@ -54,6 +54,7 @@ COPY --from=build /target/release/verifier /app/verifier
 COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
 COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
 COPY --from=build /data /data
+# COPY data /data
 RUN ln -s /app/verifier /usr/local/bin/verifier
 RUN ln -s /app/host /usr/local/bin/host
 RUN ln -s /app/host /usr/local/bin/fridge

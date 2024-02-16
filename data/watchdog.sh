@@ -1,21 +1,42 @@
 #!/bin/bash
 
+# How to test and debug
+# Start watchdog in a shell, copy new files to trace directory, 
+# e.g in data: cp response_template-generated.xml ./trace/response_template-generatedv2.xml
+
 # to pre-process XML
 watch_dir="${IN_DIR:-./trace}"
 processing_dir="${WORK_DIR:-./work}"
-done_dir="${processing_dir}/work_done"
-error_dir="${processing_dir}/work_error"
-out_dir="${processing_dir}/work_result"
-
-hfbin="../target/release/host"
-chmod a+x $hfbin
+done_dir="${DONE_DIR:-${processing_dir}/work_done}"
+error_dir="${ERROR_DIR:-${processing_dir}/work_error}"
+out_dir="${OUT_DIR:-${processing_dir}/work_result}"
+hfbin="${HOST_CMD:-../target/release/host}"
 
 # to create the proof
 # --request="../data/test/test.xml" --bankkey ../data/pub_bank.pem --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+# Resolve relative paths to absolute paths
+pub_bank="$(realpath "${BANK_PUB_KEY:-./pub_bank.pem}")"
+client="$(realpath "${CLIENT_PR_KEY:-./client.pem}")"
+pub_client="$(realpath "${CLIENT_PUB_KEY:-./pub_client.pem}")"
+pub_witness="$(realpath "${WITNESS_PUB_KEY:-./pub_witness.pem}")"
+witness="$(realpath "${WITNESS_PR_KEY:-./witness.pem}")"
 iban="CH4308307000289537312"
 
+echo environment: 
+echo "watch_dir=$watch_dir"
+echo "processing_dir=$processing_dir"
+echo "done_dir=$done_dir"
+echo "error_dir=$error_dir"
+echo "out_dir=$out_dir"
+echo "hfbin=$hfbin"
+echo "iban=$iban"
+echo "pub_bank=$pub_bank"
+echo client=$client
+echo pub_witness=$pub_witness
+echo witness=$witness
+
 # Create processing, done, and error directories if they don't exist
-echo $processing_dir $done_dir $error_dir
+
 mkdir -p "$processing_dir"
 mkdir -p "$done_dir"
 mkdir -p "$error_dir"
@@ -29,8 +50,14 @@ process_file() {
     cp "$watch_dir/$filename" "$processing_dir/$filename"
 
     # Call external script to process the file
-    echo preparing ebics response for proofing "$processing_dir/$filename"
-    xml_file="$filename" work_dir="$processing_dir" pub_bank=../pub_bank.pem  client=../client.pem pub_witness=../pub_witness.pem  witness=../witness.pem ./checkResponse.sh
+    echo preparing ebics response for proofing xml "$processing_dir/$filename"
+    xml_file="$filename" work_dir="$processing_dir" pub_bank=$pub_bank  client=$client pub_witness=$pub_witness  witness=$witness ./checkResponse.sh
+    # echo ==============================================0
+    # xml_file="$filename" work_dir="$processing_dir" pub_bank=/app/keys/t-bankAuthenticationPublicKey.pem  client=$client pub_witness=$pub_witness  witness=$witness ./checkResponse.sh
+    # echo ------------------------------------------------0
+    # xml_file="$filename" work_dir="$processing_dir" pub_bank=/app/keys/t-bankEncryptionPublicKey.pem  client=$client pub_witness=$pub_witness  witness=$witness ./checkResponse.sh
+    # echo +++++++++++++++++++++++++++++++++++++++++++++++0
+    
     local exit_code=$?
 
     # Check exit code for errors
@@ -44,8 +71,8 @@ process_file() {
 
     # Call hyperfridge to generate the proof
     output_dir_name="${filename%.xml}"
-    echo prepare to proof with files for $processing_dir/$output_dir_name/$filename  stem: $xml_file_stem
-    RISC0_DEV_MODE=true $hfbin prove-camt53 --request="$processing_dir/$output_dir_name/$filename" --bankkey ./pub_bank.pem --clientkey ./client.pem --witnesskey ./pub_witness.pem --clientiban $iban
+    echo prepare to proof with: RISC0_DEV_MODE=true $hfbin prove-camt53 --request="$processing_dir/$output_dir_name/$filename" --bankkey $pub_bank --clientkey $client --witnesskey $pub_witness --clientiban $iban
+    RISC0_DEV_MODE=true $hfbin prove-camt53 --request="$processing_dir/$output_dir_name/$filename" --bankkey $pub_bank --clientkey $client --witnesskey $pub_witness --clientiban $iban
     # xml_file="$filename" work_dir="$processing_dir" pub_bank=../pub_bank.pem  client=../client.pem pub_witness=../pub_witness.pem  witness=../witness.pem ./checkResponse.sh
     local exit_code=$?
 
@@ -86,12 +113,15 @@ process_file() {
 }
 
 # Monitor readonly directory for file creation events
+echo start loop
 while true; do
     inotifywait -m -e create --format '%f' "$watch_dir" | while read -r filename; do
         fn="$watch_dir/$filename"
         # do some sanity checks on the xml file
-        if !(grep -q '<ebicsResponse Revision="1" Version="H003"' "$fn" || 
-            grep -q '<ebicsResponse Revision="1" Version="H004"' "$fn") ; then
+        echo "======> got notification of a new file $fn"
+
+        if !(grep -q 'Version="H003"' "$fn" || 
+            grep -q 'Version="H004"' "$fn") ; then
             echo "Wrong XML filetype, only processing H003 or H004 in: $fn"
         elif  ! grep -q '<NumSegments>1</NumSegments>' "$fn" ; then
             echo "Currently only processing Ebics Responses with one Segment (< 1 MB) in: $fn"

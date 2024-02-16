@@ -64,13 +64,13 @@ struct EbicsRequestData {
     signature_value: String,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct Document {
     grp_hdr: GrpHdr, // creatin time
     stmts: Vec<Stmt>,
 }
 /// GrpHdr structure of a Camt53 XML respose
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct GrpHdr {
     cre_dt_tm: String, // creating time
     msg_id: String,    // unique ebics message id - identifies ebics xml message
@@ -78,7 +78,8 @@ struct GrpHdr {
     last_pg_ind: bool,
 }
 /// Stmt structure of a Camt53 XML respose
-#[derive(Debug, Default, Clone)]
+#[allow(dead_code)]
+#[derive(Debug, Default)]
 struct Stmt {
     elctrnc_seq_nb: String,
     iban: String,
@@ -88,8 +89,9 @@ struct Stmt {
     balances: Vec<Balance>,
     ntries: Vec<Ntry>,
 }
-
-#[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+#[derive(Debug, Default)]
 struct Ntry {
     cdtDbtInd: String, // cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
     sts: String,
@@ -97,8 +99,9 @@ struct Ntry {
     amt: String,
     txDtls: Vec<TxDtls>,
 }
-
-#[derive(Debug, Deserialize)]
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+#[derive(Debug,Default)]
 struct TxDtls {
     AmtCcy: String,
     AmtValue: String,
@@ -126,7 +129,7 @@ struct TxDtls {
 /// Balance structure of a Camt53 XML respose
 /// code or proprietory - OPBD = opening balance,CLBD is closing balance
 /// cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct Balance {
     cd: String,  // code or proprietory - OPBD = opening balance,CLBD is closing balance
     ccy: String, // currency
@@ -468,8 +471,8 @@ fn parse_ebics_response(
     let mut bank_timestamp: String = String::new();
     let mut transaction_key_b64: String = String::new();
     let mut order_data_b64: String = String::new();
-    let mut curr_ntry:Option<Ntry> = Option::None;
-    let mut curr_tx_details:Option<TxDtls> = Option::None;
+    let mut _curr_ntry:Option<Ntry> = Option::None;
+    let mut _c_curr_tx_details:Option<TxDtls> = Option::None;
     
 
 
@@ -537,9 +540,9 @@ fn parse_ebics_response(
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             }
-            Ok(Token::Text { text }) if curr_tag == "Ntry" => {
-                curr_ntry=Ntry::new();
-                v!(" new Ntry");
+            Ok(Token::Text {  }) if curr_tag == "Ntry" => {
+                //curr_ntry=Ntry::new();
+                v!(" new Ntry ");
             }
             
             Ok(_) => {}
@@ -559,11 +562,6 @@ fn parse_ebics_response(
         transaction_key_b64.len(),
         0,
         "Asserting longer than 0: transaction_key_b64"
-    );
-    assert_ne!(
-        bank_timestamp.len(),
-        0,
-        "Asserting longer than 0: bank_timestamp"
     );
     assert_ne!(
         signature_value_b64.len(),
