@@ -52,12 +52,6 @@ process_file() {
     # Call external script to process the file
     echo preparing ebics response for proofing xml "$processing_dir/$filename"
     xml_file="$filename" work_dir="$processing_dir" pub_bank=$pub_bank  client=$client pub_witness=$pub_witness  witness=$witness ./checkResponse.sh
-    # echo ==============================================0
-    # xml_file="$filename" work_dir="$processing_dir" pub_bank=/app/keys/t-bankAuthenticationPublicKey.pem  client=$client pub_witness=$pub_witness  witness=$witness ./checkResponse.sh
-    # echo ------------------------------------------------0
-    # xml_file="$filename" work_dir="$processing_dir" pub_bank=/app/keys/t-bankEncryptionPublicKey.pem  client=$client pub_witness=$pub_witness  witness=$witness ./checkResponse.sh
-    # echo +++++++++++++++++++++++++++++++++++++++++++++++0
-    
     local exit_code=$?
 
     # Check exit code for errors
@@ -67,6 +61,7 @@ process_file() {
         # Move file to error directory
         mv "$processing_dir/$filename" "$error_dir/$filename"
         echo "Error preparing file $filename."
+        return
     fi
 
     # Call hyperfridge to generate the proof
@@ -84,12 +79,13 @@ process_file() {
         # Move file to error directory
         mv "$processing_dir/$filename" "$error_dir/$filename"
         echo "Error proofing file $filename."
+        return
     fi
 
     # copy result to out directory
     transaction_id=$(grep -oP '<TransactionID>\K[^<]+' $processing_dir/$filename)
     image_id=$(${hfbin} show-image-id)
-    out_filename=receipt_${image_id}_${transaction_id}.json
+    out_filename=receipt_${transaction_id}.json
 
     # If the output filename already exists, append a timestamp to it
     if [ -f "$out_dir/$out_filename" ]; then

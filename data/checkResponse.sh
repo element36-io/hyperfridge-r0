@@ -194,7 +194,8 @@ openssl dgst -sha256 -binary  "$output_dir_name/${xml_file_stem}-SignedInfo" > "
 echo "created digest for SignedInfo from XML, now checking Signature"
 
 # old version with HBL: perl -ne  'print $1 if /(<ds:SignatureValue.*<\/ds:SignatureValue>)/' "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
-perl -0777 -ne 'print $1 if /<ds:SignatureValue[^>]*>(.*?)<\/ds:SignatureValue>/s'  "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
+# perl -0777 -ne 'print $1 if /<ds:SignatureValue[^>]*>(.*?)<\/ds:SignatureValue>/s'  "$xml_file" > $output_dir_name/$xml_file_stem-SignatureValue
+perl -0777 -ne 'print $1 if /(<ds:SignatureValue>.*?<\/ds:SignatureValue>)/s' "$xml_file" | sed 's/&#13;//g' | tr -d '\n' > $output_dir_name/$xml_file_stem-SignatureValue
 [ $(stat -c %s "$output_dir_name/$xml_file_stem-SignatureValue") -eq 0 ] && echo "Error: The SignatureValue file is empty" && exit 19
 
 # Create file names with timestamp

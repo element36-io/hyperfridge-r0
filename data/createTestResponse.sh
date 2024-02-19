@@ -215,4 +215,3 @@ openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_f
 ## call check Respose to test the generated file
 echo "Test XMLs created, calling checkResponse.sh with the generated XML to check it - $pub_bank_pem $client_pem"
 xml_file="$generated_file" pub_bank=$pub_bank_pem  client=$client_pem pub_witness=$pub_witness_pem ./checkResponse.sh
-

@@ -540,7 +540,7 @@ fn parse_ebics_response(
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             }
-            Ok(Token::Text {  }) if curr_tag == "Ntry" => {
+            Ok(Token::Text { .. }) if curr_tag == "Ntry" => {
                 //curr_ntry=Ntry::new();
                 v!(" new Ntry ");
             }
