@@ -42,7 +42,7 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host show-image-id > /
 # Final Stage - 
 FROM debian:bookworm-slim as runtime
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip
 
 #FROM alpine:latest as runteim
 # add glibc 
