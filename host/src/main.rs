@@ -370,9 +370,6 @@ fn proove_camt53(
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
 
-    let mut profiler =
-        risc0_zkvm::Profiler::new("./profile-output", methods::HYPERFRIDGE_ELF).unwrap();
-
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
         .unwrap()
@@ -400,7 +397,6 @@ fn proove_camt53(
         .unwrap()
         .write(&is_verbose())
         .unwrap()
-        .trace_callback(profiler.make_trace_callback())
         .build()
         .unwrap();
 
@@ -408,12 +404,7 @@ fn proove_camt53(
     let prover = default_prover();
     v!("prove hyperfridge elf ");
     // generate receipt
-    let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
-    profiler.finalize();
-    let report = profiler.encode_to_vec();
-    v!("write profile size {}", report.len());
-    std::fs::write("./profile-output", &report).expect("Unable to write profiling output");
-
+    let receipt_result = prover.prove(env, HYPERFRIDGE_ELF);
     let image_id_hex = get_image_id_hex();
     v!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
