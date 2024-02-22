@@ -13,9 +13,9 @@ COPY methods methods
 COPY Cargo.toml /
 COPY rust-toolchain.toml /
 
-# create directory holding generated Image Id of Computation which will be proved. 
+# create directory holding generated Id of Computation which will be proved. 
 WORKDIR /host
-RUN mkdir -p /host/out
+RUN mkdir out; touch out/test.touch; rm out/test.touch
 
 WORKDIR /
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release 
@@ -54,7 +54,6 @@ COPY --from=build /target/release/verifier /app/verifier
 COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
 COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
 COPY --from=build /data /data
-# COPY data /data
 RUN ln -s /app/verifier /usr/local/bin/verifier
 RUN ln -s /app/host /usr/local/bin/host
 RUN ln -s /app/host /usr/local/bin/fridge

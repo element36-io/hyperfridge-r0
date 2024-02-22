@@ -19,11 +19,12 @@
 
 ### The witness role
 
-The EBICS Specification does not enforce encryption of the payload (bank statements).Therefore the client is able to change for example balances or transactions and create a valid proof the the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
 
-Ebics standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the Ebics-Response.
+The EBICS Specification does not enforce encryption of the payload (bank statements). Therefore the client is able to change for example balances and create a valid proof the data. We use the concept of a witness (could also be named as signing proxy), which interacts with the bank on the clients behalf without knowing the private key of the client. The witness uses an HSM (Hardware Security Module, e.g. Google HSM) secured by a token to sign messages for the client and exchange data with the bank.
 
-Snippet of 'ebics_orders_H005.xsd', the schema-specification:
+EBICS standard plans the signing of the payload, which would make the witness superluss.  The schema-definitions already contain a placeholder, but they are deactivated using 'maxOccurs=0' which leads to a failure of schema validation if the signature of the payload is added to the EBICS-Response.
+
+Snippet of 'ebics_orders_H005.xsd', which is part of the EBICS the schema-specification for their XML documents which are exchanged between Client and Bank:
 
 ```xml
 <element name="SignatureData" minOccurs="0" maxOccurs="0">...</element>
@@ -31,7 +32,7 @@ Snippet of 'ebics_orders_H005.xsd', the schema-specification:
 
 ### EBICS Encryption and Decryption Process
 
-All messages between Client and Bank are singed XML documents. The payload is encrypted with a symetric key, whihc is shared with the client by encrypting it with the clients public key.
+All messages between Client and Bank are singed XML documents. The payload is encrypted with a symetric key, which is encrypting it with the Client's public key.
 
 ### Process Description when downloading payload data
 
@@ -43,36 +44,36 @@ All messages between Client and Bank are singed XML documents. The payload is en
 1. **Symmetric Key Encryption**:
     The symmetric key (SymKey) is then encrypted using the Client's public key, $C_{{pub}}$.
     This ensures that only the holder of the corresponding private key can decrypt and use the symmetric key.
-    Encrypted Symmetric Key: $`{Encrypt}_{C_{pub}}({SymKey}) \rightarrow {SymKey}_{enc}`$
-1. **Create Ebics Respose**:
-    After a client sends an EbicsRequest, the Bank ready to sign and send an EbicsResponse which contains : ${ebicsResponse} = {Payload}_{enc} \, \| \, {EncryptedSessionKey} \, \| \, {XMLSignature}$
+    Encrypted Symmetric Key: ${Encrypt}_{C_{pub}}({SymKey}) \rightarrow {SymKey}_{enc}$
+1. **Create EBICS Respose**:
+    After a client sends an EbicsRequest, the Bank ready to sign and send an EbicsResponse which contains ($\|$ denotes concatentation): ${ebicsResponse} = {Payload}_{enc}  \|  {EncryptedSessionKey}  \|  {XMLSignature}$
 
 ### Process Description with Witness and HSM
 
-To work on the Clients behalf, the witness needs to sign messages for the banking backend, for example it needs to create a singed EbicsRequest message, in order to get the EbicsResponse message which contains the payload.
+To work on the Clients behalf, the Witness needs to sign messages for the banking backend, for example it needs to create a singed EbicsRequest message, in order to get the EbicsResponse message which contains the payload containing balance and transactions:
 
 To sign messages for the bank it uses :
 
-4. **Request and Download EbicsResponse**
-    Using the HSM, the witness is able to create the EbicsRequest by signing it with the HSM:
-    ${hsmSign}_{hsmtoken}(EbicsRquest) \rightarrow {sign}_{C_{priv}}({EbicsRequest})$
+5. **Request and Download EbicsResponse**
+    Using the HSM, the Witness is able to create the EbicsRequest by signing it with the HSM:
+    ${hsmSign}_{hsmtoken}(EbicsRequest) \rightarrow {sign}_{C_{priv}}({EbicsRequest})$
 1. **Sign Encrypted Payload**
-    Create signature of encrypted payload:  
+    Witness creates signature of encrypted payload:  
     ${Signature}_{w_{priv}} = {Sign}_{W_{priv}}({Payload}_{enc})$
 
 
-## $Proof\alpha$: authenticity for daily statements and balances
+## ZK proofing system
 
 ### Process Description
 
-The witness uses hyperfridge and the HSM to create a SNARK proof with:
+The Witness uses hyperfridge and the HSM to create a SNARK proof with:
 - ${Payload}_{enc}, {SymKey}_{enc}, {XMLSignature}$
 - ${Signature}_{w_{priv}}$
--  And decrypted transaction key ${SymKey}$ by calling $hsmDecrypt_{hsmtoken}(Symkey_{enc})$
+-  And decrypted transaction key ${SymKey}$ by calling $hsmDecrypt_{hsmtoken}(Symkey_{enc})$ which is needed to speed up the proof-generation.
 
-6. **Create STARK proof &alpha;**: ${Proof\alpha}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
+7. **Create STARK Proof**: ${ZKProof}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
     - Private Inputs:
-        - Extracted form from ${EbicsRequest}$:  
+        - Extracted from ${EbicsRequest}$:  
             - ${Payload}_{enc}$: Encrypted payload, decrypt payload with ${SymKey}$ to extract the commitments.
             - ${SymKey}_{enc}$: Encrypted symetric transaction key, assert that the HSM-decrypted symetrical key is identical to the symetrical key of the document.
             - ${XMLSignature}, {}$: Signatures by the bank cover ${SymKey}$
@@ -80,99 +81,59 @@ The witness uses hyperfridge and the HSM to create a SNARK proof with:
     - Public Inputs: 
       - IBAN, $B_{pub}$, $W_{pub}$
 
-    - Commitment: Public input and data from  $Payload$ and $EbicsResponse$: ${extractCommitment}({EbicsRequest}, {Payload})$ presented as a JSON document.
-The STARK presents a proof of computation. The computation is sealed (using Risk-Zero framework) and contains:
+    - Commitment: Public input and data from  $Payload$ and $EbicsResponse$: ${extractCommitment}({EbicsRequest}, {Payload})$ presented as a JSON document embedded in the Risc-Zero STARK data structure.
 
-   a. **Validate $SymKey$**: The Bank has generated $SymKey$ to encrypt the $Payload$ (clients data)
-    - Verify $XMLSignature$ which contains $Symkey_{enc}$.
-    - Decrypt $Symkey_{enc}$ with $C_{priv}$ which proves the document was sent to the specific client.
+The STARK presents a proof of computation. The computation is sealed (using Risk-Zero framework) and has following properties:
 
-     b. **Validate integrity of $Payload$**:
-    - Validate ${Signature}_{w_{priv}}$ of $Payload$ so the client is not able to tamper the $Payload$ to present a fake balance.
-
-   c. **Create commitment from decrypted $Payload$**:
-    - Decrypt $Payload$ with $Symkey$.
-    - Extract the data from payload and create the commitment. 
-    - Add public input to the commitment.
-
-   d. **A seal for the proofing algorithm - the $ImageID$**
-    - The seal (exact version and code) is identified by an $ImageID$. 
-    - See [Risk-Zero Proof System](https://dev.risczero.com/proof-system/).
+  a. **Validate $SymKey$**: The Bank has generated $SymKey$ to encrypt the $Payload$ (clients data)
+   - Verify $XMLSignature$ which contains $Symkey_{enc}$.
+   - Decrypt $Symkey_{enc}$ with $C_{priv}$ which proves the document was sent to the specific client.
+ 
+  b. **Validate integrity of $Payload$**:
+   - Validate ${Signature}_{w_{priv}}$ of $Payload$ so the client is not able to tamper the $Payload$ to present a fake balance.
+  
+  c. **Create commitment from decrypted $Payload$**:
+   - Decrypt $Payload$ with $Symkey$.
+   - Extract the data from payload and create the commitment. 
+   - Add public input to the commitment.
+  
+  d. **A seal for the proofing algorithm - the STARK based on an $ImageID$**
+   - The seal (exact version and code) is identified by an $ImageID$. 
+   - See [Risk-Zero Proof System](https://dev.risczero.com/proof-system/).
 
 ### Verification
 
-7. **Verification using Risk-Zero Receipt**: Other parties (like the Bank or external verifiers) can verify the zero-knowledge proof.
-   - Verify proof with: ${VerifyProof\alpha_{ImageID}}() \rightarrow Commitment$.
+8. **Verification using Risk-Zero Receipt**: Other parties (like the Bank or external verifiers) can verify the zero-knowledge proof.
+   - Verify proof with: ${VerifyZKProof_{ImageID}}() \rightarrow Commitment$.
    - Check the public input (IBAN, $B_{pub}$, $W_{pub}$).
 
-8. **On-Chain verification with Groth16 SNARK**:
+(8.) **On-Chain verification with Groth16 SNARK**:
    - Risk-Zero privides a STARK to SNARK wrapper to support [on-chain verfication](https://www.risczero.com/news/on-chain-verification).
 
-
-## $Proof \beta$: transaction membership
-
-For example Alice wire-transfers and amount X to Bob and wants to generate a proof of this transaction without revealing the bank account number or the name of Alice. As soon as the amount is booked on Bobs bank account and Bob generates a $Proof \alpha$ with hyperfridge (automatically), Alice is able to generate $Proof \beta$ that the money arrived on Bobs account.
-
-We want to prove that a transaction (defined as $Statement$) is part of $Payload$, which has following properties:
-
-- A $Payload$ has a least one transaction $Statement$. A transaction is either a credit or debit - means it adds or reduces a balance of a bank account.
-- A $Payload$ is implemented as an [ISO20022 camt.053 (Cash management) XML message](https://www.iso20022.org/message/mdr/22714/download).
-- For later use we simplify the $Payload$ the message as:
-    - $Payload = {GroupHeader} \, \| \ ({Statement})^*$, where
-    -  ${GroupHeader}={StatementSequenceNumber}  \, \| \ Account \, \| \ Currency$
-    -  ${Statemnet}= StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo $
-
-### Process Description for proofing transaction membership
-
-1. **Generate secret $r$**: Client $C$ generates a random number $r$ and adds the number wire transfer as "additional information" which will be reflected by the field camt53 field $StmtAddionalTxInfo$ of $Payload$.
-
-2. We modify the ***STARK Proof &alpha;*** of step 6 above. For each $Statement$ in $Payload$, we add to the public commitment: $hash( StmtAccount \, \| \,  StmtAmount \, \| \,  StmtAddionalTxInfo)$
-
-3. **Create STARK Proof &beta;**: ${Proof\beta}_{ImageID}({PrivateInput}, {PublicInput}) \rightarrow {Commitment}$
-    - Private Inputs: $ StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo $
-    - Public Inputs: STARK $Proof \alpha$ verified using [composition](https://www.risczero.com/news/proof-composition).
-    - Commitment: $StmtAmount$
-For the computation of STARK Proof &beta;:
-
-   a. **validate Receipt for $Proof \alpha$**.
-
-   b. **Check hash for transaction payload**:  Calculate $hash(StmtAccount \, \| \,  StmtAmount \, \| \,  StmtDbtrCdrAddress \, \| \, StmtAddionalTxInfo)$ and check if the hash is member of the journal of receipt &alpha;.
-
-   c. Optionally **check client $C$ signature** on the transaction payload.
-
-4. Create ***STARK $Proof\beta$***:
-   a. Only the client $C$ knows $r$ and is able to generate a proof for transaction inclusion and present it for example to a smart contract without revealing IBAN (account) or private information.
-   b. Alternatively the Client $C$ signs $hash( StmtAccount \, \| \,  StmtAmount \, \| \,  StmtAddionalTxInfo )$ (including randomness factor) - then only $C$ is able to generate $Proof\beta$.
-
-5. **On-Chain verification with Groth16 SNARK**:
-Use [on-chain verfication](https://www.risczero.com/news/on-chain-verification).
-
-
 ## Key Benefits
-
-Alice can proof that she sent FIAT amount X to Bobs bank account, without revealing identity or financial data - for example to proof a payment which can be consumed by smart contracts. No swapping FIAT to some other tokens is necessary, smart contracts can directly consume events from a FIAT ledger. Bob may also use $Proof\alpha$ as a proof-of-reserve. Note that ISO20022 supports varias assets classes, not only FIAT currencies.
-
-- **Privacy**: The Client's private key remain confidential throughout the process, so do other private keys. A
-- **Security**: The signature from the Witness and the zero-knowledge proof mechanism ensure the security and integrity of the transaction without compromising sensitive information (transaction data).
+   - **Privacy**: The Client's private key remain confidential throughout the process. No party has access to any of the others private keys. The witness is not able to see the payload. 
+   - **Security**: The signature from the Witness and the zero-knowledge proof mechanism ensure the security and integrity of the transaction without compromising sensitive information (transaction data).
 - **Verifiability**: External parties can verify a bank statements legitimacy without accessing private keys or sensitive transaction details - on-chain or off-chain.
+- **Automation**: A TradFi transaction becomes a "signal" which can be presented, processed or triggered on any blockchain, fully automated.
+
 
 ## Security Considerations
 
-- The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$.
+- The witness also acts as a signing proxy to create the $EbicsRequest$ which is necessary to trigger the download of $EbicsResponse$ which contains the $Payload$. Witness and Client together are able to create fake proofs.
+- The zero-knowledge proof allows the Client to prove knowledge of certain information without revealing the information itself and without violating the privacy of financial data.
 - The use of digital signatures by the Witness ensures the integrity and authenticity of the payload, which might not be necessary if the Ebics Standard implements its planned feature and will actually sign its payload.
 - The HSM must be tamper-resistant and capable of securely managing cryptographic keys and operations.
-- Similar to concept of blockchain, we might chain daily statements and add the receipt of previous STARK $Proof\alpha$ to the following proof, checking the sequence number: Add receipt of proof &alpha; to the public inputs and check if sequence number is consecutive in step "6.".
 
 
 ## Execution time
 
-STARK proofs can be computed in a couple of minutes [see here for details](runtime.md).
+[See here](runtime.md).
 
 ## Outlook and use cases
 
 ### Proof transaction inclusion and Instant Payments
 
-As we are able to prove the payload, we can create a proof for transaction inclusion. Means we can prove FIAT payments incoming and outgoing, both on-chain - similar to how cross-blockchain bridges work today. Most banks are operating on a daily basis which prevents interactive use-cases or would ask e.g. for optimistic implementation and addition funds to secure the FIAT bridge. But the EU is working on instant payments which would even allow instant interactive and non-interactive applications. This does not only apply to FIAT assets but also to any TradFi assets. For example, Maker DAO has invested 400 mUSD in a Blackrock ETF for traditional assets. Hyperfridge would be able to create proof of assets and do balancing of investments (invest and divest) automatically. Note that using Ebics and standard banking functionality comes at no cost or transaction fees.
+As we are able to prove the payload, we can create a proof for transaction inclusion. Means we can prove FIAT payments incoming and outgoing, both on-chain - similar to how cross-blockchain bridges work today. Most banks are operating on a daily basis which prevents interactive use-cases or would ask e.g. for optimistic implementation and addition funds to secure the FIAT bridge. But the EU (European Union) is working on instant payments which would even allow instant interactive and non-interactive applications. This does not only apply to FIAT assets but also to any TradFi assets. For example, Maker DAO has invested 400 mUSD in a Blackrock ETF for traditional assets. Hyperfridge would be able to create proof of assets and do balancing of investments (invest and divest) automatically. Note that using Ebics and standard banking functionality comes at no cost or transaction fees.
 
 ### Open-API Banking and Payment-API (e.g. Stripe)
 

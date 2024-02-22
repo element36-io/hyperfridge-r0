@@ -22,6 +22,8 @@ fi
 
 echo "work dir of script $(pwd)"
 
+echo "work dir of script $(pwd)"
+
 if [ -z "${xml_file}" ]; then
     echo "xml_file variable is not set. Set to default."
     xml_file="response_template.xml"
@@ -294,6 +296,7 @@ openssl pkeyutl -verify -inkey "$pub_witness_pem" -pubin -in $orderdata_digest_f
 # the result is a compressed binary using standard RFC 1951 which is just (de)compressing a stream
 payload_file="${output_dir_name}/tmp/${xml_file_stem}_payload_camt53.zip"
 zlib-flate -uncompress  < $decrypted_file > $payload_file
+
 echo "size $(stat -c %s "$payload_file") hash of zip file:" $(openssl dgst -sha256 -r "$payload_file")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
 unzip -o $payload_file -d  $output_dir_name/tmp/camt53/

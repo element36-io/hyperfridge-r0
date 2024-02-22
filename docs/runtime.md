@@ -1,15 +1,14 @@
- # Runtime measurements
+ # Performance measurements
 
 Conclusions:
-- 
-- It takes hours without hardware acceleration to produce the STARK on strong laptop hardware, but it can be considered fast-enough, because the banking backend updates its data only once a working day. Cost is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUCA)
-- With hardware acceleration (CUCA) we *estimate* around 10-20 minutes. We could not test hardware accelartion due to compile errors with Risc-Zero framework and CUDA drivers.
+
+- With hardware acceleration (CUDA) we have execution times for a proof around **10-20 minutes**. We could not test hardware acceleration due to lack of memory, but testing with other examples shows dramatic speed-up. 
+- Cost is estimated around 0.5 USD per proof with hardware acceleration. Upper bound (no hardware acceleration) is around 2-6 USD per proof (Cost basis AWS EC2 instance c5d.12xlarge, no CUDA)
 - RSA framework is biggest bottleneck. It might be interesting to apply the [Big-Integer Patch](https://github.com/risc0/RustCrypto-crypto-bigint/tree/risczero) of Risc0 to the RSA crate, but this was not investigated further.
 
-### Reference Hardware (gaming Laptop)
+### Reference Hardware
 
-Hardware: Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070 (cudo NOT activitaed)
-
+Hardware: Gaming Laptop, Lenovo Legion 5 Pro, 32 GB RAM, Geforce 4070 (8GB)
 vendor_id	: GenuineIntel
 cpu family	: 6
 model		: 183
@@ -18,7 +17,7 @@ cpu MHz		: 1984.575
 cache size	: 30720 KB
 cpu cores	: 16
 
-Comparising with Risk Zero benchmarks [here](https://dev.risczero.com/datasheet.pdf): 
+Comparising with Risk Zero benchmarks [here](https://dev.risczero.com/datasheet.pdf):
 
 |     Cycles |   Duration |        RAM |       Seal |      Speed |
 |     ---- |   ---- |        ---- |       ---- |      ---- |
@@ -31,7 +30,17 @@ Comparising with Risk Zero benchmarks [here](https://dev.risczero.com/datasheet.
 |      4096k |    12:41.5 |     7.56GB |      1.1MB |     5.5khz |
 
 
-Running a roundtrip of proof generation of validation gives following numbers on the reference hardware: 
+With CUDA enabled we see roughly 10-20x speedup until memory runs out:
+
+|     Cycles |   Duration |        RAM |       Seal |      Speed |
+|     ---- |   ---- |        ---- |       ---- |      ---- |
+|        64k |    794.7ms |    472.4MB |    215.3kB |    82.5khz |
+|       128k |      1.36s |    944.8MB |    238.3kB |    96.3khz |
+|       256k |       2.8s |     1.89GB |      250kB |    93.7khz |
+
+
+
+Running a roundtrip of proof generation of validation gives following numbers on the reference hardware (no CUDA):
 
 ```
 RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --nocapture
@@ -43,11 +52,6 @@ RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test   -- --
 ```
 
 Runtime for genation of Proof: 12055.32s - around ***200 minutes*** without hardware acceleration.
-
-Notes: 
-- Risc0 reports 37 segments which are parallized using [continuation](https://www.risczero.com/news/continuations) on 16 cores (24 virtual cores - see hardware spec above). Using hardware with 48 cores execution time would likely be cut half to ***100 minutes*** if CPUs have same speed. 
-- Hardware acceleration (CUDA) not tested. 
-
 
 Cycle most expensive calculations:
 
@@ -64,6 +68,6 @@ Cycle most expensive calculations:
 RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test profid  -- --nocapture
 pprof -http=127.0.0.1:8089 ./host/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge host/profile-output
 ```
+
 This will generate an overview like this, which shows that bottlenecks are related to RSA decryption and signature validation. This generates a cycle overview ([full image](./hyperfridge-cycles.html)): 
 ![plot](./cycles.png)
-
