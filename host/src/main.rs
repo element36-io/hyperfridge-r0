@@ -123,7 +123,7 @@ fn main() {
                     .to_str()
                     .expect("Failed to convert file stem to string");
 
-                let __script_full_path = script_dir.join(script_file_stem);
+                let _script_full_path = script_dir.join(script_file_stem);
 
                 print_verbose!(
                     "calling {} xml_file={} pub_bank={} client={} pub_witness{}",
@@ -192,6 +192,8 @@ fn main() {
     // encrypting with privte key is much faster. So we expect the decrypted transaction
     // key, encrypt it and check if it matches with the encrypted transaction key
     // in the XML file.
+    let decrypted_tx_key_bin_filename = format!("{}-TransactionKeyDecrypt.bin", camt53_filename);
+    print_verbose!("open {}", &decrypted_tx_key_bin_filename);
     let decrypted_tx_key_bin: Vec<u8> =
         fs::read(&decrypted_tx_key_bin_filename).unwrap_or_else(|_| {
             panic!(
@@ -403,7 +405,7 @@ fn proove_camt53(
     let prover = default_prover();
     print_verbose!("prove hyperfridge elf ");
     // generate receipt
-    let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
+    let receipt_result = prover.prove(env, HYPERFRIDGE_ELF);
     let image_id_hex = get_image_id_hex();
     print_verbose!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
