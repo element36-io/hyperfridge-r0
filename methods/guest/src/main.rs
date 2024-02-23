@@ -72,9 +72,10 @@ struct EbicsRequestData {
 }
 
 
+/// GrpHdr structure of a Camt53 XML respose
 #[derive(Debug, Default, Clone)]
 struct Document {
-    grp_hdr: GrpHdr, // creatin time
+    grp_hdr: GrpHdr, // creation time
     stmts: Vec<Stmt>,
 }
 
