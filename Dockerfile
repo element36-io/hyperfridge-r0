@@ -1,16 +1,17 @@
 FROM rust:1.75-bookworm as build
 
-RUN cargo install cargo-binstall
-RUN cargo binstall cargo-risczero -y
+RUN cargo install cargo-binstall --locked --version 1.6.2
+RUN cargo binstall cargo-risczero -y --version 0.19.1
 RUN cargo risczero install
+RUN rustup toolchain list --verbose  | grep risc0
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils 
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils
 
 COPY data data
 COPY host host
 COPY verifier verifier
 COPY methods methods
-COPY Cargo.toml /
+COPY Cargo.toml Cargo.lock /
 COPY rust-toolchain.toml /
 
 # create directory holding generated Id of Computation which will be proved. 
@@ -40,7 +41,7 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host show-image-id > /
 
 
 # Final Stage - 
-FROM debian:bookworm-slim as runtime
+FROM debian:12.5-slim as runtime
 # qdpf is for zlib flate
 RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip
 
