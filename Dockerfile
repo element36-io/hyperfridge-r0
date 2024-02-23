@@ -5,7 +5,7 @@ RUN cargo binstall cargo-risczero -y --version 0.19.1
 RUN cargo risczero install
 RUN rustup toolchain list --verbose  | grep risc0
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils 
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils
 
 COPY data data
 COPY host host
@@ -43,7 +43,7 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host show-image-id > /
 # Final Stage - 
 FROM debian:12.5-slim as runtime
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip
 
 #FROM alpine:latest as runteim
 # add glibc 
