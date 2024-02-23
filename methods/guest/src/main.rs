@@ -46,6 +46,7 @@ macro_rules! print_verbose {
     };
 }
 
+/// Holds data retrieved from parsing the EbicsResponse XML file
 #[allow(dead_code)]
 #[derive(Debug)]
 struct Request {
@@ -57,7 +58,7 @@ struct Request {
     signed_info_hashed: Vec<u8>,
     order_data_b64: String,
 }
-
+/// Holds data retrieved from parsing the EbicsResponse XML file
 #[allow(dead_code)]
 #[derive(Debug)]
 struct EbicsRequestData {
@@ -69,6 +70,7 @@ struct EbicsRequestData {
     digest_value: String,
     signature_value: String,
 }
+
 
 #[derive(Debug, Default, Clone)]
 struct Document {
