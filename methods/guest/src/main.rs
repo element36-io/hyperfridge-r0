@@ -71,10 +71,11 @@ struct EbicsRequestData {
     signature_value: String,
 }
 
-/// Holds data retrieved from parsing the EbicsResponse XML file
+
+/// GrpHdr structure of a Camt53 XML respose
 #[derive(Debug, Default, Clone)]
 struct Document {
-    grp_hdr: GrpHdr, // creatin time
+    grp_hdr: GrpHdr, // creation time
     stmts: Vec<Stmt>,
 }
 
@@ -99,7 +100,7 @@ struct Stmt {
     balances: Vec<Balance>,
     ntries: Vec<Ntry>,
 }
-
+/// Holds data from Camt53 XML file - a single transaction
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 #[derive(Debug, Default)]
@@ -110,6 +111,8 @@ struct Ntry {
     amt: String,
     txDtls: Vec<TxDtls>,
 }
+
+/// Holds data from Camt53 XML file - transaction details
 #[allow(non_snake_case)]
 #[allow(dead_code)]
 #[derive(Debug,Default)]
@@ -166,7 +169,6 @@ pub fn main() {
     let witness_signature_hex: String = env::read();
     let pub_witness_pem: String = env::read();
     let flags: String = env::read();
-
     set_flags(flags);
     // convert input to key objects
     let exp: BigUint = BigUint::parse_bytes(pub_bank_exp.as_bytes(), 10)
