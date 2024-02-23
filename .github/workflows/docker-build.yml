@@ -58,7 +58,7 @@ jobs:
 
     - name: Build Docker image (manual)
       run: |
-        docker build --no-cache -t e36io/hyperfridge-r0:${{ github.run_id }} .
+        docker buildx build --platform linux/amd64,linux/arm64 -t e36io/hyperfridge-r0:${{ github.run_id }} .
 
     - name: Create and Run Temporary Container
       run: |
