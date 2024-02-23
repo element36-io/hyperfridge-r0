@@ -129,7 +129,7 @@ fn main() {
                     .expect("Script path has no file stem")
                     .to_str()
                     .expect("Failed to convert file stem to string");
-
+                // build path for checkResponse.sh script from params
                 let _script_full_path = script_dir.join(script_file_stem);
 
                 print_verbose!(

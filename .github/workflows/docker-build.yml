@@ -62,11 +62,14 @@ jobs:
 
     - name: Create and Run Temporary Container
       run: |
-        docker create --name temp-container e36io/hyperfridge-r0:${{ github.run_id }}
+        docker create --name temp-container --platform linux/amd64 e36io/hyperfridge-r0:${{ github.run_id }}
+        docker create --name temp-container-arm64 --platform linux/arm64 e36io/hyperfridge-r0:${{ github.run_id }}
         docker cp temp-container:/app/IMAGE_ID.hex ./IMAGE_ID.hex
         docker cp temp-container:/app ./app
         docker cp temp-container:/data ./data
-        docker rm temp-container  
+        docker cp temp-container-arm64:/data ./data-arm64
+        docker rm temp-container
+        docker rm temp-container-arm64
 
     - name: Read the Image Tag
       id: read_tag
@@ -76,6 +79,8 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
         zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip ./app ./data
+        zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}-arm64.zip ./app-arm64 ./data
+        
 
     - name: Build and Push Docker image with custom tag
       if: github.event_name != 'pull_request'
@@ -92,5 +97,12 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
           gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }} hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create GitHub Arm64/MacOs Release with zipped binaries
+      if: github.event_name != 'pull_request'
+      run: |
+          gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}-arm64 hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}-arm64.zip --title "Release Version MacOs (linux/arm64) ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
