@@ -1,7 +1,11 @@
 FROM rust:1.75-bookworm as build
 
-RUN cargo install cargo-binstall --locked --version 1.6.2
-RUN cargo binstall cargo-risczero -y --version 0.19.1
+RUN apt-get update  # Update the package index
+RUN apt-get install -y build-essential clang gcc bash
+
+RUN cargo install cargo-binstall --version 1.6.2
+# RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+RUN cargo binstall cargo-risczero --version 0.20.1
 RUN cargo risczero install
 RUN rustup toolchain list --verbose  | grep risc0
 # qdpf is for zlib flate
@@ -41,9 +45,10 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host show-image-id > /
 
 
 # Final Stage - 
-FROM debian:12.5-slim as runtime
+FROM debian:bookworm-slim as runtime
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip
+RUN apt update 
+RUN apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip
 
 #FROM alpine:latest as runteim
 # add glibc 
@@ -65,3 +70,22 @@ RUN ls -la /data/test/test.xml-Receipt-$(cat /app/IMAGE_ID.hex)-latest.json
 WORKDIR /app
 
 CMD ["./host --help"]
+
+
+# FROM --platform=$TARGETPLATFORM rust:1.75-bookworm as build
+
+# Install Rust
+# RUN apt-get update
+
+# RUN apt-get install -y --no-install-recommends \
+#     curl \
+#     && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+#     && rm -rf /var/lib/apt/lists/*
+
+# # Add cargo to PATH
+# ENV PATH="/root/.cargo/bin:${PATH}"
+
+# https://github.com/risc0/risc0/issues/942
+# RUN rustup set default-host aarch64-apple-darwin
+# RUN rustup default stable-aarch64-apple-darwin
+# Install cargo binstall
