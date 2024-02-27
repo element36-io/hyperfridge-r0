@@ -44,7 +44,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
         DEFAULT_BUMP: patch
-        DRY_RUN: true
+        DRY_RUN: false
         VERBOSE: true
         INITIAL_VERSION: 0.1.0
         
@@ -55,6 +55,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         WITH_V: true
+        DRY_RUN: true
+        VERBOSE: true
         DEFAULT_BUMP: patch
         
     - name: echo tag
@@ -94,13 +96,13 @@ jobs:
         context: .
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=false
+        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }} 
         tags: ${{ env.REGISTRY_IMAGE }}:${{ github.run_id }}
 
     - name: Extract container ID 
       id: extract_container_id
       run: |
-        export CONTAINER_ID=$(docker ps -q -f id=${{ steps.docker_build.outputs.container }})
+        export CONTAINER_ID=${{ steps.docker_build.outputs.container_id }}
         echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
     
     - name: Copy IMAGE_ID.hex and read tag
