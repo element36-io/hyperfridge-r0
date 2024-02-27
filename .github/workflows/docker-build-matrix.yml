@@ -13,7 +13,9 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest #,macos-latest  # , l5, self-hosted
+    # runs-on: ubuntu-latest #,macos-latest  # , l5, self-hosted
+    runs-on: ${{ matrix.os == 'macos-latest' && 'macos-latest' || 'ubuntu-latest' }}
+
     permissions:
       contents: write
     strategy:
@@ -33,6 +35,7 @@ jobs:
         platform=${{ matrix.platform }}
         platform_with_underscore=$(echo "${platform}" | tr '/' '_')
         echo "PLATFORM=${platform_with_underscore}" >> $GITHUB_ENV
+        echo $GITHUB_ENV
     
     - name:  Dry-run of Bump version and push tag, Minor version for each merge
       if: github.event_name == 'pull_request'
@@ -85,7 +88,7 @@ jobs:
 
       # https://docs.docker.com/build/ci/github-actions/multi-platform/
     - name: Build Image
-      id: build
+      id: docker_build
       uses: docker/build-push-action@v5
       with:
         context: .
