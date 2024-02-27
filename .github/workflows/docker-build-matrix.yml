@@ -6,6 +6,7 @@ on:
 
   pull_request:
     branches: [ main ]
+
 env:
   REGISTRY_IMAGE_NAME: hyperfridge-r0
   REGISTRY_IMAGE: e36io/hyperfridge-r0
@@ -21,6 +22,7 @@ jobs:
         platform:
           - linux/amd64
           # - linux/arm64
+          # arm speed up: https://martin-grigorov.medium.com/github-actions-arm64-runner-on-oracle-cloud-a77cdf7a325a
     steps:
     - name: Check out code
       uses: actions/checkout@v3
@@ -28,7 +30,8 @@ jobs:
     - name: Prepare variables
       run: |
         platform=${{ matrix.platform }}
-        echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_EN
+        platform_with_underscore=$(echo "${platform}" | tr '/' '_')
+        echo "PLATFORM=${platform_with_underscore}" >> $GITHUB_ENV
     
     - name:  Dry-run of Bump version and push tag, Minor version for each merge
       if: github.event_name == 'pull_request'
@@ -86,11 +89,11 @@ jobs:
       with:
         context: .
         platforms: ${{ matrix.platform }}
-        # labels: ${{ steps.meta.outputs.labels }}
-        # outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-        # tags: e36io/hyperfridge-r0:${{ github.run_id }}
+        labels: ${{ steps.meta.outputs.labels }}
+        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=false
+        tags: ${{ env.REGISTRY_IMAGE }}:${{ github.run_id }}
 
-    - name: Extract container ID
+    - name: Extract container ID 
       id: extract_container_id
       run: |
         export CONTAINER_ID=$(docker ps -q -f id=${{ steps.docker_build.outputs.container }})
@@ -98,29 +101,29 @@ jobs:
     
     - name: Copy IMAGE_ID.hex and read tag
       run: |
-        docker cp $CONTAINER_ID:/app/IMAGE_ID.hex IMAGE_ID.hex
+        docker cp ${{ env.CONTAINER_ID }}:/app/IMAGE_ID.hex IMAGE_ID.hex
         OUT=$(cat IMAGE_ID.hex)
         echo "IMAGE_ID=$OUT" >> $GITHUB_ENV
 
     - name: Extract data for binary release
       run: |
-        docker cp $CONTAINER_ID:/app/IMAGE_ID.hex ./IMAGE_ID-${{ matrix.platform }}.hex
-        docker cp $CONTAINER_ID:/app ./app-${{ matrix.platform }}
-        docker cp $CONTAINER_ID:/data ./data-${{ matrix.platform }}
+        docker cp ${{ env.CONTAINER_ID }}:/app/IMAGE_ID.hex ./IMAGE_ID-${{ env.PLATFORM }}.hex
+        docker cp ${{ env.CONTAINER_ID }}:/app ./app-${{ env.PLATFORM }}
+        docker cp ${{ env.CONTAINER_ID }}:/data ./data-${{ env.PLATFORM }}
 
     - name: Zip App and Data Directories to create a release
       # if: github.event_name != 'pull_request'
       run: |
         zip -r \
-          ${{ env.REGISTRY_IMAGE_NAME }}-${{ matrix.platform }}-${{ env.IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip \
-          ./app-${{ matrix.platform }} ./data-${{ matrix.platform }}
+          ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip \
+          ./app-${{ env.PLATFORM }} ./data-${{ env.PLATFORM }}
 
     - name: Create GitHub Release with zipped binaries
       # if: github.event_name != 'pull_request'
       run: |
           gh release create \
             ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_ID }} \
-            ${{ env.REGISTRY_IMAGE_NAME }}-${{ matrix.platform }}-${{ env.IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_ID }} Platform: ${{ matrix.platform}}"
+            ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_ID }} Platform: ${{ matrix.platform}}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
