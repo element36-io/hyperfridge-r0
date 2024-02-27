@@ -94,7 +94,6 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        load: true
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
         outputs: type=image,name=${{ env.REGISTRY_IMAGE }}:${{ github.run_id }} ,push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }},container=container_id
