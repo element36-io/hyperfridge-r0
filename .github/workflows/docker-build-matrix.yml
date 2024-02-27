@@ -13,13 +13,13 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest,macos-latest  # , l5, self-hosted
+    runs-on: ubuntu-latest #,macos-latest  # , l5, self-hosted
     permissions:
       contents: write
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest,macos-latest]
+        os: [ubuntu-latest] #,macos-latest]
         platform:
           - linux/amd64
           # - linux/arm64
