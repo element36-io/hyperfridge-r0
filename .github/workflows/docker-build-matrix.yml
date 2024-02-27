@@ -96,12 +96,13 @@ jobs:
         context: .
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }} 
+        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }},container=container_id
         tags: ${{ env.REGISTRY_IMAGE }}:${{ github.run_id }}
 
     - name: Extract container ID 
       id: extract_container_id
       run: |
+        echo 1 ${{ steps.docker_build.outputs.container_id }} 2 ${{ steps.docker_build.outputs.container }} 
         export CONTAINER_ID=${{ steps.docker_build.outputs.container_id }}
         echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
     
