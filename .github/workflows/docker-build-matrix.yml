@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY_IMAGE_NAME: hyperfridge-r0
-  REGISTRY_IMAGE: e36io/hyperfridge-r0
+  REGISTRY_IMAGE: ${{ secrets.DOCKER_USERNAME }}/hyperfridge-r0
 
 jobs:
   build:
@@ -94,16 +94,21 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
+        load: true
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }},container=container_id
+        outputs: type=image,name=${{ env.REGISTRY_IMAGE }}:${{ github.run_id }} ,push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }},container=container_id
         tags: ${{ env.REGISTRY_IMAGE }}:${{ github.run_id }}
+
+    - name: Inspect image
+      run: |
+        docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ github.run_id }}
 
     - name: Extract container ID 
       id: extract_container_id
       run: |
-        echo 1 ${{ steps.docker_build.outputs.container_id }} 2 ${{ steps.docker_build.outputs.container }} 
-        export CONTAINER_ID=${{ steps.docker_build.outputs.container_id }}
+        echo 1 ${{ steps.docker_build.outputs.container_id }} 2 ${{ steps.docker_build.outputs.container }} 3 ${{ steps.docker_build.outputs.imageid }}
+        export CONTAINER_ID=${{ steps.docker_build.outputs.imageid }}
         echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
     
     - name: Copy IMAGE_ID.hex and read tag
