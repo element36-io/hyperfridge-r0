@@ -1,4 +1,4 @@
-FROM rust:1.74-bookworm as build
+FROM rust:1.75-bookworm as build
 
 RUN cargo install cargo-binstall  --version 1.6.2
 RUN cargo binstall cargo-risczero -y --version 0.19.1
