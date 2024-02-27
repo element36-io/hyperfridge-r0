@@ -1,8 +1,8 @@
 FROM rust:1.74-bookworm as build
 
-RUN cargo install cargo-binstall --locked --version 1.6.2
+RUN cargo install cargo-binstall  --version 1.6.2
 RUN cargo binstall cargo-risczero -y --version 0.19.1
-RUN cargo risczero install
+# RUN cargo risczero install # not needed, because it is already installed by cargo-binstall
 RUN rustup toolchain list --verbose  | grep risc0
 # qdpf is for zlib flate
 RUN apt update && apt install -y perl qpdf xxd libxml2-utils
