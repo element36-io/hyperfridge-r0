@@ -100,24 +100,13 @@ jobs:
         # outputs: type=image,name=${{ env.REGISTRY_IMAGE }}:${{ github.run_id }} ,push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }},container=container_id
         tags: ${{ env.REGISTRY_IMAGE_NAME }}
 
-    - name: Extract container ID 
-      id: extract_container_id
-      run: |
-        echo 1 ${{ steps.docker_build.outputs.container_id }} 2 ${{ steps.docker_build.outputs.container }} 3 ${{ steps.docker_build.outputs.imageid }}
-        export CONTAINER_ID=${{ steps.docker_build.outputs.imageid }}
-        echo "CONTAINER_ID=$CONTAINER_ID" >> $GITHUB_ENV
-    
-    - name: Copy IMAGE_ID.hex and read tag
-      run: |
-        docker cp ${{ env.REGISTRY_IMAGE }}:/app/IMAGE_ID.hex IMAGE_ID.hex
-        OUT=$(cat IMAGE_ID.hex)
-        echo "IMAGE_ID=$OUT" >> $GITHUB_ENV
-
     - name: Extract data for binary release
       run: |
-        docker cp ${{ env.REGISTRY_IMAGE_NAME }}:/app/IMAGE_ID.hex ./IMAGE_ID-${{ env.PLATFORM }}.hex
-        docker cp ${{ env.REGISTRY_IMAGE_NAME }}:/app ./app-${{ env.PLATFORM }}
-        docker cp ${{ env.REGISTRY_IMAGE_NAME }}:/data ./data-${{ env.PLATFORM }}
+        id=$(docker create ${{ env.REGISTRY_IMAGE_NAME }})
+        docker cp $id:/app/IMAGE_ID.hex ./IMAGE_ID-${{ env.PLATFORM }}.hex
+        docker cp $id:/app ./app-${{ env.PLATFORM }}
+        docker cp $id:/data ./data-${{ env.PLATFORM }}
+        docker rm -v $id
 
     - name: Zip App and Data Directories to create a release
       # if: github.event_name != 'pull_request'
