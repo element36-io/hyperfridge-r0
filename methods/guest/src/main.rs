@@ -73,7 +73,7 @@ struct EbicsRequestData {
 
 
 /// GrpHdr structure of a Camt53 XML respose
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct Document {
     grp_hdr: GrpHdr, // creation time
     stmts: Vec<Stmt>,
@@ -169,6 +169,7 @@ pub fn main() {
     let witness_signature_hex: String = env::read();
     let pub_witness_pem: String = env::read();
     let flags: String = env::read();
+    // process flags coming from the host, e.g. verbose
     set_flags(flags);
     // convert input to key objects
     let exp: BigUint = BigUint::parse_bytes(pub_bank_exp.as_bytes(), 10)
@@ -212,10 +213,11 @@ pub fn main() {
 
     print_verbose!(" Cycle count {}k", (env::cycle_count()) / 1000);
 
-    let mut commitments = Vec::new();
+
     // public committed data, that is what we want to prove
     // we only add data what we decide is OK to be public
     // but in the end this depends on use cases.
+    let mut commitments = Vec::new();
 
     // An EbicsResponse can have multiple camt53 files, each with multiple transactions. 
     // Each Camt53 file is a day's worth of transactions and an offial final state similar
@@ -258,9 +260,10 @@ pub fn main() {
         &commitments.join(",")
     );
     print_verbose!("Commitment for receipt: {}", &final_commitment);
+    // r0vm commit, this is the final output of the proof
     env::commit(&final_commitment);
 }
-
+/// set the verbose flag
 fn set_flags(flags: String) {
     if flags.contains("verbose") {
         unsafe {
@@ -488,6 +491,7 @@ fn verify_bank_signature(pub_bank: &RsaPublicKey, request: &Request) {
 /// actual payload, which is a ZIP file containing the daily statements and account data - also in XML. 
 /// See  https://www.cfonb.org/fichiers/20130612170023_6_4_EBICS_Specification_2.5_final_2011_05_16_2012_07_01.pdf
 /// Chapter 5.6.1.1.2
+/// Check out example of real file in /data/response_template_pretty.xml - it is a bit long to be included here.
 
 fn parse_ebics_response(
     authenticated_xml_c14n: &str,
@@ -591,24 +595,23 @@ fn parse_ebics_response(
 
     assert!(
         digest_value_b64.len() != 0,
-        "Asserting longer than 0: digest_value_b64"
+        "Asserting longer than 0: digest_value_b64 - no digest value in EbicsResponse XML?"
     );
     assert!(
         transaction_key_b64.len() != 0,
-        "Asserting longer than 0: transaction_key_b64"
+        "Asserting longer than 0: transaction_key_b64 - no transaction key in EbicsResponse XML?"
     );
-    assert_ne!(
-        signature_value_b64.len(),
-        0,
-        "Asserting longer than 0: signature_value_b64"
+    assert!(
+        signature_value_b64.len() != 0,
+        "Asserting longer than 0: signature_value_b64 - no signature value in EbicsResponse XML?"
     );
     assert!(
         signed_info_hashed.len() != 0,
-        "Asserting longer than 0: signed_info_hashed"
+        "Asserting longer than 0: signed_info_hashed - no signed info value in EbicsResponse XML?"
     );
     assert!(
         order_data_b64.len() != 0,
-        "Asserting longer than 0: order_data_b64"
+        "Asserting longer than 0: order_data_b64 - no order data value in EbicsResponse XML?"
     );
 
     let authenticated_xml_c14n_hashed = *Impl::hash_bytes(authenticated_xml_c14n.as_bytes());
