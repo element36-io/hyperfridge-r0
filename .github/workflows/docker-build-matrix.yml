@@ -24,7 +24,8 @@ jobs:
         os: [ubuntu-latest] #,macos-latest]
         platform:
           - linux/amd64
-          # - linux/arm64
+          - linux/arm64
+          - linux/arm/v7
           # arm speed up: https://martin-grigorov.medium.com/github-actions-arm64-runner-on-oracle-cloud-a77cdf7a325a
     steps:
     - name: Check out code
@@ -79,10 +80,6 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
-    # - name: Build Docker image (manual)
-    #   run: |
-    #     docker buildx build --platform linux/amd64,linux/arm64 -t e36io/hyperfridge-r0:${{ github.run_id }} .
-
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3    
     - name: Set up Docker Buildx
@@ -97,7 +94,6 @@ jobs:
         load: true
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
-        # outputs: type=image,name=${{ env.REGISTRY_IMAGE }}:${{ github.run_id }} ,push-by-digest=true,name-canonical=true,push=false,container_id=${{ steps.docker_build.outputs.container }},container=container_id
         tags: ${{ env.REGISTRY_IMAGE_NAME }}
 
     - name: Extract data for binary release
