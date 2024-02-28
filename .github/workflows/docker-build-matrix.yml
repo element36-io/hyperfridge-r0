@@ -106,14 +106,25 @@ jobs:
         docker cp $id:/app/IMAGE_ID.hex ./IMAGE_ID-${{ env.PLATFORM }}.hex
         docker cp $id:/app ./app-${{ env.PLATFORM }}
         docker cp $id:/data ./data-${{ env.PLATFORM }}
+        echo "IMAGE_TAG=$(cat ./IMAGE_ID-${{ env.PLATFORM }}.hex)" >> $GITHUB_ENV   
         docker rm -v $id
 
     - name: Zip App and Data Directories to create a release
       # if: github.event_name != 'pull_request'
       run: |
+        tempDir="/tmp/${{ env.PLATFORM }}-files"
+        mkdir -p $tempDir/app $tempDir/data
+        echo $tempDir
+    
+
+        mv ./app-${{ env.PLATFORM }}/* $tempDir/app
+        mv ./data-${{ env.PLATFORM }}/* $tempDir/data
+        ls -la $tempDir/app
+  
         zip -r \
           ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip \
-          ./app-${{ env.PLATFORM }} ./data-${{ env.PLATFORM }}
+          $tempDir/app $tempDir/data
+        rm -rf $tempDir
 
     - name: Create GitHub Release with zipped binaries
       # if: github.event_name != 'pull_request'
