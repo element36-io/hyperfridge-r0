@@ -118,9 +118,12 @@ jobs:
         echo r0ImageId ${{ env.R0_IMAGE_ID }}
         mv ./app-${{ env.PLATFORM }}/* $tempDir/app
         mv ./data-${{ env.PLATFORM }}/* $tempDir/data
+        currentDir=$(pwd)
+        cd $tempDir
         zip -r \
           ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip \
-          $tempDir/app $tempDir/data
+          app data
+        mv  ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip $currentDir
         rm -rf $tempDir
 
     - name: Create GitHub Release with zipped binaries
