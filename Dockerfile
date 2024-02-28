@@ -1,12 +1,17 @@
 FROM rust:1.75-bookworm as build
 
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils
 RUN cargo install cargo-binstall  --version 1.6.2
 RUN cargo binstall cargo-risczero -y --version 0.19.1
-RUN cargo risczero install 
-# not needed, because it is already installed by cargo-binstall
-RUN rustup toolchain list --verbose  | grep risc0
+
+# Conditionally install the cargo risczero toolchain based on the platform
+ARG PLATFORM
+RUN if [ "$PLATFORM" != "linux/amd64" ]; then \
+        cargo risczero build-toolchain; \
+    else \
+        cargo risczero install; \
+    fi
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils
 
 COPY data data
 COPY host host
