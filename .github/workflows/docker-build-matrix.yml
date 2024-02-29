@@ -103,6 +103,7 @@ jobs:
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=local,src=/tmp/.buildx-cache
+        cache-to: type=inline
         tags: ${{ env.REGISTRY_IMAGE_NAME }}
 
     - name: Extract data for binary release
