@@ -25,7 +25,7 @@ jobs:
         platform:
           - linux/amd64
           # - linux/arm64
-          # - linux/arm/v7
+          - linux/arm/v7
           # arm speed up: https://martin-grigorov.medium.com/github-actions-arm64-runner-on-oracle-cloud-a77cdf7a325a
     steps:
     - name: Check out code
