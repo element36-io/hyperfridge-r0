@@ -19,6 +19,10 @@ jobs:
 
     permissions:
       contents: write
+    outputs:
+      MY_TAG: ${{ steps.prepare_env.outputs.MY_TAG }}
+      MY_VERSION: ${{ steps.prepare_env.outputs.MY_VERSION }}   
+      R0_IMAGE_ID: ${{ env.R0_IMAGE_ID }}   
     steps:
     - name: Check out code
       uses: actions/checkout@v3
@@ -52,24 +56,12 @@ jobs:
         VERBOSE: true
         DEFAULT_BUMP: patch
         
-    - name: echo tag
+    - name: echo tags
       if: github.event_name != 'pull_request'
       run: |
         echo "The current tag is: ${{ steps.taggerRun.outputs.new_tag }}"
-
-    - name: echo part
-      if: github.event_name != 'pull_request'
-      run: |
         echo "The version increment was: ${{ steps.taggerRun.outputs.part }}"
 
-    - name: Prepare common variables
-      id: prepare_env
-      run: |
-        echo "::set-env name=MY_TAG::${{ steps.taggerRun.outputs.new_tag }}"}
-        echo "::set-env name=MY_VERSION::${{ steps.taggerRun.outputs.part }}"}
-        echo "MY_TAG=${{ steps.taggerRun.outputs.new_tag }}" 
-        echo "MY_VERSION=${{ steps.taggerRun.outputs.part }}"
-        
 
   build_linux:
     needs: prepare
@@ -87,6 +79,9 @@ jobs:
         platform:
           - linux/amd64
     steps:
+    - name: Echo variables
+      run: |
+        echo tempDir $tempDir ${{ env.MY_TAG }} ${{ env.MY_VERSION }} ${{ env.R0_IMAGE_ID }}
     - name: Check out code
       uses: actions/checkout@v3
 
