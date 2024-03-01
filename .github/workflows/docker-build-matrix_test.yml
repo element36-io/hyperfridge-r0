@@ -156,11 +156,14 @@ jobs:
       MY_VERSION: ${{ needs.prepare.outputs.MY_VERSION }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [macos-latest]
         platform:
-          - linux/arm64
+          # - linux/arm64
+          - arm64v8
+          - darwin/amd64
+          
     steps:
     - name: Echo variables
       run: |
