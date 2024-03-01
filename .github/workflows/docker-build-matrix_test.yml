@@ -20,8 +20,8 @@ jobs:
     permissions:
       contents: write
     outputs:
-      MY_TAG: ${{ steps.prepare_env.outputs.MY_TAG }}
-      MY_VERSION: ${{ steps.prepare_env.outputs.MY_VERSION }}   
+      MY_TAG: ${{ env.MY_TAG }}
+      MY_VERSION: ${{ env.MY_VERSION }}   
 
     steps:
     - name: Check out code
@@ -64,12 +64,9 @@ jobs:
 
     - name: Prepare common variables
       id: prepare_env
-      env:
-        MY_TAG: ${{ steps.taggerRun.outputs.new_tag }}
-        MY_VERSION: ${{ steps.taggerRun.outputs.part }}
       run: |
-        echo "MY_TAG=${{ steps.taggerRun.outputs.new_tag }}"
-        echo "MY_VERSION=${{ steps.taggerRun.outputs.part }}"
+        echo "MY_TAG=${{ steps.taggerRun.outputs.new_tag }}" >> $GITHUB_ENV
+        echo "MY_VERSION=${{ steps.taggerRun.outputs.part }}" >> $GITHUB_ENV
 
   build_linux:
     needs: prepare
