@@ -61,7 +61,12 @@ jobs:
       run: |
         echo "The current tag is: ${{ steps.taggerRun.outputs.new_tag }}"
         echo "The version increment was: ${{ steps.taggerRun.outputs.part }}"
-
+        
+    - name: Prepare common variables
+      id: prepare_env
+      run: |
+        echo "MY_TAG=${{ steps.taggerRun.outputs.new_tag }}"
+        echo "MY_VERSION=${{ steps.taggerRun.outputs.part }}"
 
   build_linux:
     needs: prepare
@@ -73,7 +78,7 @@ jobs:
       MY_VERSION: ${{ needs.prepare.outputs.MY_VERSION }}
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         os: [ubuntu-latest] #,macos-latest]
         platform:
