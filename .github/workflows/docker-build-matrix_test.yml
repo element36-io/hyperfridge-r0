@@ -160,7 +160,7 @@ jobs:
       matrix:
         os: [macos-latest]
         platform:
-          # - linux/arm64
+          # - linux/arm64 
           - arm64v8
           - darwin/amd64
           
