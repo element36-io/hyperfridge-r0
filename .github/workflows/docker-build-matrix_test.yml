@@ -10,6 +10,7 @@ on:
 env:
   REGISTRY_IMAGE_NAME: hyperfridge-r0
   REGISTRY_IMAGE: ${{ secrets.DOCKER_USERNAME }}/hyperfridge-r0
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   prepare:
@@ -61,11 +62,24 @@ jobs:
       run: |
         echo "The version increment was: ${{ steps.taggerRun.outputs.part }}"
 
+    - name: Prepare common variables
+      id: prepare_env
+      run: |
+        echo "::set-env name=MY_TAG::${{ steps.taggerRun.outputs.new_tag }}"}
+        echo "::set-env name=MY_VERSION::${{ steps.taggerRun.outputs.part }}"}
+        echo "MY_TAG=${{ steps.taggerRun.outputs.new_tag }}" 
+        echo "MY_VERSION=${{ steps.taggerRun.outputs.part }}"
+        
+
   build_linux:
     needs: prepare
     runs-on: ubuntu-latest    
     permissions:
       contents: write
+    env: 
+      MY_TAG: ${{ needs.prepare_env.outputs.MY_TAG }}
+      MY_VERSION: ${{ needs.prepare_env.outputs.MY_VERSION }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -79,11 +93,12 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Prepare variables
+    - name: Prepare variables Linux
       run: |
         platform=${{ matrix.platform }}
         platform_with_underscore=$(echo "${platform}" | tr '/' '_')
         echo "PLATFORM=${platform_with_underscore}" >> $GITHUB_ENV
+        echo "PLATFORM=${platform_with_underscore}"
         echo $GITHUB_ENV
 
     - name: Build Image
@@ -95,8 +110,7 @@ jobs:
         build-args: |
           PLATFORM=${{ matrix.platform }}
         platforms: ${{ matrix.platform }}
-        labels: ${{ steps.meta.outputs.labels }}
-        tags: ${{ env.REGISTRY_IMAGE_NAME }}
+        tags: ${{ env.REGISTRY_IMAGE_NAME }},${{ env.MY_TAG }}
 
     - name: Extract data for binary release
       run: |
@@ -112,16 +126,16 @@ jobs:
       run: |
         tempDir="/tmp/${{ env.PLATFORM }}-files"
         mkdir -p $tempDir/app $tempDir/data
-        echo tempDir $tempDir
+        echo tempDir $tempDir ${{ env.PLATFORM }} ${{ env.MY_TAG }} ${{ env.MY_VERSION }} ${{ env.R0_IMAGE_ID }} ${{ env.REGISTRY_IMAGE_NAME }} 
         echo r0ImageId ${{ env.R0_IMAGE_ID }}
         mv ./app-${{ env.PLATFORM }}/* $tempDir/app
         mv ./data-${{ env.PLATFORM }}/* $tempDir/data
         currentDir=$(pwd)
         cd $tempDir
         zip -r \
-          ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip \
+          ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ env.MY_TAG }}.zip \
           app data
-        mv  ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip $currentDir
+        mv  ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ env.MY_TAG }}.zip $currentDir
         rm -rf $tempDir
 
     - name: Create GitHub Release with zipped binaries
@@ -129,7 +143,6 @@ jobs:
       run: |
           gh release create \
             ${{ steps.taggerRun.outputs.new_tag }}-${{ env.R0_IMAGE_ID }} \
-            ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.R0_IMAGE_ID }} Platform: ${{ matrix.platform}}"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ env.MY_TAG }}.zip --title "Release Version ${{ env.MY_TAG }} Image ID:${{ env.R0_IMAGE_ID }} Platform: ${{ matrix.platform}}"
+
 
