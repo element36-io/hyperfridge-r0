@@ -69,8 +69,8 @@ jobs:
     permissions:
       contents: write
     env: 
-      MY_TAG: ${{ needs.prepare_env.outputs.MY_TAG }}
-      MY_VERSION: ${{ needs.prepare_env.outputs.MY_VERSION }}
+      MY_TAG: ${{ needs.prepare.outputs.MY_TAG }}
+      MY_VERSION: ${{ needs.prepare.outputs.MY_VERSION }}
 
     strategy:
       fail-fast: false
