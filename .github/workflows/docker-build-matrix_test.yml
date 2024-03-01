@@ -1,0 +1,132 @@
+name: Docker Build
+
+on:
+  push:
+    branches: [ main, web3review ]
+
+  pull_request:
+    branches: [ main ]
+
+env:
+  REGISTRY_IMAGE_NAME: hyperfridge-r0
+  REGISTRY_IMAGE: ${{ secrets.DOCKER_USERNAME }}/hyperfridge-r0
+
+jobs:
+  prepare:
+    # runs-on: ubuntu-latest #,macos-latest  # , l5, self-hosted
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+
+    - name: Login to DockerHub
+      if: github.event_name != 'pull_request'
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+
+    - name: Prepare variables
+      run: |
+        platform=${{ matrix.platform }}
+        platform_with_underscore=$(echo "${platform}" | tr '/' '_')
+        echo "PLATFORM=${platform_with_underscore}" >> $GITHUB_ENV
+        echo $GITHUB_ENV
+    
+    - name:  Dry-run of Bump version and push tag, Minor version for each merge
+      if: github.event_name == 'pull_request'
+      uses: anothrNick/github-tag-action@1.64.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DEFAULT_BUMP: patch
+        DRY_RUN: false
+        VERBOSE: true
+        INITIAL_VERSION: 0.1.0
+        
+    - name:  Bump version and push tag, Minor version for each merge
+      if: github.event_name != 'pull_request'
+      uses: anothrNick/github-tag-action@1.64.0
+      id: taggerRun
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        WITH_V: true
+        DRY_RUN: true
+        VERBOSE: true
+        DEFAULT_BUMP: patch
+        
+    - name: echo tag
+      if: github.event_name != 'pull_request'
+      run: |
+        echo "The current tag is: ${{ steps.taggerRun.outputs.new_tag }}"
+
+    - name: echo part
+      if: github.event_name != 'pull_request'
+      run: |
+        echo "The version increment was: ${{ steps.taggerRun.outputs.part }}"
+
+  build_linux:
+    needs: prepare
+    runs-on: ubuntu-latest    
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest] #,macos-latest]
+        platform:
+          - linux/amd64
+    steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Image
+      id: docker_build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        build-args: |
+          PLATFORM=${{ matrix.platform }}
+        platforms: ${{ matrix.platform }}
+        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ env.REGISTRY_IMAGE_NAME }}
+
+    - name: Extract data for binary release
+      run: |
+        id=$(docker create ${{ env.REGISTRY_IMAGE_NAME }})
+        docker cp $id:/app/IMAGE_ID.hex ./IMAGE_ID-${{ env.PLATFORM }}.hex
+        docker cp $id:/app ./app-${{ env.PLATFORM }}
+        docker cp $id:/data ./data-${{ env.PLATFORM }}
+        echo "R0_IMAGE_ID=$(cat ./IMAGE_ID-${{ env.PLATFORM }}.hex)" >> $GITHUB_ENV   
+        docker rm -v $id
+
+    - name: Zip App and Data Directories to create a release
+      # if: github.event_name != 'pull_request'
+      run: |
+        tempDir="/tmp/${{ env.PLATFORM }}-files"
+        mkdir -p $tempDir/app $tempDir/data
+        echo tempDir $tempDir
+        echo r0ImageId ${{ env.R0_IMAGE_ID }}
+        mv ./app-${{ env.PLATFORM }}/* $tempDir/app
+        mv ./data-${{ env.PLATFORM }}/* $tempDir/data
+        currentDir=$(pwd)
+        cd $tempDir
+        zip -r \
+          ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip \
+          app data
+        mv  ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip $currentDir
+        rm -rf $tempDir
+
+    - name: Create GitHub Release with zipped binaries
+      # if: github.event_name != 'pull_request'
+      run: |
+          gh release create \
+            ${{ steps.taggerRun.outputs.new_tag }}-${{ env.R0_IMAGE_ID }} \
+            ${{ env.REGISTRY_IMAGE_NAME }}-${{ env.PLATFORM }}-${{ env.R0_IMAGE_ID }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.R0_IMAGE_ID }} Platform: ${{ matrix.platform}}"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
