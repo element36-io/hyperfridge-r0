@@ -22,7 +22,7 @@ jobs:
     outputs:
       MY_TAG: ${{ steps.prepare_env.outputs.MY_TAG }}
       MY_VERSION: ${{ steps.prepare_env.outputs.MY_VERSION }}   
-      R0_IMAGE_ID: ${{ env.R0_IMAGE_ID }}   
+
     steps:
     - name: Check out code
       uses: actions/checkout@v3
@@ -81,7 +81,7 @@ jobs:
     steps:
     - name: Echo variables
       run: |
-        echo tempDir $tempDir ${{ env.MY_TAG }} ${{ env.MY_VERSION }} ${{ env.R0_IMAGE_ID }}
+        echo ... tempDir $tempDir MY_TAG ${{ env.MY_TAG }} MY_VERSION ${{ env.MY_VERSION }} 
     - name: Check out code
       uses: actions/checkout@v3
 
