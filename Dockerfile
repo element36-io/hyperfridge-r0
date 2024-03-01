@@ -1,4 +1,19 @@
-FROM rust:1.75-bookworm as build
+# FROM rust:1.75-bookworm as build
+# Base stage for building
+FROM debian:12.5-slim as build
+
+# Install required dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    build-essential \
+    git \
+    pkg-config \
+    libssl-dev \
+    cmake
+
+# Install Rust 1.75
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.75
+
 
 RUN apt update && apt install -y perl qpdf xxd libxml2-utils
 RUN cargo install cargo-binstall  --version 1.6.2

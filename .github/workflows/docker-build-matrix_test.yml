@@ -161,8 +161,10 @@ jobs:
         os: [macos-latest]
         platform:
           #   - linux/arm64 
-          - arm64v8
+          # - arm64v8
           - darwin/amd64
+          # - linux/amd64
+          - linux/arm/v7,linux/arm64
           
     steps:
     - name: Echo variables
