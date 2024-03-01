@@ -14,7 +14,7 @@ env:
 
 jobs:
   prepare:
-    # runs-on: ubuntu-latest #,macos-latest  # , l5, self-hosted
+    # runs-on: ubuntu-latest #,macos-latest  # , l5, self-hosted 
     runs-on: ubuntu-latest
 
     permissions:
@@ -160,7 +160,7 @@ jobs:
       matrix:
         os: [macos-latest]
         platform:
-          # - linux/arm64 
+          #   - linux/arm64 
           - arm64v8
           - darwin/amd64
           
