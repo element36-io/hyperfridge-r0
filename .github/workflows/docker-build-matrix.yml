@@ -101,8 +101,6 @@ jobs:
       with:
         context: .
         load: true
-        build-args: |
-          PLATFORM=${{ matrix.platform }}
         platforms: ${{ matrix.platform }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=local,src=/tmp/.buildx-cache

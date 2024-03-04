@@ -1,6 +1,6 @@
 # FROM rust:1.75-bookworm as build
 # Base stage for building
-FROM debian:12.5-slim as build
+        FROM debian:12.5-slim as build
 
 # Install required dependencies
 RUN apt-get update && apt-get install -y \
