@@ -3,30 +3,39 @@
         FROM debian:12.5-slim as build
 
 # Install required dependencies
+
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
     git \
     pkg-config \
     libssl-dev \
-    cmake
+    cmake \
+    python3  \
+    ninja-build \
+    perl qpdf xxd libxml2-utils
 
 # Install Rust 1.75
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.75
 
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils
+
 RUN cargo install cargo-binstall  --version 1.6.2
 RUN cargo binstall cargo-risczero -y --version 0.19.1
 
 # Conditionally install the cargo risczero toolchain based on the platform
 ARG PLATFORM
+RUN echo "PLATFORM: $PLATFORM"
 RUN if [ "$PLATFORM" != "linux/amd64" ]; then \
         cargo risczero build-toolchain; \
     else \
         cargo risczero install; \
     fi
-# qdpf is for zlib flate
+# Test toolchain installation
+RUN rustup toolchain list --verbose | grep risc0
+
+
 
 COPY data data
 COPY host host
@@ -34,6 +43,7 @@ COPY verifier verifier
 COPY methods methods
 COPY Cargo.toml Cargo.lock /
 COPY rust-toolchain.toml /
+RUN rustup toolchain install .
 
 # create directory holding generated Image Id of Computation which will be proved. 
 RUN mkdir -p /host/out
