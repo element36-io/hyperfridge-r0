@@ -1,6 +1,6 @@
 # FROM rust:1.75-bookworm as build
 # Base stage for building
-FROM e36io:test-r0 as build
+FROM e36io/risczero:r0-test as build
 
 COPY data data
 COPY host host
