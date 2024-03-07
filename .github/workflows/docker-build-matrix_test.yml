@@ -203,7 +203,7 @@ jobs:
     #     tags: ${{ env.REGISTRY_IMAGE_NAME }},${{ env.MY_TAG }}
 
     - name: Build Docker image (manual)
-      run: docker buildx build -t ${{ env.REGISTRY_IMAGE_NAME }}:${{ env.MY_TAG }} --build-arg PLATFORM=${{ matrix.platform }} .
+      run: docker buildx build -t ${{ env.REGISTRY_IMAGE_NAME }}:${{ env.MY_TAG }} --build-arg PLATFORM=${{ matrix.platform }} -f DockerfileMacOS .
 
     - name: Extract data for binary release
       run: |
