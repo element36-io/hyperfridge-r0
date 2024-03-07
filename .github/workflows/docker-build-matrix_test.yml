@@ -155,18 +155,18 @@ jobs:
       MY_TAG: ${{ needs.prepare.outputs.MY_TAG }}
       MY_VERSION: ${{ needs.prepare.outputs.MY_VERSION }}
 
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest]
-        # platform:
-        #   #   - linux/arm64 
-        #   # - arm64v8
-        #   # - darwin/amd64
-        #   # - linux/amd64
-        #   # - linux/arm/v7
-        #   # - linux/arm/v8
-        #   - linux/arm64
+    # strategy:
+    #   fail-fast: false
+    #   matrix:
+    #     os: [macos-latest]
+    #     # platform:
+    #     #   #   - linux/arm64 
+    #     #   # - arm64v8
+    #     #   # - darwin/amd64
+    #     #   # - linux/amd64
+    #     #   # - linux/arm/v7
+    #     #   # - linux/arm/v8
+    #     #   - linux/arm64
           
     steps:
     - name: Echo variables
@@ -191,16 +191,19 @@ jobs:
         echo "PLATFORM=${platform_with_underscore}"
         echo $GITHUB_ENV
 
-    - name: Build Image
-      id: docker_build
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        load: true
-        build-args: |
-          PLATFORM=${{ matrix.platform }}
-        platforms: ${{ matrix.platform }}
-        tags: ${{ env.REGISTRY_IMAGE_NAME }},${{ env.MY_TAG }}
+    # - name: Build Image
+    #   id: docker_build
+    #   uses: docker/build-push-action@v5
+    #   with:
+    #     context: .
+    #     load: true
+    #     build-args: |
+    #       PLATFORM=${{ matrix.platform }}
+    #     platforms: ${{ matrix.platform }}
+    #     tags: ${{ env.REGISTRY_IMAGE_NAME }},${{ env.MY_TAG }}
+
+    - name: Build Docker image (manual)
+      run: docker buildx build -t ${{ env.REGISTRY_IMAGE_NAME }}:${{ env.MY_TAG }} --build-arg PLATFORM=${{ matrix.platform }} .
 
     - name: Extract data for binary release
       run: |
