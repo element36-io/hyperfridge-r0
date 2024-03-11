@@ -76,7 +76,6 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
         zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip ./app ./data
-        zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}-arm64.zip ./app-arm64 ./data
         
 
     - name: Build and Push Docker image with custom tag
@@ -94,12 +93,5 @@ jobs:
       if: github.event_name != 'pull_request'
       run: |
           gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }} hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Create GitHub Arm64/MacOs Release with zipped binaries
-      if: github.event_name != 'pull_request'
-      run: |
-          gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}-arm64 hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}-arm64.zip --title "Release Version MacOs (linux/arm64) ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

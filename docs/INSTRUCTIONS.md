@@ -114,7 +114,7 @@ The binary distribution can be downloaded from [github](https://github.com/eleme
 
 ### Preparations for command line and scripts
 
-**Note**: There is no binary releases for other than linux platforms (amd64). From check-out root directory,  build localy with: 
+**Note**: There is no binary releases for other than linux platforms (amd64). On other platforms, check-out this project and build locally:
 
 ```bash
 RISC0_DEV_MODE=true cargo build --release 
@@ -126,18 +126,7 @@ ls -la ./bin
 # you should have host, verifier and hyperfridge executables. 
 ```
 
-If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI.
-
-```bash
-ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
-opennssl version # output, e.g. OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)
-xxd --version # xxd 2021-10-22 by Juergen Weigert et al.
-zlib-flate --version # zlib-flate from qpdf version 10.6.3
-xmllint --version # xmllint: using libxml version 20913
-perl --version # 5 Version 34
-```
-
-Download binary realease from this repo, unzip the realese. Test your installation by showing the command line help:
+Download binary realease from this repo, unzip the release to ./bin. Test your installation by cd-ing to bin and showing the command line help:
 
 ```bash
 ./host --help
@@ -190,6 +179,7 @@ Verify the proof:
 
 ```bash
 # we need the image id and the receipt
+./host show-image-id > IMAGE_ID.hex
 imageid=$(cat IMAGE_ID.hex)
 proof=../data/test/test.xml-Receipt-$imageid-latest.json
 echo verify with $imageid
@@ -198,7 +188,7 @@ RISC0_DEV_MODE=true  ./verifier verify --imageid-hex=$imageid --proof-json=$proo
 
 ## Tests in Rust environment
 
-We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install).
+We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install). Check with `rustup toolchain list --verbose | grep risc0`.
 
 ### Unit tests
 
@@ -215,6 +205,25 @@ Most important, run unit test for the guest code in directory `methods/guest`:
 cd methods/guest
 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture 
 ```
+
+## Create own (test) data, working with scrips
+
+If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI, we are not aware of any version related dependencies. 
+
+
+
+Check if those commands are available/installed on our OS: 
+
+```bash
+ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
+opennssl version # output, e.g. OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)
+xxd --version # xxd 2021-10-22 by Juergen Weigert et al.
+zlib-flate --version # zlib-flate from qpdf version 10.6.3
+xmllint --version # xmllint: using libxml version 20913
+perl --version # 5 Version 34
+rustup toolchain list --verbose | grep risc0 # risc-zero installed: risc0 (...path...) 
+```
+
 
 For running the tests with a new ebics response, lets copy the existing into a new file, then we create the proof for it: 
 
@@ -303,6 +312,6 @@ cargo run  -- --verbose verify  \
     --imageid-hex=$imageid --proof-json=$proof
 ```
 
-### Notes on provided test data
+## Notes on provided test data
 
 The test data was taken from the productive systems (Hypo Lenzburg), decrypted and encrypted again with generated keys as it can be seen in scripts `data/createTestResponse.sh` and `data/checkResponse.sh`. A productive sample has been added to `data/test/test.xml (prod).zip`, the payload of test data remained unchanged from the productive system.

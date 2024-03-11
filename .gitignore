@@ -37,3 +37,5 @@ data/test/tmp/*
 cobertura.xml
 methods/guest/build_rs_cov.profraw
 tmp/
+bin
+data/test/test.xml-Receipt-90ae877c92ba8275f1345254efad79312bbe8dec1b4c7160a2558cbefc68b3c5-latest.json
