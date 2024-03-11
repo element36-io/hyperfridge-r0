@@ -62,8 +62,8 @@ RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host --verbose prove-c
 RUN RUST_BACKTRACE=1 RISC0_DEV_MODE=true ./target/release/host show-image-id > /host/out/IMAGE_ID.hex
 
 #RUN cat /host/out/IMAGE_ID.hex &&  find /data -type f -name "*-Receipt-*.json" 
-#COPY host/out/IMAGE_ID.hex /data/IMAGE_ID.hex
-#RUN ls && ls /data/test/ && ls data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json
+COPY host/out/IMAGE_ID.hex /data/IMAGE_ID.hex
+RUN cp /data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json /data/test/test.xml-Receipt-test.json
 
 # Final Stage - Build the executable image
 FROM debian:12.5-slim as runtime
