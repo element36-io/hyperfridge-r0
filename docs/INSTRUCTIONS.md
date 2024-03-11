@@ -16,6 +16,9 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 ***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
 
+***Note - MacOS***: Images on Dockerhub are built locally and pushed to dockerhub due to restriction of github-actions. If a certain version is needed on MacOs which was not pushed to dockerhub, build the image locally with `docker  build . -t fridge`. If you encounter error messages when copy-pasting code here (`zsh: command not found: #`), swith to bash with entering `bash`.
+
+
 [![codecov](https://codecov.io/gh/element36-io/hyperfridge-r0/graph/badge.svg?token=JNQZL1G2OM)](https://codecov.io/gh/element36-io/hyperfridge-r0) 
 Remark on code coverage: Module `methods/guest` can not be shown because the Risc-Zero framework compiles to Risc V instruction set.
 
@@ -25,7 +28,15 @@ Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e3
 
 ### Preparations for using Docker
 
-Using docker, make sure its installed:
+
+Use bash: 
+
+```bash
+echo $0
+# output: bash
+```
+
+We are using docker, make sure its installed:
 
 ```bash
 docker --version # output, e.g. Docker version 24.0.7, build afdd53b
@@ -39,7 +50,7 @@ docker tag  e36io/hyperfridge-r0:latest fridge
 # no output is given by docker
 ```
 
-Or test with docker using your local container build:
+Or test with docker using your local container build if your machine is not supported by our docker images:
 
 ```bash
 # optional, don't do this for first tests unless you know what you are doing
@@ -91,7 +102,7 @@ Verify a receipt (json-file) and show its contents (public commitments):
 ```bash
 # we need the image id and the receipt
 imageid=$(docker run fridge cat /app/IMAGE_ID.hex)
-proof=/data/test/test.xml-Receipt-test.json
+proof=/data/test/test.xml-Receipt-$imageid-latest.json
 
 # check the proof
 docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imageid --proof-json=$proof
@@ -102,6 +113,18 @@ docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imag
 The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 
 ### Preparations for command line and scripts
+
+**Note**: There is no binary releases for other than linux platforms (amd64). From check-out root directory,  build localy with: 
+
+```bash
+RISC0_DEV_MODE=true cargo build --release 
+mkdir -p ./bin
+cp ./target/release/host ./bin
+cp ./target/release/verifier ./bin
+cp ./target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge ./bin
+ls -la ./bin
+# you should have host, verifier and hyperfridge executables. 
+```
 
 If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI.
 
