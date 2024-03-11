@@ -2,7 +2,7 @@ name: Docker Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, web3review ]
 
   pull_request:
     branches: [ main ]
@@ -58,18 +58,15 @@ jobs:
 
     - name: Build Docker image (manual)
       run: |
-        docker buildx build --platform linux/amd64,linux/arm64 -t e36io/hyperfridge-r0:${{ github.run_id }} .
+        docker buildx build -t e36io/hyperfridge-r0:${{ github.run_id }} .
 
     - name: Create and Run Temporary Container
       run: |
-        docker create --name temp-container --platform linux/amd64 e36io/hyperfridge-r0:${{ github.run_id }}
-        docker create --name temp-container-arm64 --platform linux/arm64 e36io/hyperfridge-r0:${{ github.run_id }}
+        docker create --name temp-container e36io/hyperfridge-r0:${{ github.run_id }}
         docker cp temp-container:/app/IMAGE_ID.hex ./IMAGE_ID.hex
         docker cp temp-container:/app ./app
         docker cp temp-container:/data ./data
-        docker cp temp-container-arm64:/data ./data-arm64
         docker rm temp-container
-        docker rm temp-container-arm64
 
     - name: Read the Image Tag
       id: read_tag
