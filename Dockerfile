@@ -1,6 +1,6 @@
 # FROM rust:1.75-bookworm as build
 # Base stage for building
-        FROM debian:12.5-slim as build
+FROM debian:12.5-slim as build
 
 # Install required dependencies
 
@@ -94,5 +94,4 @@ RUN ln -s /app/host /usr/local/bin/fridge
 RUN ls -la /data/test/test.xml-Receipt-$(cat /app/IMAGE_ID.hex)-latest.json 
 
 WORKDIR /app
-
-CMD ["./host --help"]
+CMD ["/app/host", "--help"]
