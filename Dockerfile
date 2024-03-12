@@ -68,7 +68,7 @@ RUN cp /data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json /d
 # Final Stage - Build the executable image
 FROM debian:12.5-slim as runtime
 # qdpf is for zlib flate
-RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip
+RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip zip
 
 #FROM alpine:latest as runteim
 # add glibc 

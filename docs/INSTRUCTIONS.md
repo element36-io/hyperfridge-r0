@@ -208,13 +208,14 @@ RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture
 
 ## Create own (test) data, working with scrips
 
-If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils` - versions are given only as FYI, we are not aware of any version related dependencies. 
+### Use local development environment on Linux
 
-
-
-Check if those commands are available/installed on our OS: 
+If you are using the binary distribution make sure you are running a glibc compatible environment and necessary tools are installed to run the scripts for pre-processing the EBICS Response. On debian based systems you may use `apt install -y openssl perl qpdf xxd libxml2-utils inotify-tools` - versions are given only as FYI, we are not aware of any version related dependencies. 
+ 
+Check if those commands are available/installed on **Linux**
 
 ```bash
+apt install -y openssl perl qpdf xxd libxml2-utils inotify-tools`
 ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
 opennssl version # output, e.g. OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)
 xxd --version # xxd 2021-10-22 by Juergen Weigert et al.
@@ -223,7 +224,6 @@ xmllint --version # xmllint: using libxml version 20913
 perl --version # 5 Version 34
 rustup toolchain list --verbose | grep risc0 # risc-zero installed: risc0 (...path...) 
 ```
-
 
 For running the tests with a new ebics response, lets copy the existing into a new file, then we create the proof for it: 
 
@@ -283,10 +283,73 @@ cargo run  -- --verbose prove-camt53  \
 # ---> error Verification
 
 ```
+### Use docker environment on MacOS
 
-### Create real receipt with CUDA hardware acceleration
+Bash into the container: 
+```bash
+docker run -it --rm --entrypoint /bin/bash fridge
+```
 
-Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`.
+For running the tests with a new ebics response, lets copy the existing into a new file, then we create the proof for it: 
+
+```bash
+# simulates the download of ebics file
+cd /data
+mkdir myrequest
+cp response_template.xml myrequest.xml
+cp -r response_template/camt53 myrequest
+# you may edit the myrequest and payload in ../data/myrequest/camt53 now
+
+# Data above needs to be compressed, signed etc.
+# Create the signed ebics response and pre-process data for proofing:
+xml_file=myrequest.xml ./createTestResponse.sh
+
+# now create the proof
+# note that the proof needs the singed file:  --request="../data/myrequest-generated/myrequest-generated.xml"
+cd /app
+RISC0_DEV_MODE=true \
+    host  prove-camt53  \
+   --request="/data/myrequest-generated/myrequest-generated.xml"  --bankkey /data/pub_bank.pem \
+    --clientkey /data/client.pem --witnesskey /data/pub_witness.pem --clientiban CH4308307000289537312
+```
+
+Lets check the output:
+
+```bash
+# You see receipt in output of the command and serialized in a json file: 
+ ls -la /data/myrequest-generated/*.json
+ cat /data/myrequest-generated/*.json
+```
+
+Now let's try to create a fake proof - we will use wrong public keys where the verification of signatures should fail:
+
+```bash
+# note that we use witness key for bank: --bankkey ../data/pub_witness.pem
+cd /app
+RISC0_DEV_MODE=true \
+    host prove-camt53  \
+        --request="../data/myrequest-generated/myrequest-generated.xml" --bankkey ../data/pub_witness.pem \
+        --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+# panics, output: 
+# verify bank signature
+# ---> error Verification
+```
+
+Wrong witness:
+
+```bash
+# note that we use bank key for witness: --witnesskey ../data/pub_bank.pem 
+RISC0_DEV_MODE=true \
+    host prove-camt53  \
+        --request="/data/myrequest-generated/myrequest-generated.xml" --bankkey /data/pub_bank.pem \
+        --clientkey /data/client.pem --witnesskey /data/pub_bank.pem --clientiban CH4308307000289537312
+# panics, output: 
+# verify the verify_order_data_signature by witness
+# ---> error Verification
+
+## Create real receipt with CUDA hardware acceleration on Linux dev environment
+
+Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`. 
 
 ```bash
 cd ../host
