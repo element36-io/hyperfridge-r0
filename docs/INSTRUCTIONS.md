@@ -16,7 +16,7 @@ For better understanding, lets look at roundtrip of the proofing system:
 
 ***Note:*** You may remove `RISC0_DEV_MODE=true` variable to create a real proof, expect the execution time to be several hours to create the STARK. You may add `--verbose` after each command (host or verifier) to see what is going on. Use `RUST_BACKTRACE=1` to debug.
 
-***Note - MacOS***: Images on Dockerhub are built locally and pushed to dockerhub due to restriction of github-actions. If a certain version is needed on MacOs which was not pushed to dockerhub, build the image locally with `docker  build . -t fridge`. If you encounter error messages when copy-pasting code here (`zsh: command not found: #`), swith to bash with entering `bash`.
+***Note for MacOS***: Images on Dockerhub are built locally and pushed to dockerhub due to restriction of github-actions. If a certain version is needed on MacOs which was not pushed to dockerhub, build the image locally with `docker  build . -t fridge` or using the Script `buildPublish.sh` to pushlish a release to github or dockerhub. See [MacOS Development](macos.md) for help to give some guidance for the development environment in MacOS. 
 
 
 [![codecov](https://codecov.io/gh/element36-io/hyperfridge-r0/graph/badge.svg?token=JNQZL1G2OM)](https://codecov.io/gh/element36-io/hyperfridge-r0) 
@@ -44,9 +44,19 @@ docker --version # output, e.g. Docker version 24.0.7, build afdd53b
 
 Label the [hyperfridge container from dockerhub](https://hub.docker.com/r/e36io/hyperfridge-r0/tags) you want to use with a shortcut "fridge" for later usage:
 
+On **Linux**:
+
 ```bash
 docker pull e36io/hyperfridge-r0:latest
 docker tag  e36io/hyperfridge-r0:latest fridge
+# no output is given by docker
+```
+
+On **MacOS**:
+
+```bash
+docker pull e36io/hyperfridge-r0:macos-latest
+docker tag  e36io/hyperfridge-r0:macos-latest fridge
 # no output is given by docker
 ```
 
@@ -66,7 +76,7 @@ We included all test data which is necessary to run a quick shake-down test to g
 docker run --env RISC0_DEV_MODE=true  fridge host test
 ```
 
-You may create new keys, additional test data and payload which is described [here](testdata.md).
+The output 
 
 ### Create a receipt (STARK proof)
 
@@ -110,21 +120,10 @@ docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imag
 
 ## Test with binary Release and command line
 
-The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). It is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
+The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). To understand versioning concept, is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 
 ### Preparations for command line and scripts
 
-**Note**: There is no binary releases for other than linux platforms (amd64). On other platforms, check-out this project and build locally:
-
-```bash
-RISC0_DEV_MODE=true cargo build --release 
-mkdir -p ./bin
-cp ./target/release/host ./bin
-cp ./target/release/verifier ./bin
-cp ./target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge ./bin
-ls -la ./bin
-# you should have host, verifier and hyperfridge executables. 
-```
 
 Download binary realease from this repo, unzip the release to ./bin. Test your installation by cd-ing to bin and showing the command line help:
 
@@ -186,7 +185,7 @@ echo verify with $imageid
 RISC0_DEV_MODE=true  ./verifier verify --imageid-hex=$imageid --proof-json=$proof
 ```
 
-## Tests in Rust environment
+## Tests in Rust-development environment
 
 We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install). Check with `rustup toolchain list --verbose | grep risc0`.
 
@@ -206,7 +205,7 @@ cd methods/guest
 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture 
 ```
 
-## Create own (test) data, working with scrips
+## Create own test data
 
 ### Use local development environment on Linux
 
@@ -281,8 +280,8 @@ cargo run  -- --verbose prove-camt53  \
 # panics, output: 
 # verify the verify_order_data_signature by witness
 # ---> error Verification
-
 ```
+
 ### Use docker environment on MacOS
 
 Bash into the container: 
