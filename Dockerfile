@@ -40,7 +40,7 @@ COPY verifier verifier
 COPY methods methods
 COPY Cargo.toml Cargo.lock /
 COPY rust-toolchain.toml /
-RUN rustup toolchain install .
+# RUN rustup toolchain install .
 
 # create directory holding generated Image Id of Computation which will be proved. 
 RUN mkdir -p /host/out

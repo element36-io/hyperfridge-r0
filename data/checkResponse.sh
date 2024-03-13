@@ -251,3 +251,4 @@ echo "..."
 echo "size $(stat -c %s "$payload_file") hash of zip file:" $(openssl dgst -sha256 -r "$payload_file")
 # The uncompressed stream is then a zip file which holds the filenames.. so its actually compressed twice. 
 unzip -o $payload_file -d  $output_dir_name/tmp/camt53/
+echo "Secret Input Data generated."

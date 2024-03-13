@@ -2,8 +2,6 @@
 
 This document describes in-depth our rust-modules and the zero-knowledge proof, and how to run various tests.
 
-
-
 For better understanding, lets look at roundtrip of the proofing system:
 
 1. Request and retrieval of banking documents with daily statements (EBICS request and response) through an EBICS banking client, e.g. [ebics-java-client]. The client
@@ -28,18 +26,19 @@ Docker containers are on [dockerhub](https://hub.docker.com/repository/docker/e3
 
 ### Preparations for using Docker
 
-
 Use bash: 
 
 ```bash
-echo $0
-# output: bash
+bash
+echo $0 
+# output: bash ..
 ```
 
 We are using docker, make sure its installed:
 
 ```bash
-docker --version # output, e.g. Docker version 24.0.7, build afdd53b
+docker --version 
+# output, e.g. Docker version 24.0.7, build afdd53b
 ```
 
 Label the [hyperfridge container from dockerhub](https://hub.docker.com/r/e36io/hyperfridge-r0/tags) you want to use with a shortcut "fridge" for later usage:
@@ -187,13 +186,14 @@ RISC0_DEV_MODE=true  ./verifier verify --imageid-hex=$imageid --proof-json=$proo
 
 ## Tests in Rust-development environment
 
-We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install). Check with `rustup toolchain list --verbose | grep risc0`.
+We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install). Check with `rustup toolchain list --verbose | grep risc0`. Clone project: `git clone git@github.com:element36-io/hyperfridge-r0.git`.
 
 ### Unit tests
 
 Unit tests for the host program in `host` will create receipt for the test data:
 
 ```bash
+cd hyperfridge-r0
 cd host
 RISC0_DEV_MODE=true cargo test  -- --nocapture
 ```
@@ -201,6 +201,7 @@ RISC0_DEV_MODE=true cargo test  -- --nocapture
 Most important, run unit test for the guest code in directory `methods/guest`:
 
 ```bash
+cd ..
 cd methods/guest
 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture 
 ```
@@ -294,13 +295,14 @@ For running the tests with a new ebics response, lets copy the existing into a n
 ```bash
 # simulates the download of ebics file
 cd /data
-mkdir myrequest
+rm -R -f /data/myrequest && mkdir -p myrequest
 cp response_template.xml myrequest.xml
 cp -r response_template/camt53 myrequest
 # you may edit the myrequest and payload in ../data/myrequest/camt53 now
 
 # Data above needs to be compressed, signed etc.
-# Create the signed ebics response and pre-process data for proofing:
+# Create the signed ebics response and pre-process data for proofing,
+# should result in "Secret Input Data generated."
 xml_file=myrequest.xml ./createTestResponse.sh
 
 # now create the proof
@@ -346,7 +348,7 @@ RISC0_DEV_MODE=true \
 # verify the verify_order_data_signature by witness
 # ---> error Verification
 
-## Create real receipt with CUDA hardware acceleration on Linux dev environment
+## Create real receipt with CUDA hardware acceleration on **Linux** dev environment
 
 Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`. 
 
