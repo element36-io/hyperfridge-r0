@@ -347,6 +347,7 @@ RISC0_DEV_MODE=true \
 # panics, output: 
 # verify the verify_order_data_signature by witness
 # ---> error Verification
+```
 
 ## Create real receipt with CUDA hardware acceleration on **Linux** dev environment
 
