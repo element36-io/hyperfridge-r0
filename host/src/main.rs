@@ -143,7 +143,7 @@ fn main() {
                 // call the script with the given parameters
                 let output = Command::new(script_path)
                     // .current_dir(&script_dir)
-                    // .env("output_dir_name", &script_full_path)
+                    // // .env("output_output_dir_name", &script_full_path)
                     .env("xml_file", &camt53_filename)
                     .env("pub_bank", &pub_bank_pem_filename)
                     .env("client", &client_pem_filename)
@@ -206,7 +206,6 @@ fn main() {
     // in the XML file.
     let decrypted_tx_key_bin_filename = format!("{}-TransactionKeyDecrypt.bin", camt53_filename);
     print_verbose!("open {}", &decrypted_tx_key_bin_filename);
-
     let decrypted_tx_key_bin: Vec<u8> =
         fs::read(&decrypted_tx_key_bin_filename).unwrap_or_else(|_| {
             panic!(
@@ -306,7 +305,7 @@ fn main() {
                 .unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
 
             file.write_all(receipt_json_string.as_bytes())
-                .unwrap_or_else(|_| panic!("Unable to write data in file {} (main)", &file_name));
+                .unwrap_or_else(|_| panic!("Unable to write data in file {}", &file_name));
 
             print_verbose!(" wrote receipt to {}", &file_name);
 
@@ -388,9 +387,6 @@ fn proove_camt53(
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
 
-    let mut profiler =
-        risc0_zkvm::Profiler::new("./profile-output", methods::HYPERFRIDGE_ELF).unwrap();
-
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
         .unwrap()
@@ -418,7 +414,6 @@ fn proove_camt53(
         .unwrap()
         .write(&is_verbose())
         .unwrap()
-        .trace_callback(profiler.make_trace_callback())
         .build()
         .unwrap();
 
@@ -426,12 +421,7 @@ fn proove_camt53(
     let prover = default_prover();
     print_verbose!("prove hyperfridge elf ");
     // generate receipt
-    let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
-    profiler.finalize();
-    let report = profiler.encode_to_vec();
-    print_verbose!("write profile size {}", report.len());
-    std::fs::write("./profile-output", &report).expect("Unable to write profiling output");
-
+    let receipt_result = prover.prove(env, HYPERFRIDGE_ELF);
     let image_id_hex = get_image_id_hex();
     print_verbose!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",

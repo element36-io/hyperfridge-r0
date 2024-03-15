@@ -41,3 +41,10 @@ bin
 data/test/test.xml-Receipt-90ae877c92ba8275f1345254efad79312bbe8dec1b4c7160a2558cbefc68b3c5-latest.json
 release
 macos-release.zip
+data/work
+data/trace
+data/profile-output
+data.sik
+data/data
+data/test
+

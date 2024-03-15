@@ -73,14 +73,14 @@ struct EbicsRequestData {
 
 
 /// GrpHdr structure of a Camt53 XML respose
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct Document {
     grp_hdr: GrpHdr, // creation time
     stmts: Vec<Stmt>,
 }
 
 /// GrpHdr structure of a Camt53 XML respose
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct GrpHdr {
     cre_dt_tm: String, // creating time
     msg_id: String,    // unique ebics message id - identifies ebics xml message
@@ -89,7 +89,8 @@ struct GrpHdr {
 }
 
 /// Stmt structure of a Camt53 XML respose
-#[derive(Debug, Default, Clone)]
+#[allow(dead_code)]
+#[derive(Debug, Default)]
 struct Stmt {
     elctrnc_seq_nb: String,
     iban: String,
@@ -97,12 +98,52 @@ struct Stmt {
     fr_dt_tm: String,
     to_dt_tm: String,
     balances: Vec<Balance>,
+    ntries: Vec<Ntry>,
+}
+/// Holds data from Camt53 XML file - a single transaction
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+#[derive(Debug, Default)]
+struct Ntry {
+    cdtDbtInd: String, // cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
+    sts: String,
+    ccy: String, // currency
+    amt: String,
+    txDtls: Vec<TxDtls>,
+}
+
+/// Holds data from Camt53 XML file - transaction details
+#[allow(non_snake_case)]
+#[allow(dead_code)]
+#[derive(Debug,Default)]
+struct TxDtls {
+    AmtCcy: String,
+    AmtValue: String,
+    CdtDbtInd: String,
+    DbtrNm: String,
+    //Debitor
+    DbtrStrtNm: String,
+    DbtrBldgNb: String,
+    DbtrPstCd: String,
+    DbtrTwnNm: String,
+    DbtrCtry: Option<String>,
+    DbtrAcctIBAN: String,
+    //Creditor
+    CdtrStrtNm: String,
+    CdtrBldgNb: String,
+    CdtrPstCd: String,
+    CdtrTwnNm: String,
+    CdtrCtry: Option<String>,
+    CdtrAcctIBAN: String,
+    //
+    RmtInfUstrd: Option<String>,
+    AddtlTxInf: Option<String>,
 }
 
 /// Balance structure of a Camt53 XML respose
 /// code or proprietory - OPBD = opening balance,CLBD is closing balance
 /// cdt_dbt_ind  - creit or debit indicator - plus or minus of the balance
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct Balance {
     cd: String,  // code or proprietory - OPBD = opening balance,CLBD is closing balance
     ccy: String, // currency
@@ -170,8 +211,7 @@ pub fn main() {
         &pub_witness,
     );
 
-    print_verbose!(" Cycle count {}k", (env::get_cycle_count()) / 1000);
-
+    print_verbose!(" Cycle count {}k", (env::cycle_count()) / 1000);
 
     // public committed data, that is what we want to prove
     // we only add data what we decide is OK to be public
@@ -246,7 +286,7 @@ fn load(
     pub_witness: &RsaPublicKey,
 ) -> Vec<Document> {
     // star is with 1586k
-    print_verbose!("   Cycle count start {}k", (env::get_cycle_count()) / 1000);
+    print_verbose!("   Cycle count start {}k", (env::cycle_count()) / 1000);
 
     // convert the XML files to a structure and do first consistency checks
     let request = parse_ebics_response(
@@ -257,14 +297,14 @@ fn load(
     );
     print_verbose!(
         " >  Cycle count parse_ebics_response {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     // cycle count 1864k (plus 3k)
     // verify the signature of the bank
     verify_bank_signature(pub_bank, &request);
     print_verbose!(
         "   Cycle count verify_bank_signature {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
 
     // cycle count 23336k (plus 10k)
@@ -272,7 +312,7 @@ fn load(
     let transaction_key = decrypt_transaction_key(&request, client_key, decrypted_tx_key);
     print_verbose!(
         "   Cycle count decrypt_transaction_key {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     // cycle count 33979k (plus 10k)
 
@@ -287,7 +327,7 @@ fn load(
     );
     print_verbose!(
         "   Cycle count decrypt_order_data {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
 
     //let document=parse_camt53(std::str::from_utf8(&order_data[1].to_vec()).unwrap());
@@ -315,7 +355,7 @@ fn load(
             }
             print_verbose!(
                 "   Cycle count for camt document {}k",
-                (env::get_cycle_count()) / 1000
+                (env::cycle_count()) / 1000
             );
         } else {
             print_verbose!(
@@ -327,7 +367,7 @@ fn load(
 
     print_verbose!(
         "   Cycle count parse_camt53 {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     // cycle count 36330k (plus 1k)
     documents
@@ -466,6 +506,10 @@ fn parse_ebics_response(
     let mut bank_timestamp: String = String::new();
     let mut transaction_key_b64: String = String::new();
     let mut order_data_b64: String = String::new();
+    let mut _curr_ntry:Option<Ntry> = Option::None;
+    let mut _c_curr_tx_details:Option<TxDtls> = Option::None;
+    
+
 
     // digest over all tags with authenticated=true; later check it with digest_value_b64
     let calculated_digest_b64 = general_purpose::STANDARD
@@ -486,6 +530,7 @@ fn parse_ebics_response(
     // To better understand the XML parsing, look an a an exmaple of the XML file, 
     // e.g. in  /data/response_template_pretty.xml 
     for token in tokens {
+        
         match token {
             Ok(Token::ElementStart { local, .. }) => {
                 //print_verbose!("   open tag  as_str {:?}", local.as_str());
@@ -534,6 +579,11 @@ fn parse_ebics_response(
             Ok(Token::Text { text }) if curr_tag == "OrderData" => {
                 order_data_b64 = text.to_string();
             }
+            Ok(Token::Text { .. }) if curr_tag == "Ntry" => {
+                //curr_ntry=Ntry::new();
+                print_verbose!(" new Ntry ");
+            }
+            
             Ok(_) => {}
             Err(e) => {
                 eprintln!("Error parsing XML: {:?}", e);
@@ -637,14 +687,14 @@ fn decrypt_transaction_key(
         // We check if if provided decrypted key was using the decrypted key in the XML as source.
         print_verbose!(
             "   Cycle count before rsa_encrypt {}k",
-            (env::get_cycle_count()) / 1000
+            (env::cycle_count()) / 1000
         );
         let encrypted_recreated =
             rsa::hazmat::rsa_encrypt(&pub_key, &BigUint::from_bytes_be(decrypted_tx_key)).unwrap();
 
         print_verbose!(
             "   Cycle count after rsa_encrypt {}k",
-            (env::get_cycle_count()) / 1000
+            (env::cycle_count()) / 1000
         );
         assert_eq!(
             BigUint::from_bytes_be(&transaction_key_bin),
@@ -716,13 +766,13 @@ fn decrypt_order_data(
     // Verify the signature
     print_verbose!(
         "   Cycle count before pub_witness.verify( {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     // also verify the signature of the witness
     let res = pub_witness.verify(scheme, sha.as_bytes(), witness_signature_bytes);
     print_verbose!(
         "   Cycle count after pub_witness.verify( {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     match res {
         Ok(_) => print_verbose!(" Order Data is verified"),
@@ -735,7 +785,7 @@ fn decrypt_order_data(
     print_verbose!(
         "   Cycle count before
         .decrypt_padded_b2b_mut( {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     // does the following:
     // openssl enc -d -aes-128-cbc -nopad -in orderdata_decoded.bin -out $decrypted_file -K ${transaction_key_hex} -iv 00000000000000000000000000000000
@@ -757,7 +807,7 @@ fn decrypt_order_data(
     print_verbose!(
         "   Cycle count after
             .decrypt_padded_b2b_mut( {}k",
-        (env::get_cycle_count()) / 1000
+        (env::cycle_count()) / 1000
     );
     // uncompressed the data
     let decompressed = decompress_to_vec_zlib(decrypted_data).expect("Failed to decompress!");

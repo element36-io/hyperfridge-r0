@@ -68,6 +68,6 @@ Cycle most expensive calculations:
 RUST_LOG="executor=info" RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test profid  -- --nocapture
 pprof -http=127.0.0.1:8089 ./host/target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge host/profile-output
 ```
+
 This will generate an overview like this, which shows that bottlenecks are related to RSA decryption and signature validation. This generates a cycle overview ([full image](./hyperfridge-cycles.html)): 
 ![plot](./cycles.png)
-
