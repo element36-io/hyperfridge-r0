@@ -2,7 +2,7 @@ name: Docker Build
 
 on:
   push:
-    branches: [ main, web3review]
+    branches: [ main s]
 
   pull_request:
     branches: [ main ]
