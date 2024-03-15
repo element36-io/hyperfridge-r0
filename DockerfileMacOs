@@ -21,7 +21,7 @@ RUN . "$HOME/.cargo/env"
 # Install the RISC0 toolchain
 RUN cargo install cargo-binstall  --version 1.6.2
 RUN cargo binstall cargo-risczero -y --version 0.20.1
-RUN cargo risczero build-toolchain@0.20.1
+RUN cargo risczero build-toolchain
 
 # Test toolchain installation
 RUN rustup toolchain list --verbose | grep risc0
