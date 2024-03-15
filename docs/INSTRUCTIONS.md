@@ -184,7 +184,7 @@ echo verify with $imageid
 RISC0_DEV_MODE=true  ./verifier verify --imageid-hex=$imageid --proof-json=$proof
 ```
 
-## Tests in Rust-development environment
+## Tests in Rust-development environment (Linux and MacOs)
 
 We assume you have [installed rust](https://github.com/element36-io/ocw-ebics/blob/main/docs/rust-setup.md) and [risk zero environment](https://dev.risczero.com/api/zkvm/install). Check with `rustup toolchain list --verbose | grep risc0`. Clone project: `git clone git@github.com:element36-io/hyperfridge-r0.git`.
 
