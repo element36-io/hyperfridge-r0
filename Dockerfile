@@ -1,6 +1,7 @@
 # Base stage for building
-FROM debian:12.5-slim as build
+FROM debian:12.5 as build
 # Install required dependencies
+# docker buildx build --build-arg PLATFORM=linux/amd64 --load -t temp .
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -16,7 +17,7 @@ RUN apt-get update && apt-get install -y \
 # Install Rust 1.75
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.75
 ENV PATH="/root/.cargo/bin:${PATH}"
-
+RUN . "$HOME/.cargo/env"  
 # Install the RISC0 toolchain
 RUN cargo install cargo-binstall  --version 1.6.2
 RUN cargo binstall cargo-risczero -y --version 0.19.1
@@ -25,9 +26,9 @@ RUN cargo binstall cargo-risczero -y --version 0.19.1
 ARG PLATFORM
 RUN echo "PLATFORM: $PLATFORM"
 RUN if [ "$PLATFORM" != "linux/amd64" ]; then \
-        cargo risczero build-toolchain; \
+        echo "building r0 toolset for other than linux - this may take a while "; cargo risczero build-toolchain@0.19.1; \
     else \
-        cargo risczero install; \
+        echo "use binary r0 toolset on linux"; cargo risczero install; \
     fi
 
 # Test toolchain installation
@@ -38,9 +39,8 @@ COPY data data
 COPY host host
 COPY verifier verifier
 COPY methods methods
-COPY Cargo.toml Cargo.lock /
-COPY rust-toolchain.toml /
-# RUN rustup toolchain install .
+COPY Cargo.toml Cargo.lock rust-toolchain.toml/
+# RUN rustup toolchain  install .
 
 # create directory holding generated Image Id of Computation which will be proved. 
 RUN mkdir -p /host/out
