@@ -2,7 +2,7 @@ name: Docker Build
 
 on:
   push:
-    branches: [ main, web3review ]
+    branches: [ main ]
 
   pull_request:
     branches: [ main ]
@@ -58,7 +58,7 @@ jobs:
 
     - name: Build Docker image (manual)
       run: |
-        docker buildx build --build-arg PLATFORM=linux/amd64 --load -t e36io/hyperfridge-r0:${{ github.run_id }} .
+        docker buildx build -f DockerfileLinux --load -t e36io/hyperfridge-r0:${{ github.run_id }} .
   
     - name: Create and Run Temporary Container
       run: |
