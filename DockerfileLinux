@@ -14,22 +14,14 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     perl qpdf xxd libxml2-utils
 
-# Install Rust 1.75
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.75
+# Install Rust 1.75 --> CHECK rust-toolchain.toml for rust verion; must be same
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.75 
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN . "$HOME/.cargo/env"  
 # Install the RISC0 toolchain
 RUN cargo install cargo-binstall  --version 1.6.2
-RUN cargo binstall cargo-risczero -y --version 0.19.1
-
-# Conditionally install the cargo risczero toolchain based on the platform depending on build argument
-ARG PLATFORM
-RUN echo "PLATFORM: $PLATFORM"
-RUN if [ "$PLATFORM" != "linux/amd64" ]; then \
-        echo "building r0 toolset for other than linux - this may take a while "; cargo risczero build-toolchain@0.19.1; \
-    else \
-        echo "use binary r0 toolset on linux"; cargo risczero install; \
-    fi
+RUN cargo binstall cargo-risczero -y --version 0.20.1
+RUN cargo risczero install;
 
 # Test toolchain installation
 RUN rustup toolchain list --verbose | grep risc0
@@ -39,7 +31,7 @@ COPY data data
 COPY host host
 COPY verifier verifier
 COPY methods methods
-COPY Cargo.toml Cargo.lock rust-toolchain.toml/
+COPY Cargo.toml Cargo.lock rust-toolchain.toml /
 # RUN rustup toolchain  install .
 
 # create directory holding generated Image Id of Computation which will be proved. 
