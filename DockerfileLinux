@@ -1,5 +1,5 @@
 # Base stage for building
-FROM debian:12.5 as build
+FROM debian:12.5-slim as build
 # Install required dependencies
 # docker buildx build --build-arg PLATFORM=linux/amd64 --load -t temp .
 
