@@ -59,12 +59,20 @@ docker tag  e36io/hyperfridge-r0:macos-latest fridge
 # no output is given by docker
 ```
 
-Or test with docker using your local container build if your machine is not supported by our docker images:
+Or test with docker using your local container on **Linux**:
 
 ```bash
 # optional, don't do this for first tests unless you know what you are doing
-docker  build . -t fridge
+docker  build -f DockerfileLinux. -t fridge
 ```
+
+On **MacOs** use: 
+
+```bash
+# optional, don't do this for first tests unless you know what you are doing
+docker  build -f DockerfileMacOs. -t fridge
+```
+Creating **MacOS image** will take several hours and is not possible on github free tier. The script `buildPublish.sh` is used for building and publishing the image from the local Mac. 
 
 ### Integration tests with provided test data
 
@@ -126,6 +134,7 @@ The binary distribution can be downloaded from [github](https://github.com/eleme
 Download binary realease from this repo, unzip the release to ./bin. Test your installation by cd-ing to bin and showing the command line help:
 
 ```bash
+cd app
 ./host --help
 # output should show command line parameters: Usage: host [OPTIONS] [COMMAND] ...
 ```
@@ -214,7 +223,7 @@ If you are using the binary distribution make sure you are running a glibc compa
 Check if those commands are available/installed on **Linux**
 
 ```bash
-apt install -y openssl perl qpdf xxd libxml2-utils inotify-tools`
+apt install -y openssl perl qpdf xxd libxml2-utils inotify-tools
 ldd /bin/bash #  linux-vdso.so.1 (0x00007ffc33bee000) ....
 opennssl version # output, e.g. OpenSSL 3.0.2 15 Mar 2022 (Library: OpenSSL 3.0.2 15 Mar 2022)
 xxd --version # xxd 2021-10-22 by Juergen Weigert et al.
@@ -346,34 +355,6 @@ RISC0_DEV_MODE=true \
 # panics, output: 
 # verify the verify_order_data_signature by witness
 # ---> error Verification
-```
-
-## Create real receipt with CUDA hardware acceleration on **Linux** dev environment
-
-Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`. 
-
-```bash
-cd ../host
-RISC0_DEV_MODE=false \
-cargo run -f cuda -- --verbose prove-camt53  \
-   --request="../data/myrequest-generated/myrequest-generated.xml"  --bankkey ../data/pub_bank.pem \
-    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
-```
-
-Use verifier to check the receipt, move to `verifier` directory:
-
-```bash
-cd verifier
-# we need the image ID which is part of the binary package name and versioning, but
-# here we take it from the host
-imageid=$(cat ../host/out/IMAGE_ID.hex)
-# get the filename of the proof
-proof=$(find ../data/myrequest-generated/ -type f -name "*.json" | head -n 1)
-
-# verifies the proofs and shows public inputs and commitments:
-RISC0_DEV_MODE=true \
-cargo run  -- --verbose verify  \
-    --imageid-hex=$imageid --proof-json=$proof
 ```
 
 ## Notes on provided test data

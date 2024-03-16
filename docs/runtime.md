@@ -71,3 +71,32 @@ pprof -http=127.0.0.1:8089 ./host/target/riscv-guest/riscv32im-risc0-zkvm-elf/re
 
 This will generate an overview like this, which shows that bottlenecks are related to RSA decryption and signature validation. This generates a cycle overview ([full image](./hyperfridge-cycles.html)): 
 ![plot](./cycles.png)
+
+
+## Create real receipt with CUDA hardware acceleration on **Linux** dev environment
+
+Note that `RISC0_DEV_MODE=false` and add feature "cuda" to `host/Cargo.toml`. 
+
+```bash
+cd ../host
+RISC0_DEV_MODE=false \
+cargo run -f cuda -- --verbose prove-camt53  \
+   --request="../data/myrequest-generated/myrequest-generated.xml"  --bankkey ../data/pub_bank.pem \
+    --clientkey ../data/client.pem --witnesskey ../data/pub_witness.pem --clientiban CH4308307000289537312
+```
+
+Use verifier to check the receipt, move to `verifier` directory:
+
+```bash
+cd verifier
+# we need the image ID which is part of the binary package name and versioning, but
+# here we take it from the host
+imageid=$(cat ../host/out/IMAGE_ID.hex)
+# get the filename of the proof
+proof=$(find ../data/myrequest-generated/ -type f -name "*.json" | head -n 1)
+
+# verifies the proofs and shows public inputs and commitments:
+RISC0_DEV_MODE=true \
+cargo run  -- --verbose verify  \
+    --imageid-hex=$imageid --proof-json=$proof
+```
