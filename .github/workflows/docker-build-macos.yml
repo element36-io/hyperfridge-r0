@@ -2,10 +2,7 @@ name: Docker Build MacOs
 
 on:
   push:
-    branches: [ main, web3review]
-
-  pull_request:
-    branches: [ main ]
+    branches: [ macos ]
 
 jobs:
   build:

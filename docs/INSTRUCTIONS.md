@@ -117,7 +117,7 @@ proof=/data/test/test.xml-Receipt-$imageid-latest.json
 docker run --env RISC0_DEV_MODE=true  fridge verifier verify --imageid-hex=$imageid --proof-json=$proof
 ```
 
-## Test with binary Release (only Linux available) and command line
+## Only Linux: Test with binary Release and command line
 
 The binary distribution can be downloaded from [github](https://github.com/element36-io/hyperfridge-r0/releases). To understand versioning concept, is crucial to understand the concept of a "sealed" binary. Means, that the (RiscV) binary producing the STARK is pinned by its hash ("Image-ID"). Proofs can only be validated if you know the Image-Id, that is why we included the Image-ID in the releases and docker tags and as a file (IMAGE_ID.hex) in the distributions.
 

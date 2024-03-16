@@ -5,7 +5,7 @@ set -e
 docker login
 
 # Build the Docker image
-docker buildx build --load . -t temp
+docker buildx build -f DockerfileMacOs --load -t temp . 
 
 # Create a temporary container from the image
 CONTAINER_ID=$(docker create temp)
