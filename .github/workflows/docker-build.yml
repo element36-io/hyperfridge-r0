@@ -2,7 +2,7 @@ name: Docker Build
 
 on:
   push:
-    branches: [ main, ms1review ]
+    branches: [ main ]
 
   pull_request:
     branches: [ main ]
@@ -28,7 +28,7 @@ jobs:
         INITIAL_VERSION: 0.1.0
         
     - name:  Bump version and push tag, Minor version for each merge
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'push'
       uses: anothrNick/github-tag-action@1.64.0
       id: taggerRun
       env:
@@ -37,20 +37,14 @@ jobs:
         DEFAULT_BUMP: patch
         
     - name: echo tag
-      if: github.event_name != 'pull_request'
       run: |
         echo "The current tag is: ${{ steps.taggerRun.outputs.new_tag }}"
-
-    - name: echo part
-      if: github.event_name != 'pull_request'
-      run: |
         echo "The version increment was: ${{ steps.taggerRun.outputs.part }}"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2 
 
     - name: Login to DockerHub
-      if: github.event_name != 'pull_request'
       uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
@@ -58,39 +52,35 @@ jobs:
 
     - name: Build Docker image (manual)
       run: |
-        docker build --no-cache -t e36io/hyperfridge-r0:${{ github.run_id }} .
-
+        docker buildx build -f DockerfileLinux --load -t e36io/hyperfridge-r0:${{ github.run_id }} .
+  
     - name: Create and Run Temporary Container
       run: |
         docker create --name temp-container e36io/hyperfridge-r0:${{ github.run_id }}
         docker cp temp-container:/app/IMAGE_ID.hex ./IMAGE_ID.hex
         docker cp temp-container:/app ./app
         docker cp temp-container:/data ./data
-        docker rm temp-container  
+        docker rm temp-container
 
     - name: Read the Image Tag
       id: read_tag
       run: echo "IMAGE_TAG=$(cat IMAGE_ID.hex)" >> $GITHUB_ENV        
 
     - name: Zip App and Data Directories to create a release
-      if: github.event_name != 'pull_request'
       run: |
         zip -r hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip ./app ./data
-
-    - name: Build and Push Docker image with custom tag
-      if: github.event_name != 'pull_request'
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: |
-          e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}
-          e36io/hyperfridge-r0:latest      
-
+        
     - name: Create GitHub Release with zipped binaries
-      if: github.event_name != 'pull_request'
+      if: github.event_name == 'push'
       run: |
           gh release create ${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }} hyperfridge-${{ env.IMAGE_TAG }}-${{ steps.taggerRun.outputs.new_tag }}.zip --title "Release Version ${{ steps.taggerRun.outputs.new_tag }} Image ID:${{ env.IMAGE_TAG }}"
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Push Docker image to Docker Hub with additional tags
+      if: github.event_name == 'push'
+      run: |
+        docker tag e36io/hyperfridge-r0:${{ github.run_id }} e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}
+        docker push e36io/hyperfridge-r0:${{ steps.taggerRun.outputs.new_tag }}-${{ env.IMAGE_TAG }}
+        docker tag e36io/hyperfridge-r0:${{ github.run_id }} e36io/hyperfridge-r0:latest
+        docker push e36io/hyperfridge-r0:latest

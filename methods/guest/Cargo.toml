@@ -5,14 +5,12 @@ edition = "2021"
 
 [workspace]
 
-
 [features]
 debug_mode = []
 
 [dependencies]
 # If you want to try (experimental) std support, add `features = [ "std" ]` to risc0-zkvm
-# risc0-zkvm = { version = "0.19.1", default-features = false,features = [ "std",] }
-risc0-zkvm = { version = "0.19.1", default-features = false,features = [ "std",] }
+risc0-zkvm = { version = "0.20.1", default-features = false,features = [ "std","getrandom"] }
 
 aes = "0.8"
 cbc = "0.1"

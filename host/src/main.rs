@@ -26,6 +26,7 @@ macro_rules! print_verbose {
     };
 }
 
+/// Holds the commitment data which is publicly visible in the proof
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
 struct Commitment {
@@ -52,18 +53,22 @@ struct Stmt {
 fn main() {
     let cli = parse_cli();
 
+    // command line parsing
     if cli.markdown_help {
         clap_markdown::print_help_markdown::<Cli>();
         std::process::exit(0);
     }
 
+    // structure holding the command line arguments
     let pub_bank_pem_filename: String;
     let client_pem_filename: String;
     let pub_witness_pem_filename: String;
     let iban: String;
     let camt53_filename: String;
 
+    // use cli framework to parse command line arguments
     match &cli.command {
+        // user called prove-camt53 command, we get cli params and function arguments
         Some(Commands::ProveCamt53 {
             script,
             bankkey,
@@ -73,6 +78,7 @@ fn main() {
             clientiban,
             request,
         }) => {
+            // convert cli arguments for later usage
             pub_bank_pem_filename = (*bankkey
                 .as_ref()
                 .expect("extracting path for file")
@@ -112,6 +118,7 @@ fn main() {
             .to_string();
 
             // calls checkResponse.sh
+            // this is optional to include a script to pre-process the data
             if let Some(script_path) = script {
                 let script_dir = script_path
                     .parent()
@@ -122,7 +129,7 @@ fn main() {
                     .expect("Script path has no file stem")
                     .to_str()
                     .expect("Failed to convert file stem to string");
-
+                // build path for checkResponse.sh script from params
                 let _script_full_path = script_dir.join(script_file_stem);
 
                 print_verbose!(
@@ -133,17 +140,17 @@ fn main() {
                     &client_pem_filename,
                     &pub_witness_pem_filename,
                 );
-
+                // call the script with the given parameters
                 let output = Command::new(script_path)
                     // .current_dir(&script_dir)
-                    // .env("output_dir_name", &script_full_path)
+                    // // .env("output_output_dir_name", &script_full_path)
                     .env("xml_file", &camt53_filename)
                     .env("pub_bank", &pub_bank_pem_filename)
                     .env("client", &client_pem_filename)
                     .env("pub_witness", &pub_witness_pem_filename)
                     .output()
                     .expect("failed to execute script");
-
+                // check output of the script
                 if output.status.success() {
                     print_verbose!("Script {:?} executed successfully.", script_path.clone());
                 } else {
@@ -158,6 +165,7 @@ fn main() {
                 }
             }
         }
+        // user called test command, we use test data as fixed arguments
         Some(Commands::Test) => {
             print_verbose!("Proofing with test data.");
             pub_bank_pem_filename = TEST_BANKKEY.to_string();
@@ -167,6 +175,7 @@ fn main() {
             iban = TEST_IBAN.to_string();
             camt53_filename = TEST_EBICS_FILE.to_string();
         }
+        // user wants to see the image id
         Some(Commands::ShowImageId) => {
             println!("{}", get_image_id_hex());
             std::process::exit(0);
@@ -176,6 +185,9 @@ fn main() {
         }
     }
 
+    // we need to do the proofing now, either with test data or with the given parameters
+
+    // prepare the files for the proofing
     let bank_public_key_x002_pem =
         fs::read_to_string(&pub_bank_pem_filename).expect("Failed to read bank_public_key file");
     let user_private_key_e002_pem =
@@ -194,7 +206,6 @@ fn main() {
     // in the XML file.
     let decrypted_tx_key_bin_filename = format!("{}-TransactionKeyDecrypt.bin", camt53_filename);
     print_verbose!("open {}", &decrypted_tx_key_bin_filename);
-
     let decrypted_tx_key_bin: Vec<u8> =
         fs::read(&decrypted_tx_key_bin_filename).unwrap_or_else(|_| {
             panic!(
@@ -204,6 +215,7 @@ fn main() {
         });
 
     // other pre-processed files, mainly to c14n for XML
+    // we expect the files to be present, if not we panic
     let signed_info_xml_c14n = fs::read_to_string(format!("{}-SignedInfo", camt53_filename))
         .expect("Failed to read SignedInfo file (ends with -SignedInfo)");
     let authenticated_xml_c14n = fs::read_to_string(format!("{}-authenticated", camt53_filename))
@@ -217,6 +229,7 @@ fn main() {
 
     let image_id_hex = get_image_id_hex();
 
+    // do the proofing and get the receipt
     let receipt_result = proove_camt53(
         &signed_info_xml_c14n,
         &authenticated_xml_c14n,
@@ -230,9 +243,10 @@ fn main() {
         &pub_witness_pem,
         "host:main",
     );
-
+    // process result
     match &receipt_result {
         Ok(_val) => {
+            // call good, we have a receipt
             let receipt_file_id;
             let receipt = receipt_result.unwrap();
             let receipt_json_string =
@@ -254,11 +268,12 @@ fn main() {
             };
 
             print_verbose!("Receipt with public commitment: {} ", &(commitment_string));
-
+            // parse JSON commitment
             let commitment: Result<Commitment, serde_json::Error> =
                 serde_json::from_str(&commitment_string);
 
             match commitment {
+                // parsing the commitment was successful
                 Ok(commitment) => {
                     // collect the sequence numbers from the camt53 files to use them in the filename of the receipt json
                     let joined_elctrnc_seq_nb = commitment
@@ -290,7 +305,7 @@ fn main() {
                 .unwrap_or_else(|_| panic!("Unable to create file {}", &file_name));
 
             file.write_all(receipt_json_string.as_bytes())
-                .unwrap_or_else(|_| panic!("Unable to write data in file {} (main)", &file_name));
+                .unwrap_or_else(|_| panic!("Unable to write data in file {}", &file_name));
 
             print_verbose!(" wrote receipt to {}", &file_name);
 
@@ -372,9 +387,6 @@ fn proove_camt53(
     let modulus_str = bank_public_key.n().to_str_radix(10);
     let exponent_str = bank_public_key.e().to_str_radix(10);
 
-    let mut profiler =
-        risc0_zkvm::Profiler::new("./profile-output", methods::HYPERFRIDGE_ELF).unwrap();
-
     let env = ExecutorEnv::builder()
         .write(&signed_info_xml_c14n)
         .unwrap()
@@ -402,7 +414,6 @@ fn proove_camt53(
         .unwrap()
         .write(&is_verbose())
         .unwrap()
-        .trace_callback(profiler.make_trace_callback())
         .build()
         .unwrap();
 
@@ -410,12 +421,7 @@ fn proove_camt53(
     let prover = default_prover();
     print_verbose!("prove hyperfridge elf ");
     // generate receipt
-    let receipt_result = prover.prove_elf(env, HYPERFRIDGE_ELF);
-    profiler.finalize();
-    let report = profiler.encode_to_vec();
-    print_verbose!("write profile size {}", report.len());
-    std::fs::write("./profile-output", &report).expect("Unable to write profiling output");
-
+    let receipt_result = prover.prove(env, HYPERFRIDGE_ELF);
     let image_id_hex = get_image_id_hex();
     print_verbose!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
@@ -573,6 +579,7 @@ mod tests {
     use std::fs::File;
     use std::io::Write;
 
+    // run a test with the test data shipped also with binary release
     #[test]
     fn do_main() {
         let now = Local::now();
@@ -582,11 +589,11 @@ mod tests {
             format!("{}", now.format("%H:%M:%S"))
         );
         let host_info = format!("callinfo: {}, timestamp: {}", "do_main", &timestamp_string);
-
+        // read decrypted transaction key
         let decrypted_tx_key_bin: &Vec<u8> =
             &fs::read(TEST_EBICS_FILE.to_string() + "-TransactionKeyDecrypt.bin")
                 .expect("Failed to read transaction key file");
-
+        // run the proofing with static test data
         let receipt_result = proove_camt53(
             fs::read_to_string(TEST_EBICS_FILE.to_string() + "-SignedInfo")
                 .unwrap()
@@ -610,7 +617,7 @@ mod tests {
             fs::read_to_string(TEST_WITNESSKEY).unwrap().as_str(),
             &host_info,
         );
-
+        // lets see if the receipt is there
         match &receipt_result {
             Ok(_val) => {
                 // print_verbose!("Receipt result: {}", val);_
@@ -621,12 +628,13 @@ mod tests {
                 let receipt_json =
                     serde_json::to_string(&receipt).expect("Failed to serialize receipt");
                 print_verbose!("Receipt result: {:?}", &receipt_json);
+                // journal contains the commitment which is the public data we added as JSON
                 let journal = receipt.journal;
                 print_verbose!(
                     "Receipt result (commitment) {}: ",
                     &(journal.decode::<String>().unwrap())
                 );
-
+                // lets write the receipt to a file
                 let filename = format!(
                     "{}-Receipt-{}-latest.json",
                     TEST_EBICS_FILE.to_string(),
