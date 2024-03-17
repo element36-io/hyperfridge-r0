@@ -63,14 +63,14 @@ Or test with docker using your local container on **Linux**:
 
 ```bash
 # optional, don't do this for first tests unless you know what you are doing
-docker  build -f DockerfileLinux. -t fridge
+docker  build -f DockerfileLinux . -t fridge
 ```
 
 On **MacOs** use: 
 
 ```bash
 # optional, don't do this for first tests unless you know what you are doing
-docker  build -f DockerfileMacOs. -t fridge
+docker  build -f DockerfileMacOs . -t fridge
 ```
 Creating **MacOS image** will take several hours and is not possible on github free tier. The script `buildPublish.sh` is used for building and publishing the image from the local Mac. 
 
