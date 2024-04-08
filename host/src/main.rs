@@ -118,7 +118,6 @@ fn main() {
             .to_string();
 
             // calls checkResponse.sh
-            // this is optional to include a script to pre-process the data 
             if let Some(script_path) = script {
                 let script_dir = script_path
                     .parent()

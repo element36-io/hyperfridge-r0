@@ -213,7 +213,6 @@ pub fn main() {
 
     print_verbose!(" Cycle count {}k", (env::cycle_count()) / 1000);
 
-
     // public committed data, that is what we want to prove
     // we only add data what we decide is OK to be public
     // but in the end this depends on use cases.
