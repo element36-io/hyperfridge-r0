@@ -59,7 +59,6 @@ function check_and_print_version() {
 check_and_print_version "./host/Cargo.toml"
 cargo publish --dry-run -p fridge-r0-client
 
-
 check_and_print_version "./verifier/Cargo.toml"
 cargo publish --dry-run -p fridge-r0-verifier
 
