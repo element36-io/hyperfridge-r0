@@ -878,6 +878,39 @@ dependencies = [
 ]
 
 [[package]]
+name = "fridge-r0-client"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "clap-markdown",
+ "env_logger",
+ "methods",
+ "num-bigint 0.4.4",
+ "pem",
+ "pkcs1",
+ "risc0-zkvm",
+ "rsa",
+ "serde",
+ "serde_json",
+ "sha2 0.10.6",
+ "xmlparser",
+]
+
+[[package]]
+name = "fridge-r0-verifier"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "clap-markdown",
+ "env_logger",
+ "risc0-zkvm",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "funty"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1068,27 +1101,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
 dependencies = [
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "host"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "clap-markdown",
- "env_logger",
- "methods",
- "num-bigint 0.4.4",
- "pem",
- "pkcs1",
- "risc0-zkvm",
- "rsa",
- "serde",
- "serde_json",
- "sha2 0.10.6",
- "xmlparser",
 ]
 
 [[package]]
@@ -2658,18 +2670,6 @@ name = "valuable"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "830b7e5d4d90034032940e4ace0d9a9a057e7a45cd94e6c007832e39edb82f6d"
-
-[[package]]
-name = "verifier"
-version = "0.1.0"
-dependencies = [
- "clap",
- "clap-markdown",
- "env_logger",
- "risc0-zkvm",
- "serde",
- "serde_json",
-]
 
 [[package]]
 name = "version_check"

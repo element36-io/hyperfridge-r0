@@ -1,10 +1,14 @@
 [package]
-name = "host"
+name = "fridge-r0-client"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
 authors = ["Walter Strametz <walter.strametz@element36.io>"]
-description = "Proofing system for EBICS/ISO20022 (banking backend) access."
+description = "Hyperfridge - a client for a proofing system for EBICS/ISO20022 (banking backend) access."
+
+[[bin]]
+name = "host"
+path = "src/main.rs"
 
 [dependencies]
 # from template

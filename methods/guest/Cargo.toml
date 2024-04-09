@@ -1,7 +1,15 @@
 [package]
-name = "hyperfridge"
+name = "fridge-r0-prover"
 version = "0.1.0"
 edition = "2021"
+
+license = "MIT"
+authors = ["Walter Strametz <walter.strametz@element36.io>"]
+description = "Hyperfridge - a prover for EBICS/ISO20022 (banking backend) access."
+
+[[bin]]
+name = "hyperfridge"
+path = "src/main.rs"
 
 [workspace]
 
