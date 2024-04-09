@@ -900,7 +900,7 @@ dependencies = [
 
 [[package]]
 name = "fridge-r0-verifier"
-version = "0.1.0"
+version = "0.0.32"
 dependencies = [
  "clap",
  "clap-markdown",
