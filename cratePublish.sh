@@ -13,17 +13,15 @@ function check_and_print_version() {
     exit 1
   fi
 
-    # Get the current version from cargo.toml (without "v" prefix)
-  current_version=$(grep -Eo 'version = \"[0-9]*\.[0-9]*\.[0-9]*\"' "$cargo_toml_path" | cut -d '"' -f2)
-
+  # Get the current version from cargo.toml (without "v" prefix)
+  current_version=$(grep -Eo 'version = \"[0-9]*\.[0-9]*\.[0-9]*\"' "$cargo_toml_path" | head -n 1 | cut -d '"' -f2)
   if [[ -z "$current_version" ]]; then
-    echo "Error: Could not find version in Cargo.toml"
+    echo "Error: Could not find version in $cargo_toml_path"
     exit 1
   fi
-  echo "Current version in Cargo.toml: $current_version"
- # Get the latest semantic version tag (without "v") from GitHub
-   # Get the latest semantic version tag (without "v") from GitHub (alternative)
-    latest_version=$(git tag -l --sort=-v:refname  | head -n 1 | cut -d 'v' -f2)
+
+  # Get the latest semantic version tag (without "v") from GitHub
+  latest_version=$(git tag -l --sort=-v:refname  | head -n 1 | cut -d 'v' -f2)
 
   if [[ -z "$latest_version" ]]; then
     echo "No semantic version tag starting with 'v' found!"
@@ -33,7 +31,7 @@ function check_and_print_version() {
   # Check for version mismatch
   if [[ "$current_version" != "$latest_version" ]]; then
     echo "Version mismatch!"
-    echo "  Cargo.toml version: $current_version"
+    echo "  $cargo_toml_path version: $current_version"
     echo "  Latest version from tags: $latest_version"
     echo "  Cargo.toml path: $cargo_toml_path"
 
@@ -55,11 +53,9 @@ function check_and_print_version() {
   fi
 }
 
-
-check_and_print_version "./host/Cargo.toml"
-cargo publish --dry-run -p fridge-r0-client
-
+echo " > publishing verifier"
 check_and_print_version "./verifier/Cargo.toml"
-cargo publish --dry-run -p fridge-r0-verifier
+# --dry-run 
+cargo publish -p fridge-r0-verifier
 
 

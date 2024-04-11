@@ -879,7 +879,7 @@ dependencies = [
 
 [[package]]
 name = "fridge-r0-client"
-version = "0.1.0"
+version = "0.0.32"
 dependencies = [
  "anyhow",
  "chrono",
@@ -1389,7 +1389,7 @@ dependencies = [
 
 [[package]]
 name = "methods"
-version = "0.1.0"
+version = "0.0.32"
 dependencies = [
  "risc0-build",
  "sha2 0.10.6",
