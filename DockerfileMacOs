@@ -1,5 +1,5 @@
 # Base stage for building
-FROM debian:12.5-slim as build
+FROM debian:12-slim as build
 # Install required dependencies
 # docker buildx build --build-arg PLATFORM=linux/amd64 --load -t temp .
 
@@ -14,14 +14,14 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     perl qpdf xxd libxml2-utils
 
-# Install Rust 1.75 --> CHECK rust-toolchain.toml for rust verion; must be same
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.75
-ENV PATH="/root/.cargo/bin:${PATH}"
-RUN . "$HOME/.cargo/env"  
+# Install Rust 1.81 --> CHECK rust-toolchain.toml for rust verion; must be same
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81
+ENV PATH="/root/.risc0/bin:/root/.cargo/bin:${PATH}"
+RUN . "$HOME/.cargo/env" 
 # Install the RISC0 toolchain
-RUN cargo install cargo-binstall  --version 1.6.2
-RUN cargo binstall cargo-risczero -y --version 0.20.1
-RUN cargo risczero build-toolchain
+RUN curl -L https://risczero.com/install | bash
+RUN rzup --version
+RUN rzup install
 
 # Test toolchain installation
 RUN rustup toolchain list --verbose | grep risc0
@@ -58,7 +58,7 @@ COPY host/out/IMAGE_ID.hex /data/IMAGE_ID.hex
 RUN cp /data/test/test.xml-Receipt-$(cat ./host/out/IMAGE_ID.hex)-latest.json /data/test/test.xml-Receipt-test.json
 
 # Final Stage - Build the executable image
-FROM debian:12.5-slim as runtime
+FROM debian:12-slim as runtime
 # qdpf is for zlib flate
 RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-tools unzip zip
 
@@ -69,7 +69,7 @@ RUN apt update && apt install -y perl qpdf xxd libxml2-utils openssl inotify-too
 # Copy the compiled binaries from the build stage
 COPY --from=build /target/release/host /app/host
 COPY --from=build /target/release/verifier /app/verifier
-COPY --from=build /target/riscv-guest/riscv32im-risc0-zkvm-elf/release/hyperfridge /app/hyperfridge
+COPY --from=build /target/riscv-guest/methods/hyperfridge/riscv32im-risc0-zkvm-elf/release/hyperfridge  /app/hyperfridge
 COPY --from=build /host/out/IMAGE_ID.hex /app/IMAGE_ID.hex
 COPY --from=build /data /data
 
