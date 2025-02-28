@@ -31,6 +31,7 @@ jobs:
           . "$HOME/.cargo/env" 
           curl -L https://risczero.com/install | bash
           source "/home/runner/.bashrc"
+          cat "/home/runner/.bashrc"
           rzup install
 
       - name: Run tests (with coverage)
