@@ -30,6 +30,7 @@ jobs:
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81
           . "$HOME/.cargo/env" 
           curl -L https://risczero.com/install | bash
+          source "/home/runner/.bashrc"
           rzup install
 
       - name: Run tests (with coverage)
