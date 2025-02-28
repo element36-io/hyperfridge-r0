@@ -28,7 +28,6 @@ jobs:
       - name: Install Rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81
-          # set PATH="/root/.risc0/bin:/root/.cargo/bin:${PATH}"
           . "$HOME/.cargo/env" 
           curl -L https://risczero.com/install | bash
           cargo binstall cargo-risczero -y
