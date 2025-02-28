@@ -29,7 +29,7 @@ jobs:
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81
           . "$HOME/.cargo/env"
-          export PATH="$PATH:/home/runner/.risc0/bin" 
+          export PATH="$PATH:/home/runner/.risc0/bin:/home/runner/.cargo/bin" 
           curl -L https://risczero.com/install | bash
           source "/home/runner/.bashrc"
           cat "/home/runner/.bashrc"
