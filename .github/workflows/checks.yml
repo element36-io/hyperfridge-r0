@@ -37,7 +37,6 @@ jobs:
 
       - name: Run tests (with coverage)
         run: |
-          rustup install stable
           cargo install cargo-tarpaulin
           RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo +stable build --release 
           RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable test 
