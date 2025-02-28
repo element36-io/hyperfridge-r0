@@ -15,7 +15,7 @@ on:
 jobs:
   check:
     # The type of runner that the job will run on
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.10
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -28,7 +28,7 @@ jobs:
       - name: Install Rust
         run: |
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81
-          set PATH="/root/.risc0/bin:/root/.cargo/bin:${PATH}"
+          # set PATH="/root/.risc0/bin:/root/.cargo/bin:${PATH}"
           . "$HOME/.cargo/env" 
           curl -L https://risczero.com/install | bash
           cargo binstall cargo-risczero -y
