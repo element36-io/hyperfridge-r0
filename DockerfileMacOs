@@ -1,7 +1,9 @@
 # Base stage for building
 FROM debian:12-slim as build
 # Install required dependencies
-# docker buildx build --build-arg PLATFORM=linux/amd64 --load -t temp .
+# on MacOs: 
+# docker buildx build -f DockerfileMacOs --load -t temp . 
+
 
 RUN apt-get update && apt-get install -y \
     curl \
