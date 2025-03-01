@@ -100,3 +100,28 @@ RISC0_DEV_MODE=true \
 cargo run  -- --verbose verify  \
     --imageid-hex=$imageid --proof-json=$proof
 ```
+
+# Notes on Optimization using Chinese Remainder Theorem (CRT)
+
+The rsa crate automatically uses CRT optimization for decryption when:
+  1. The private key contains the necessary prime factors (p and q)
+  2. The key is properly loaded with all components
+
+  When the code calls client_key.decrypt(Pkcs1v15Encrypt, &transaction_key_bin) in the guest code, the library is already using CRT optimization
+  under the hood to speed up the computation.
+
+  The CRT optimization in the library:
+  - Performs two smaller exponentiations (mod p and mod q) instead of one large exponentiation
+  - Combines the results using the Chinese Remainder Theorem
+  - Achieves approximately 3-4x speedup for RSA private key operations
+
+  This means Hyperfridge is already benefiting from CRT optimization for the expensive RSA decryption operations without requiring code changes. The
+  "hazmat" feature that's enabled in the Cargo.toml also exposes the underlying cryptographic primitives, giving the library full access to optimize
+  these operations.
+
+  To potentially gain further optimization, you could focus on other aspects like:
+  1. Parallelizing independent operations
+  2. Pre-computing values where possible
+  3. Using batch verification techniques for multiple signatures
+
+  But for the specific RSA decryption performance, CRT is already applied by the library.

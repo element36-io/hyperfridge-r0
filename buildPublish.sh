@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-
+# Needs to be run on a Mac with M1 or similar
 
 docker login
 
@@ -13,8 +13,6 @@ echo "container-id $CONTAINER_ID"
 
 # Copy the IMAGE_ID.hex file from the container to the host
 docker cp $CONTAINER_ID:/app/IMAGE_ID.hex ./IMAGE_ID.hex
-
-
 
 # Read the content of IMAGE_ID.hex
 IMAGE_ID=$(cat IMAGE_ID.hex)
