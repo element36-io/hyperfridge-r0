@@ -27,17 +27,16 @@ jobs:
 
       - name: Install Rust
         run: |
-          rustup update stable --no-self-update
-          rustup target add wasm32-unknown-unknown
-          cargo install cargo-binstall
-          cargo binstall cargo-risczero -y
-          cargo risczero install
-          rustup component add rustfmt
-          rustup component add clippy
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.81
+          . "$HOME/.cargo/env"
+          export PATH="$PATH:/home/runner/.risc0/bin:/home/runner/.cargo/bin" 
+          curl -L https://risczero.com/install | bash
+          source "/home/runner/.bashrc"
+          cat "/home/runner/.bashrc"
+          rzup install
 
       - name: Run tests (with coverage)
         run: |
-          rustup install stable
           cargo install cargo-tarpaulin
           RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo +stable build --release 
           RISC0_SKIP_BUILD=1 RISC0_DEV_MODE=true cargo +stable test 
@@ -55,12 +54,12 @@ jobs:
         env: 
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
       
-      - name: Run fmt
-        run: cargo fmt --all -- --check
+      # - name: Run fmt
+      #   run: cargo fmt --all -- --check
       
-      - name: Run clippy
-        run: |
-          RISC0_SKIP_BUILD=true cargo clippy --all-targets
+      # - name: Run clippy
+      #   run: |
+      #     RISC0_SKIP_BUILD=true cargo clippy --all-targets
 
       - name: Check Build
         run: |

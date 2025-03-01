@@ -74,6 +74,23 @@ It is possible to organize the files for these components in various ways.
 However, in this starter template we use a standard directory structure for zkVM
 applications, which we think is a good starting point for your applications.
 
+The codebase is organized into three main components:
+
+  1. Host (host/src/main.rs):
+    - Handles user inputs and proof generation
+    - Sets up the zkVM environment with bank statements, keys, and signatures
+    - Writes the proof (receipt) to disk as JSON
+
+  2. Guest (methods/guest/src/main.rs):
+    - Runs inside the RISC Zero zkVM
+    - Performs cryptographic validation of bank data
+    - Verifies signatures, decrypts transaction keys, and parses CAMT53 files
+    - Creates a commitment containing verified account information
+    s
+  3. Verifier (verifier/src/main.rs):
+    - Standalone tool that validates proofs
+    - Checks that computations were performed
+
 ```text
 project_name
 ├── Cargo.toml
