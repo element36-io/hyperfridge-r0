@@ -420,8 +420,8 @@ fn proove_camt53(
     // Obtain the default prover.
     let prover = default_prover();
     print_verbose!("prove hyperfridge elf ");
-    // generate receipt
-    let receipt_result = prover.prove(env, HYPERFRIDGE_ELF);
+    // generate receipt (risc0 1.x returns ProveInfo, extract .receipt)
+    let receipt_result = prover.prove(env, HYPERFRIDGE_ELF).map(|info| info.receipt);
     let image_id_hex = get_image_id_hex();
     print_verbose!(
         "got the receipt of the prove , id first 32u {} binary size of ELF binary {}k",
