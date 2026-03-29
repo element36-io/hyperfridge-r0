@@ -28,7 +28,7 @@ Guest code lives in `methods/guest/src/main.rs`. The build script (`methods/buil
 ## Toolchain & Dependencies
 
 - **Rust**: 1.85 (pinned in `rust-toolchain.toml`)
-- **RISC Zero**: v1.2.6 (zkVM, build, and prover)
+- **RISC Zero**: v2.3.2 (zkVM, build, and prover)
 - **Components**: clippy, rustfmt, rust-src
 - **System packages** (Linux): `clang`, `llvm`, `libssl-dev`, `pkg-config`, `cmake`, `protobuf-compiler`, `libxml2-utils`
 

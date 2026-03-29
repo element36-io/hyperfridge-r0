@@ -10,7 +10,7 @@ debug_mode = []
 
 [dependencies]
 # If you want to try (experimental) std support, add `features = [ "std" ]` to risc0-zkvm
-risc0-zkvm = { version = "=1.2.6", default-features = false, features = [ "std", "getrandom"] }
+risc0-zkvm = { version = "=2.3.2", default-features = false, features = [ "std", "getrandom"] }
 
 aes = "0.8"
 cbc = "0.1"
