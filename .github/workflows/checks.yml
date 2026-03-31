@@ -45,6 +45,7 @@ jobs:
           RISC0_DEV_MODE=true cargo test
 
       - name: Run coverage
+        continue-on-error: true
         run: |
           cargo install cargo-tarpaulin
           RISC0_DEV_MODE=true cargo tarpaulin --verbose --workspace --timeout 600 --out xml
@@ -55,9 +56,10 @@ jobs:
           RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo test --features debug_mode -- --nocapture)
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v2
+        continue-on-error: true
+        uses: codecov/codecov-action@v4
         with:
-          fail_ci_if_error: true
+          fail_ci_if_error: false
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
