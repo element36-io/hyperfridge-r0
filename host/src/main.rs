@@ -12,16 +12,15 @@ use serde::Deserialize;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 
-static mut VERBOSE: bool = false; // print verbose
+static VERBOSE: AtomicBool = AtomicBool::new(false);
 
 /// Print the message if `VERBOSE` mode
 macro_rules! print_verbose {
     ($($arg:tt)*) => {
-        unsafe {
-            if VERBOSE {
-                println!($($arg)*);
-            }
+        if crate::VERBOSE.load(std::sync::atomic::Ordering::Relaxed) {
+            println!($($arg)*);
         }
     };
 }
@@ -335,13 +334,13 @@ fn main() {
 fn is_verbose() -> String {
     match std::env::var("FRIDGE_VERBOSE") {
         Ok(value) if value == "1" || value.eq_ignore_ascii_case("true") => "verbose".to_string(),
-        _ => unsafe {
-            if VERBOSE {
+        _ => {
+            if VERBOSE.load(Ordering::Relaxed) {
                 "verbose".to_string()
             } else {
                 "".to_string()
             }
-        },
+        }
     }
 }
 
@@ -556,9 +555,7 @@ enum Commands {
 fn parse_cli() -> Cli {
     let cli = Cli::parse();
 
-    unsafe {
-        VERBOSE = cli.verbose;
-    }
+    VERBOSE.store(cli.verbose, Ordering::Relaxed);
     cli
 }
 
@@ -571,7 +568,7 @@ mod tests {
     use crate::fs;
     use crate::{
         get_image_id_hex, proove_camt53, TEST_BANKKEY, TEST_CLIENTKEY, TEST_EBICS_FILE, TEST_IBAN,
-        TEST_WITNESSKEY, VERBOSE,
+        TEST_WITNESSKEY,
     };
 
     use chrono::Local;
@@ -637,7 +634,7 @@ mod tests {
                 // lets write the receipt to a file
                 let filename = format!(
                     "{}-Receipt-{}-latest.json",
-                    TEST_EBICS_FILE.to_string(),
+                    TEST_EBICS_FILE,
                     get_image_id_hex()
                 );
                 let mut file =
