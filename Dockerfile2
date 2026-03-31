@@ -1,6 +1,7 @@
 FROM rust:1.89-bookworm as build
 
-RUN cargo install rzup
+RUN curl -L https://risczero.com/install | bash
+ENV PATH="/root/.risc0/bin:${PATH}"
 RUN rzup install rust
 # qdpf is for zlib flate
 RUN apt update && apt install -y perl qpdf xxd libxml2-utils

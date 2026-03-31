@@ -31,7 +31,9 @@ jobs:
           rustup default 1.89
           rustup target add wasm32-unknown-unknown
           rustup component add rustfmt clippy
-          cargo install rzup
+          curl -L https://risczero.com/install | bash
+          export PATH="$HOME/.risc0/bin:$PATH"
+          echo "$HOME/.risc0/bin" >> $GITHUB_PATH
           rzup install rust
 
       - name: Build

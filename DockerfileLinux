@@ -19,7 +19,8 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --de
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN . "$HOME/.cargo/env"
 # Install the RISC0 toolchain
-RUN cargo install rzup
+RUN curl -L https://risczero.com/install | bash
+ENV PATH="/root/.risc0/bin:${PATH}"
 RUN rzup install rust
 
 # Test toolchain installation
