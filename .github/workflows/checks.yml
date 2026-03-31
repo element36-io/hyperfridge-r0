@@ -20,7 +20,7 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install linux dependencies
         run: sudo apt-get update && sudo apt-get install -y clang libssl-dev llvm libudev-dev protobuf-compiler
@@ -40,11 +40,14 @@ jobs:
         run: |
           RUST_BACKTRACE=1 RISC0_DEV_MODE=true cargo build --release
 
-      - name: Run tests (with coverage)
+      - name: Run tests
+        run: |
+          RISC0_DEV_MODE=true cargo test
+
+      - name: Run coverage
         run: |
           cargo install cargo-tarpaulin
-          RISC0_DEV_MODE=true cargo test
-          RISC0_DEV_MODE=true cargo tarpaulin --verbose --all-features --workspace --timeout 600 --out xml
+          RISC0_DEV_MODE=true cargo tarpaulin --verbose --workspace --timeout 600 --out xml
 
       - name: Run tests in guest module
         run: |
