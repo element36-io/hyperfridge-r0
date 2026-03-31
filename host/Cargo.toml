@@ -1,11 +1,18 @@
 [package]
-name = "host"
-version = "0.1.0"
+name = "fridge-r0-client"
+version = "0.0.32"
 edition = "2021"
+license = "MIT"
+authors = ["Walter Strametz <walter.strametz@element36.io>"]
+description = "Hyperfridge - a client for a proofing system for EBICS/ISO20022 (banking backend) access."
+
+[[bin]]
+name = "host"
+path = "src/main.rs"
 
 [dependencies]
 # from template
-methods = { path = "../methods" }
+methods = { path = "../methods",version = "*"  }
 # Define the risc0-zkvm crate with features for testing only
 #risc0-zkvm = { version = "0.19.1", features = ["profiler", "prove", "getrandom" ] }
 risc0-zkvm = { workspace = true, features = [ "prove", "getrandom"] }
@@ -32,6 +39,7 @@ clap-markdown = "0.1"
 #metal = ["risc0-zkvm/metal"]
 
 [dependencies.sha2]
+version = "0.10.6"  # Dummy version
 git = "https://github.com/risc0/RustCrypto-hashes"
 tag = "sha2-v0.10.6-risczero.0"
 
