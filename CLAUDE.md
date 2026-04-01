@@ -27,15 +27,15 @@ Guest code lives in `methods/guest/src/main.rs`. The build script (`methods/buil
 
 ## Toolchain & Dependencies
 
-- **Rust**: 1.75 (pinned in `rust-toolchain.toml`)
-- **RISC Zero**: v0.20.1 (zkVM, build, and prover)
+- **Rust**: 1.89 (pinned in `rust-toolchain.toml`)
+- **RISC Zero**: v3.0.5 (zkVM, build, and prover)
 - **Components**: clippy, rustfmt, rust-src
 - **System packages** (Linux): `clang`, `llvm`, `libssl-dev`, `pkg-config`, `cmake`, `protobuf-compiler`, `libxml2-utils`
 
 Install RISC Zero toolchain:
 ```bash
-cargo binstall cargo-risczero
-cargo risczero install
+curl -L https://risczero.com/install | bash
+rzup install
 ```
 
 ## Build & Run
@@ -157,6 +157,6 @@ Three entities: **Bank** (signs responses), **Client** (requests statements), **
 ## Common Issues
 
 - **Slow builds**: Guest compilation to RISC-V is inherently slow. Always use `RISC0_DEV_MODE=true` for development.
-- **Missing RISC Zero toolchain**: Run `cargo risczero install` after installing `cargo-risczero`.
+- **Missing RISC Zero toolchain**: Install via `rzup install` (see https://risczero.com/install).
 - **Coverage gaps**: Guest code running in zkVM cannot be instrumented by tarpaulin — this is expected.
 - **XML test data**: Test fixtures in `data/test/` are pre-generated. Regenerate with `data/createTestResponse.sh` if needed (requires `openssl`, `xmllint`, etc.).
