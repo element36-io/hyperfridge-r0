@@ -34,14 +34,14 @@ risc0_zkvm::guest::entry!(main);
 #[cfg(test)]
 mod test_xmlparse;
 
-static mut VERBOSE: bool = false; // print verbose or not
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static VERBOSE: AtomicBool = AtomicBool::new(false);
 
 macro_rules! print_verbose {
     ($($arg:tt)*) => {
-        unsafe {
-            if VERBOSE {
-                println!($($arg)*);
-            }
+        if VERBOSE.load(Ordering::Relaxed) {
+            println!($($arg)*);
         }
     };
 }
@@ -265,9 +265,7 @@ pub fn main() {
 /// set the verbose flag
 fn set_flags(flags: String) {
     if flags.contains("verbose") {
-        unsafe {
-            VERBOSE = true;
-        }
+        VERBOSE.store(true, Ordering::Relaxed);
     }
 }
 
